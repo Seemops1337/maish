@@ -1,8 +1,18 @@
+> **Maish is a personal fork of [Velo](https://github.com/avihaymenahem/velo).**
+>
+> It carries fixes for running against a self-hosted [Stalwart](https://stalw.art)
+> mail server — strict IMAP FETCH syntax, SQLite transaction handling, and CalDAV
+> over the Rust HTTP client. Those fixes are also offered upstream as pull
+> requests. See [`NOTICE`](NOTICE) for the full list of modifications.
+>
+> Not affiliated with or endorsed by the Velo project. For the original, go
+> [there](https://github.com/avihaymenahem/velo).
+
 <p align="center">
-  <img src="assets/icon.png?v1" alt="Velo" width="200" height="200" style="border-radius: 24px;" />
+  <img src="assets/icon.png?v1" alt="Maish" width="200" height="200" style="border-radius: 24px;" />
 </p>
 
-<h1 align="center">Velo</h1>
+<h1 align="center">Maish</h1>
 
 <p align="center">
   <strong>Email at the speed of thought.</strong>
