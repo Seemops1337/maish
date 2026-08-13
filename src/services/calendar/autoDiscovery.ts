@@ -38,6 +38,8 @@ const PRESETS: CalDavPreset[] = [
   },
 ];
 
+import { davFetch } from "./davFetch";
+
 export interface CalDavDiscoveryResult {
   providerName: string | null;
   caldavUrl: string | null;
@@ -94,13 +96,15 @@ export async function discoverCalDavSettings(email: string): Promise<CalDavDisco
 
 async function tryWellKnownDiscovery(domain: string): Promise<string | null> {
   try {
-    const response = await fetch(`https://${domain}/.well-known/caldav`, {
+    // DAV hosts serve no CORS headers — go through the Rust HTTP client.
+    const response = await davFetch(`https://${domain}/.well-known/caldav`, {
       method: "GET",
       redirect: "manual",
     });
 
-    // RFC 6764: server should respond with 301/302 redirect to the CalDAV endpoint
-    if (response.status === 301 || response.status === 302) {
+    // RFC 6764: server should redirect to the CalDAV endpoint. Any 3xx counts —
+    // Stalwart answers 307, others 301/302/308.
+    if (response.status >= 300 && response.status < 400) {
       const location = response.headers.get("Location");
       if (location) {
         // Handle relative URLs
@@ -123,7 +127,7 @@ async function tryWellKnownDiscovery(domain: string): Promise<string | null> {
 
 async function tryNextcloudDiscovery(domain: string): Promise<string | null> {
   try {
-    const response = await fetch(`https://${domain}/remote.php/dav/`, {
+    const response = await davFetch(`https://${domain}/remote.php/dav/`, {
       method: "OPTIONS",
     });
     if (response.ok || response.status === 401) {
@@ -151,6 +155,7 @@ export async function testCalDavConnection(
       credentials: { username, password },
       authMethod: "Basic",
       defaultAccountType: "caldav",
+      fetch: davFetch,
     });
 
     await client.login();

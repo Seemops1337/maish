@@ -8,6 +8,7 @@ import type {
   CreateEventInput,
   UpdateEventInput,
 } from "./types";
+import { davFetch } from "./davFetch";
 import { generateVEvent, parseVEvent } from "./icalHelper";
 import { getAccount } from "@/services/db/accounts";
 
@@ -36,6 +37,7 @@ export class CalDAVProvider implements CalendarProvider {
       credentials: { username, password },
       authMethod: "Basic",
       defaultAccountType: "caldav",
+      fetch: davFetch,
     });
 
     await this.client.login();
