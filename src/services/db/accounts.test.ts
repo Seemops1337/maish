@@ -4,6 +4,7 @@ import {
   getAccountByEmail,
   insertImapAccount,
   insertAccount,
+  saveCalDavAccount,
   deleteAccount,
   updateAccountTokens,
   updateAccountSyncState,
@@ -280,6 +281,57 @@ describe("accounts", () => {
       const [sql, params] = mockExecute.mock.calls[0] as [string, unknown[]];
       expect(sql).toContain("UPDATE accounts SET history_id");
       expect(params).toEqual(["history-999", "acc-1"]);
+    });
+  });
+
+  describe("saveCalDavAccount", () => {
+    const input = {
+      id: "new-acc",
+      email: "user@example.com",
+      displayName: null,
+      caldavUrl: "https://dav.example.com/dav/cal",
+      caldavUsername: "user@example.com",
+      caldavPassword: "secret",
+    };
+
+    it("inserts a new account when the address is unknown", async () => {
+      mockSelectFirstBy.mockResolvedValue(null);
+      mockExecute.mockResolvedValue(undefined);
+
+      const result = await saveCalDavAccount(input);
+
+      const [sql] = mockExecute.mock.calls[0] as [string];
+      expect(sql).toContain("INSERT INTO accounts");
+      expect(result).toEqual({ accountId: "new-acc", attachedToExisting: false });
+    });
+
+    it("attaches to the existing account instead of violating UNIQUE(email)", async () => {
+      // A CalDAV calendar usually belongs to an address that already has a mail
+      // account; inserting a second row fails on accounts.email.
+      mockSelectFirstBy.mockResolvedValue(
+        createMockImapAccount({ id: "existing-acc", email: "user@example.com" }),
+      );
+      mockExecute.mockResolvedValue(undefined);
+
+      const result = await saveCalDavAccount(input);
+
+      const [sql, params] = mockExecute.mock.calls[0] as [string, unknown[]];
+      expect(sql).toContain("UPDATE accounts SET caldav_url");
+      expect(params).toContain("existing-acc");
+      expect(params).toContain("enc:secret");
+      expect(result).toEqual({ accountId: "existing-acc", attachedToExisting: true });
+    });
+
+    it("marks the existing account as CalDAV-enabled", async () => {
+      mockSelectFirstBy.mockResolvedValue(
+        createMockImapAccount({ id: "existing-acc", email: "user@example.com" }),
+      );
+      mockExecute.mockResolvedValue(undefined);
+
+      await saveCalDavAccount(input);
+
+      const [, params] = mockExecute.mock.calls[0] as [string, unknown[]];
+      expect(params).toContain("caldav");
     });
   });
 });
