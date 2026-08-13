@@ -39,7 +39,7 @@ export async function getDb(): Promise<Database> {
   if (activeTx) return activeTx as Database;
 
   if (!db) {
-    db = await Database.load("sqlite:velo.db");
+    db = await Database.load("sqlite:maish.db");
   }
   return db;
 }
