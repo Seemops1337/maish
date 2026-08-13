@@ -124,7 +124,7 @@ export type ImapSyncProgressCallback = (progress: ImapSyncProgress) => void;
  * Generate a synthetic Message-ID for messages that lack one.
  */
 function syntheticMessageId(accountId: string, folder: string, uid: number): string {
-  return `synthetic-${accountId}-${folder}-${uid}@velo.local`;
+  return `synthetic-${accountId}-${folder}-${uid}@maish.local`;
 }
 
 /**

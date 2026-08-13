@@ -94,13 +94,13 @@ async function executeSingleAction(
         await Promise.all(threadIds.map((id) =>
           setThreadCategory(accountId, id, action.params!.category!, true),
         ));
-        window.dispatchEvent(new Event("velo-sync-done"));
+        window.dispatchEvent(new Event("maish-sync-done"));
       }
       break;
 
     case "reply":
       window.dispatchEvent(
-        new CustomEvent("velo-inline-reply", {
+        new CustomEvent("maish-inline-reply", {
           detail: { threadId: threadIds[0], accountId, mode: "reply" },
         }),
       );
@@ -108,7 +108,7 @@ async function executeSingleAction(
 
     case "replyAll":
       window.dispatchEvent(
-        new CustomEvent("velo-inline-reply", {
+        new CustomEvent("maish-inline-reply", {
           detail: { threadId: threadIds[0], accountId, mode: "replyAll" },
         }),
       );
@@ -116,7 +116,7 @@ async function executeSingleAction(
 
     case "forward":
       window.dispatchEvent(
-        new CustomEvent("velo-inline-reply", {
+        new CustomEvent("maish-inline-reply", {
           detail: { threadId: threadIds[0], accountId, mode: "forward" },
         }),
       );

@@ -147,7 +147,7 @@ describe("imapMessageToParsedMessage", () => {
     const msg = createMockImapMessage({ message_id: null });
     const { threadable } = imapMessageToParsedMessage(msg, "acc-1", "INBOX");
 
-    expect(threadable.messageId).toBe("synthetic-acc-1-INBOX-42@velo.local");
+    expect(threadable.messageId).toBe("synthetic-acc-1-INBOX-42@maish.local");
   });
 
   it("converts attachments correctly", () => {
