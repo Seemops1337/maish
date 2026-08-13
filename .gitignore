@@ -73,7 +73,7 @@ coverage/
 # Packaging Artifacts
 build-dir/
 repo/
-velo-*.tar.gz
+maish-*.tar.gz
 *.flatpak
 *.rpm
 *.src.rpm

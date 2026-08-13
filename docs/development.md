@@ -6,6 +6,40 @@
 - [Rust](https://www.rust-lang.org/tools/install) (latest stable)
 - Tauri v2 system dependencies ([see Tauri docs](https://v2.tauri.app/start/prerequisites/))
 
+## Setting up on another machine
+
+```bash
+git clone https://github.com/Seemops1337/maish.git
+cd maish
+npm install
+npm run tauri build -- --no-bundle
+```
+
+Everything needed to build is in the repository — `package-lock.json` pins the
+frontend dependencies and `src-tauri/Cargo.lock` the Rust ones. The first Rust
+build takes several minutes; later ones are far quicker.
+
+Your mail is **not** in the repository, and must not be. Two files hold it, both
+named after the application identifier `xyz.hochreiner.maish`:
+
+| What | Linux path |
+|---|---|
+| Database | `~/.config/xyz.hochreiner.maish/maish.db` |
+| Encryption key | `~/.local/share/xyz.hochreiner.maish/maish.key` |
+
+Starting without them gives you an empty client: add the account again and let
+it sync. To carry an existing setup across, copy **both** files. The key alone
+is useless, and the database alone cannot be read — every stored password and
+token is encrypted with that key, and a missing key file is silently replaced by
+a fresh one, after which login fails without an error dialog.
+
+Copy the database with SQLite rather than `cp`, so the write-ahead log is
+included:
+
+```bash
+sqlite3 "file:$HOME/.config/xyz.hochreiner.maish/maish.db?mode=ro" ".backup /path/to/target/maish.db"
+```
+
 ## Commands
 
 ```bash
@@ -40,7 +74,7 @@ cd src-tauri && cargo build
 - **Setup:** `src/test/setup.ts` (imports `@testing-library/jest-dom/vitest`)
 - **Config:** `globals: true` -- no imports needed for `describe`, `it`, `expect`
 - **Location:** Tests are colocated with source files (e.g., `uiStore.test.ts` next to `uiStore.ts`)
-- **Count:** 130 test files across stores (8), services (70), utils (14), components (31), constants (3), router (1), hooks (2), and config (1)
+- **Count:** 134 test files across stores (8), services (70), utils (14), components (31), constants (3), router (1), hooks (2), and config (1)
 
 ### Zustand test pattern
 
