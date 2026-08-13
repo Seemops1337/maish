@@ -64,6 +64,12 @@ Branches intended for **upstream** branch off `origin/main`, must stay free of
 Maish branding, and must not carry drive-by refactors — a reviewer should see
 one idea per pull request. Never merge `main` into them.
 
+**Everything in the repository is English.** Code, identifiers, comments,
+commit messages, documentation, `NOTICE`, pull requests, issue comments, UI
+strings — no exceptions, including throwaway debug output that might get
+committed by accident. The chat itself follows whatever language the maintainer
+writes in, which is usually German; that never leaks into a file or a commit.
+
 **Publishing needs approval.** Push, pull request, issue comment: draft the
 exact text, show it, wait. Local branches and commits need no permission.
 
