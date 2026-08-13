@@ -1,6 +1,8 @@
 import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { discoverCalDavSettings, testCalDavConnection } from "./autoDiscovery";
 import { davFetch } from "./davFetch";
+import { getAccountByEmail } from "@/services/db/accounts";
+import { createMockImapAccount } from "@/test/mocks";
 
 vi.mock("tsdav", () => ({
   DAVClient: vi.fn(),
@@ -11,12 +13,26 @@ vi.mock("@tauri-apps/plugin-http", () => ({
   fetch: vi.fn(),
 }));
 
+vi.mock("@/services/db/accounts", () => ({
+  getAccountByEmail: vi.fn().mockResolvedValue(null),
+}));
+
 const mockDavFetch = vi.mocked(tauriFetch);
+const mockGetAccountByEmail = vi.mocked(getAccountByEmail);
+
+const redirectTo = (location: string) =>
+  ({
+    status: 301,
+    ok: false,
+    headers: new Headers({ Location: location }),
+  }) as Response;
 
 describe("discoverCalDavSettings", () => {
   afterEach(() => {
     vi.restoreAllMocks();
     mockDavFetch.mockReset();
+    mockGetAccountByEmail.mockReset();
+    mockGetAccountByEmail.mockResolvedValue(null);
   });
 
   it("returns Google preset for gmail.com", async () => {
@@ -64,6 +80,49 @@ describe("discoverCalDavSettings", () => {
       authMethod: "basic",
       needsAppPassword: false,
     });
+  });
+
+  it("falls back to the account's mail server when the address domain has none", async () => {
+    // Self-hosted setups routinely split the two: mail lives on
+    // mail.example.net while example.com serves no .well-known at all.
+    mockGetAccountByEmail.mockResolvedValue(
+      createMockImapAccount({ imap_host: "mail.example.net" }),
+    );
+    mockDavFetch.mockImplementation(async (input) =>
+      String(input).startsWith("https://mail.example.net/")
+        ? redirectTo("https://mail.example.net/dav/cal")
+        : Promise.reject(new Error("Not found")),
+    );
+
+    const result = await discoverCalDavSettings("user@example.com");
+
+    expect(result.caldavUrl).toBe("https://mail.example.net/dav/cal");
+  });
+
+  it("prefers the address domain over the mail server", async () => {
+    mockGetAccountByEmail.mockResolvedValue(
+      createMockImapAccount({ imap_host: "mail.example.net" }),
+    );
+    mockDavFetch.mockResolvedValue(redirectTo("https://example.com/dav/cal"));
+
+    const result = await discoverCalDavSettings("user@example.com");
+
+    expect(result.caldavUrl).toBe("https://example.com/dav/cal");
+  });
+
+  it("does not probe the mail server when it matches the address domain", async () => {
+    mockGetAccountByEmail.mockResolvedValue(
+      createMockImapAccount({ imap_host: "example.com" }),
+    );
+    mockDavFetch.mockRejectedValue(new Error("Network error"));
+
+    await discoverCalDavSettings("user@example.com");
+
+    const probed = mockDavFetch.mock.calls.map(([input]) => String(input));
+    expect(probed).toEqual([
+      "https://example.com/.well-known/caldav",
+      "https://example.com/remote.php/dav/",
+    ]);
   });
 
   it("returns redirect Location for unknown domain with .well-known 307", async () => {
