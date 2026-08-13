@@ -8,8 +8,8 @@
   <description>
     <p>Maish is a fork of Velo, a fast and beautiful desktop email client, built with modern web technologies.</p>
   </description>
-  <url type="homepage">https://github.com/Seemops1337/velo</url>
-  <url type="bugtracker">https://github.com/Seemops1337/velo/issues</url>
+  <url type="homepage">https://github.com/Seemops1337/maish</url>
+  <url type="bugtracker">https://github.com/Seemops1337/maish/issues</url>
   <launchable type="desktop-id">xyz.hochreiner.maish.desktop</launchable>
   <releases>
     <release version="0.4.21" date="2026-02-20" /> <!-- x-release-please-version -->

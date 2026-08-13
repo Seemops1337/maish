@@ -10,7 +10,7 @@ Release: %{app_release}%{?dist}
 Summary: Fast, beautiful desktop email client
 
 License: Apache-2.0
-URL:     https://github.com/Seemops1337/velo
+URL:     https://github.com/Seemops1337/maish
 Source0: %{url}/archive/v%{version}/%{name}-%{version}.tar.gz
 
 # Build Dependencies
