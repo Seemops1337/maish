@@ -7,6 +7,7 @@ use tauri::{Emitter, Manager};
 use tauri_plugin_autostart::MacosLauncher;
 
 mod commands;
+mod db_tx;
 mod imap;
 mod oauth;
 mod smtp;
@@ -112,7 +113,13 @@ pub fn run() {
             commands::imap_delta_check,
             commands::smtp_send_email,
             commands::smtp_test_connection,
+            db_tx::db_tx_begin,
+            db_tx::db_tx_commit,
+            db_tx::db_tx_rollback,
+            db_tx::db_tx_execute,
+            db_tx::db_tx_select,
         ])
+        .manage(db_tx::DbTxState::new())
         .setup(|app| {
             {
                 let level = if cfg!(debug_assertions) {
@@ -126,6 +133,15 @@ pub fn run() {
                         .level_for("sqlx::query", log::LevelFilter::Warn)
                         .build(),
                 )?;
+            }
+
+            {
+                // Point the dedicated transaction connection at the same file
+                // tauri-plugin-sql uses (app config dir + the name from
+                // tauri.conf.json's `preload`).
+                let db_path = app.path().app_config_dir()?.join("velo.db");
+                let state = app.state::<db_tx::DbTxState>();
+                tauri::async_runtime::block_on(state.set_path(db_path));
             }
 
             #[cfg(not(target_os = "linux"))]
