@@ -292,9 +292,9 @@ export function Sidebar({ collapsed, onAddAccount }: SidebarProps) {
         useUIStore.getState().setSyncingFolder(null);
       }, 500);
     };
-    window.addEventListener("velo-sync-done", handler);
+    window.addEventListener("maish-sync-done", handler);
     return () => {
-      window.removeEventListener("velo-sync-done", handler);
+      window.removeEventListener("maish-sync-done", handler);
       if (timer) clearTimeout(timer);
     };
   }, [activeAccountId, loadLabels, refreshSmartFolderCounts]);

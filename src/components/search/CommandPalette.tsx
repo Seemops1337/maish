@@ -79,14 +79,14 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
       onClose();
       const threadId = getSelectedThreadId();
       if (threadId) {
-        window.dispatchEvent(new CustomEvent("velo-extract-task", { detail: { threadId } }));
+        window.dispatchEvent(new CustomEvent("maish-extract-task", { detail: { threadId } }));
       }
     } },
     { id: "task-view", label: "View Tasks", shortcut: "g k", category: "Tasks", action: () => { navigateToLabel("tasks"); onClose(); } },
     { id: "task-toggle-panel", label: "Toggle Task Panel", category: "Tasks", action: () => { useUIStore.getState().toggleTaskSidebar(); onClose(); } },
 
     // AI
-    { id: "ask-ai", label: "Ask AI about your inbox", category: "AI", action: () => { onClose(); window.dispatchEvent(new Event("velo-toggle-ask-inbox")); } },
+    { id: "ask-ai", label: "Ask AI about your inbox", category: "AI", action: () => { onClose(); window.dispatchEvent(new Event("maish-toggle-ask-inbox")); } },
 
     // Settings
     { id: "toggle-sidebar", label: "Toggle Sidebar", shortcut: "Ctrl+Shift+E", category: "Settings", action: () => { toggleSidebar(); onClose(); } },

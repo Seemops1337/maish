@@ -37,7 +37,7 @@ async function checkSnoozedThreads(): Promise<void> {
     });
 
     // Notify the UI to refresh
-    window.dispatchEvent(new Event("velo-sync-done"));
+    window.dispatchEvent(new Event("maish-sync-done"));
   }
 }
 

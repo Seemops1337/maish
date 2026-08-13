@@ -1,12 +1,7 @@
-> **Maish is a personal fork of [Velo](https://github.com/avihaymenahem/velo).**
->
-> It carries fixes for running against a self-hosted [Stalwart](https://stalw.art)
-> mail server — strict IMAP FETCH syntax, SQLite transaction handling, and CalDAV
-> over the Rust HTTP client. Those fixes are also offered upstream as pull
-> requests. See [`NOTICE`](NOTICE) for the full list of modifications.
->
-> Not affiliated with or endorsed by the Velo project. For the original, go
-> [there](https://github.com/avihaymenahem/velo).
+> **Maish is a personal desktop email client.** It began as a fork of
+> [Velo](https://github.com/avihaymenahem/velo) (Apache-2.0) and is maintained
+> independently — not affiliated with or endorsed by that project. See
+> [`NOTICE`](NOTICE) for what was changed.
 
 <p align="center">
   <img src="assets/icon.png?v1" alt="Maish" width="200" height="200" style="border-radius: 24px;" />
@@ -28,21 +23,14 @@
   <a href="#installation">Installation</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
   <a href="docs/keyboard-shortcuts.md">Shortcuts</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
   <a href="docs/architecture.md">Architecture</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
-  <a href="docs/development.md">Development</a>&nbsp;&nbsp;&bull;&nbsp;&nbsp;
-  <a href="CONTRIBUTING.md">Contributing</a>
+  <a href="docs/development.md">Development</a>
 </p>
 
 ---
 
-<p align="center">
-  <img width="1920" height="1032" alt="Screenshot 2026-02-17 223320" src="https://github.com/user-attachments/assets/dd096d15-4c1e-438c-99f9-c38b50a8a437" />
-</p>
+## Why Maish?
 
----
-
-## Why Velo?
-
-Most email clients are slow, bloated, or send your data to someone else's server. Velo is different:
+Most email clients are slow, bloated, or send your data to someone else's server. Maish is different:
 
 - **Local-first** -- Your emails live in a local SQLite database. No middleman servers. Read your mail offline.
 - **Keyboard-driven** -- Superhuman-inspired shortcuts let you fly through your inbox without touching the mouse.
@@ -98,7 +86,7 @@ Thread summaries, smart reply suggestions, AI compose & reply, text transform (i
 
 ### Calendar
 
-Google Calendar sync with month, week, and day views. Create events without leaving Velo.
+Google Calendar sync with month, week, and day views. Create events without leaving Maish.
 
 ### UI & Design
 
@@ -131,21 +119,21 @@ Google Calendar sync with month, week, and day views. Create events without leav
 
 Download the latest release for your platform:
 
-**[Download Velo](https://github.com/avihaymenahem/velo/releases/latest)** -- Windows `.msi` / `.exe` &nbsp;&bull;&nbsp; macOS `.dmg` &nbsp;&bull;&nbsp; Linux `.deb` / `.AppImage`
+**[Download Maish](https://github.com/avihaymenahem/velo/releases/latest)** -- Windows `.msi` / `.exe` &nbsp;&bull;&nbsp; macOS `.dmg` &nbsp;&bull;&nbsp; Linux `.deb` / `.AppImage`
 
 No build tools or programming knowledge required -- just download, install, and run.
 
 ### Account setup
 
-**Gmail:** Create OAuth credentials in [Google Cloud Console](https://console.cloud.google.com/) (enable Gmail API + Calendar API), then enter your Client ID in Velo's Settings. No client secret needed (PKCE).
+**Gmail:** Create OAuth credentials in [Google Cloud Console](https://console.cloud.google.com/) (enable Gmail API + Calendar API), then enter your Client ID in Maish's Settings. No client secret needed (PKCE).
 
-**IMAP/SMTP:** Click "Add IMAP Account" in the account switcher. Enter your email and password -- Velo auto-discovers server settings for popular providers (Outlook, Yahoo, iCloud, Fastmail, etc.). For other providers, enter IMAP/SMTP server details manually. No Google Cloud project needed.
+**IMAP/SMTP:** Click "Add IMAP Account" in the account switcher. Enter your email and password -- Maish auto-discovers server settings for popular providers (Outlook, Yahoo, iCloud, Fastmail, etc.). For other providers, enter IMAP/SMTP server details manually. No Google Cloud project needed.
 
 **AI (optional):** Add an API key for [Anthropic](https://console.anthropic.com/), [OpenAI](https://platform.openai.com/), or [Google Gemini](https://aistudio.google.com/) in Settings. Then select which model to use for each provider.
 
 ### Building from source
 
-For developers who want to build Velo themselves or contribute:
+For developers who want to build Maish themselves or contribute:
 
 ```bash
 git clone https://github.com/avihaymenahem/velo.git

@@ -518,7 +518,7 @@ export function SettingsPage() {
                   <Section title="Startup">
                     <ToggleRow
                       label="Launch at login"
-                      description="Start Velo automatically when you log in (minimized to tray)"
+                      description="Start Maish automatically when you log in (minimized to tray)"
                       checked={autostartEnabled}
                       onToggle={handleAutostartToggle}
                     />
@@ -1393,7 +1393,7 @@ export function SettingsPage() {
 
               {activeTab === "about" && (
                 <>
-                  <DeveloperTab />
+                  <DemaishperTab />
                   <AboutTab />
                 </>
               )}
@@ -1574,7 +1574,7 @@ function SyncOfflineSection() {
   );
 }
 
-function DeveloperTab() {
+function DemaishperTab() {
   const [appVersion, setAppVersion] = useState("");
   const [tauriVersion, setTauriVersion] = useState("");
   const [webviewVersion, setWebviewVersion] = useState("");
@@ -1700,12 +1700,12 @@ function DeveloperTab() {
         </div>
       </Section>
 
-      <Section title="Developer Tools">
+      <Section title="Demaishper Tools">
         <div className="flex items-center justify-between">
           <div>
             <span className="text-sm text-text-secondary">Open DevTools</span>
             <p className="text-xs text-text-tertiary mt-0.5">
-              Open the WebView developer tools inspector
+              Open the WebView demaishper tools inspector
             </p>
           </div>
           <Button
@@ -1741,11 +1741,11 @@ function AboutTab() {
 
   return (
     <>
-      <Section title="Velo Mail">
+      <Section title="Maish">
         <div className="flex items-center gap-3 mb-2">
-          <img src={appIcon} alt="Velo" className="w-12 h-12 rounded-xl" />
+          <img src={appIcon} alt="Maish" className="w-12 h-12 rounded-xl" />
           <div>
-            <h3 className="text-base font-semibold text-text-primary">Velo</h3>
+            <h3 className="text-base font-semibold text-text-primary">Maish</h3>
             <p className="text-sm text-text-tertiary">
               {appVersion ? `Version ${appVersion}` : "Loading..."}
             </p>
@@ -1759,37 +1759,37 @@ function AboutTab() {
       <Section title="Links">
         <div className="space-y-1">
           <button
-            onClick={() => openExternal("https://velomail.app")}
+            onClick={() => openExternal("https://maishmail.app")}
             className="flex items-center gap-3 w-full px-4 py-2.5 rounded-lg bg-bg-secondary hover:bg-bg-hover transition-colors text-left"
           >
             <Globe size={16} className="text-text-tertiary shrink-0" />
             <div className="min-w-0 flex-1">
               <span className="text-sm text-text-primary">Website</span>
-              <p className="text-xs text-text-tertiary">velomail.app</p>
+              <p className="text-xs text-text-tertiary">maishmail.app</p>
             </div>
             <ExternalLink size={14} className="text-text-tertiary shrink-0" />
           </button>
 
           <button
-            onClick={() => openExternal("https://github.com/avihaymenahem/velo")}
+            onClick={() => openExternal("https://github.com/avihaymenahem/maish")}
             className="flex items-center gap-3 w-full px-4 py-2.5 rounded-lg bg-bg-secondary hover:bg-bg-hover transition-colors text-left"
           >
             <Github size={16} className="text-text-tertiary shrink-0" />
             <div className="min-w-0 flex-1">
               <span className="text-sm text-text-primary">GitHub Repository</span>
-              <p className="text-xs text-text-tertiary">avihaymenahem/velo</p>
+              <p className="text-xs text-text-tertiary">avihaymenahem/maish</p>
             </div>
             <ExternalLink size={14} className="text-text-tertiary shrink-0" />
           </button>
 
           <button
-            onClick={() => openExternal("mailto:info@velomail.app")}
+            onClick={() => openExternal("mailto:info@maishmail.app")}
             className="flex items-center gap-3 w-full px-4 py-2.5 rounded-lg bg-bg-secondary hover:bg-bg-hover transition-colors text-left"
           >
             <Mail size={16} className="text-text-tertiary shrink-0" />
             <div className="min-w-0 flex-1">
               <span className="text-sm text-text-primary">Contact</span>
-              <p className="text-xs text-text-tertiary">info@velomail.app</p>
+              <p className="text-xs text-text-tertiary">info@maishmail.app</p>
             </div>
             <ExternalLink size={14} className="text-text-tertiary shrink-0" />
           </button>
@@ -1812,7 +1812,7 @@ function AboutTab() {
             </button>
           </p>
           <p className="text-xs text-text-tertiary leading-relaxed">
-            Copyright 2025 Velo Mail. You may use, distribute, and modify this software under the terms of the Apache 2.0 license. This software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND.
+            Copyright 2025 Velo Mail. Copyright 2026 Seemops1337. Maish is a fork of Velo. You may use, distribute, and modify this software under the terms of the Apache 2.0 license. This software is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND.
           </p>
         </div>
       </Section>

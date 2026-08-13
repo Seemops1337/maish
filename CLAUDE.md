@@ -38,20 +38,30 @@ Example:
 Write the handover prompt so it stands on its own: repo path, branch, task,
 relevant files, decisions already made, and what explicitly does not matter.
 
-## This is Maish, a fork of Velo
+## This is Maish
 
-Upstream is `avihaymenahem/velo` (Apache-2.0), remote `origin`. This fork is
-`Seemops1337/maish`, remote `fork`. `NOTICE` lists every modification, as
-Apache-2.0 section 4(b) requires — **keep it current when you change behaviour.**
+Maish began as a fork of Velo (`avihaymenahem/velo`, Apache-2.0) and is now
+maintained independently as `Seemops1337/maish`. Upstream is no longer tracked:
+there is no `upstream` remote, no shared branding, and no plan to send further
+changes there. Five pull requests opened before the split are left open at
+`avihaymenahem/velo`; nothing depends on their outcome.
+
+What Apache-2.0 still requires, and what must therefore stay:
+
+- `LICENSE` — the full licence text
+- `NOTICE` — the record of modifications under section 4(b); **keep it current
+  when you change behaviour**
+- The upstream copyright line in the About panel
+  (`src/components/settings/SettingsPage.tsx`), retained under section 4(c)
+  alongside the Maish one
 
 Identity is `Maish` / `xyz.hochreiner.maish`; the binary is
-`src-tauri/target/release/maish`. Upstream's `com.velomail.app` install can
-coexist, so both may run at once.
+`src-tauri/target/release/maish`.
 
-The fork exists to make the client work against a self-hosted Stalwart server.
-Four changes depart from upstream — see Fork-specific behaviour below: IMAP
-FETCH parentheses, transactions on a dedicated SQLite connection, CalDAV over
-the Rust HTTP client, and CalDAV attaching to an existing account.
+Four behavioural changes carried over from the fork are described under
+Fork-specific behaviour below: IMAP FETCH parentheses, transactions on a
+dedicated SQLite connection, CalDAV over the Rust HTTP client, and CalDAV
+attaching to an existing account.
 
 ## Working rules
 
@@ -59,10 +69,6 @@ the Rust HTTP client, and CalDAV attaching to an existing account.
 either. Branch, commit, verify, then merge. `fix/<slug>` for bugfixes,
 `feat/<slug>` for features, `docs/`, `chore/`, `debug/` for the rest. Throwaway
 branches for instrumentation get deleted once the question is answered.
-
-Branches intended for **upstream** branch off `origin/main`, must stay free of
-Maish branding, and must not carry drive-by refactors — a reviewer should see
-one idea per pull request. Never merge `main` into them.
 
 **Everything in the repository is English.** Code, identifiers, comments,
 commit messages, documentation, `NOTICE`, pull requests, issue comments, UI
@@ -298,8 +304,8 @@ Key tables (37 total): `accounts` (with `provider` "gmail_api"|"imap", IMAP/SMTP
 
 ## Fork-specific behaviour
 
-These four depart from upstream. Each was verified against Stalwart and is
-offered upstream as a pull request.
+These four are why the fork exists. Each was verified against a self-hosted
+Stalwart server.
 
 - **IMAP FETCH data lists are parenthesised** (`src-tauri/src/imap/client.rs`).
   RFC 3501 §6.4.5 requires `(UID FLAGS INTERNALDATE BODY.PEEK[])`; `async-imap`
@@ -334,6 +340,7 @@ offered upstream as a pull request.
 ## Key Gotchas
 
 - **Tauri SQL plugin config**: `preload` in tauri.conf.json must be an array `["sqlite:maish.db"]` — NOT an object/map
+- **Renaming the app identity moves three data artifacts, not one**: the database (`~/.config/<identifier>/maish.db`), the AES key file (`~/.local/share/<identifier>/maish.key`, `KEY_FILE_NAME` in `src/utils/crypto.ts`) and the log directory. Miss the key file and the app silently generates a new one — every stored credential then fails to decrypt, so sync stops without an error dialog. Carry both files over and confirm sync actually runs afterwards, not just that the database has rows
 - **The database filename lives in three places and they must agree**: `preload` in tauri.conf.json, `Database.load()` in `src/services/db/connection.ts`, and the `db_tx` path in `src-tauri/src/lib.rs` `setup()`. Miss one and the app splits in half — pooled reads and writes hit one file while everything inside a transaction hits another, so the UI reads an empty database while sync fills the other one
 - **Tauri Emitter trait**: Must `use tauri::Emitter;` to call `.emit()` on windows
 - **Tauri capabilities**: Any new plugin needs explicit permissions added to `src-tauri/capabilities/default.json`. Windows allow `"main"`, `"splashscreen"`, and `"thread-*"` wildcard
