@@ -2,6 +2,27 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## This is Maish, a fork of Velo
+
+Upstream is `avihaymenahem/velo` (Apache-2.0), remote `origin`. This fork is
+`Seemops1337/maish`, remote `fork`. `NOTICE` lists every modification, as
+Apache-2.0 section 4(b) requires — **keep it current when you change behaviour.**
+
+Identity is `Maish` / `xyz.hochreiner.maish`; the binary is
+`src-tauri/target/release/maish`. Upstream's `com.velomail.app` install can
+coexist, so both may run at once.
+
+The fork exists to make the client work against a self-hosted Stalwart server.
+Four changes depart from upstream — see Fork-specific behaviour below: IMAP
+FETCH parentheses, transactions on a dedicated SQLite connection, CalDAV over
+the Rust HTTP client, and CalDAV attaching to an existing account.
+
+**Branch policy.** `main` carries the fork, rename commits included. Branches
+intended for upstream (`fix/*`, `feat/*`) branch off `origin/main` and must stay
+free of Maish branding — never merge `main` into them. Publishing anything
+(push, PR, issue comment) needs the maintainer's approval of the exact text
+first.
+
 ## Commands
 
 ```bash
@@ -10,6 +31,12 @@ npm run tauri dev
 
 # Build production app
 npm run tauri build
+
+# Release build without installers — what this fork normally uses (~3 min)
+npm run tauri build -- --no-bundle
+
+# Run it (KDE/Wayland: the app needs an X authority handed to it)
+DISPLAY=:0 XAUTHORITY=$(ls -t /run/user/1000/xauth_* | head -1) ./src-tauri/target/release/maish
 
 # Vite dev server only (no Tauri)
 npm run dev
@@ -37,7 +64,7 @@ Tauri v2 desktop app: Rust backend + React 19 frontend communicating via Tauri I
 
 ### Three-layer data flow
 
-1. **Rust backend** (`src-tauri/`): System tray, minimize-to-tray (hide on close), splash screen, OAuth localhost server (port 17248, PKCE), single-instance enforcement, autostart support, IMAP/SMTP client modules. Tauri commands: `start_oauth_server`, `close_splashscreen`, `set_tray_tooltip`, `open_devtools`, plus 11 IMAP commands (`imap_test_connection`, `imap_list_folders`, `imap_fetch_messages`, `imap_fetch_new_uids`, `imap_fetch_message_body`, `imap_set_flags`, `imap_move_messages`, `imap_delete_messages`, `imap_get_folder_status`, `imap_fetch_attachment`, `imap_append_message`) and 2 SMTP commands (`smtp_send_email`, `smtp_test_connection`). Rust IMAP uses `async-imap` + `mail-parser`, SMTP uses `lettre`. Plugins: sql (SQLite), notification, opener, log, dialog, fs, http, single-instance, autostart, deep-link (`mailto:` scheme), global-shortcut. Windows-specific: sets AUMID for proper notification identity.
+1. **Rust backend** (`src-tauri/`): System tray, minimize-to-tray (hide on close), splash screen, OAuth localhost server (port 17248, PKCE), single-instance enforcement, autostart support, IMAP/SMTP client modules. Tauri commands: `start_oauth_server`, `close_splashscreen`, `set_tray_tooltip`, `open_devtools`, 5 transaction commands (`db_tx_begin`, `db_tx_execute`, `db_tx_select`, `db_tx_commit`, `db_tx_rollback`, see Fork-specific behaviour), plus 11 IMAP commands (`imap_test_connection`, `imap_list_folders`, `imap_fetch_messages`, `imap_fetch_new_uids`, `imap_fetch_message_body`, `imap_set_flags`, `imap_move_messages`, `imap_delete_messages`, `imap_get_folder_status`, `imap_fetch_attachment`, `imap_append_message`) and 2 SMTP commands (`smtp_send_email`, `smtp_test_connection`). Rust IMAP uses `async-imap` + `mail-parser`, SMTP uses `lettre`. Plugins: sql (SQLite), notification, opener, log, dialog, fs, http, single-instance, autostart, deep-link (`mailto:` scheme), global-shortcut. Windows-specific: sets AUMID for proper notification identity.
 
 2. **Service layer** (`src/services/`): All business logic. Plain async functions (not classes, except `GmailClient`).
    - `db/` — SQLite queries via `getDb()` singleton from `connection.ts`. Version-tracked migrations in `migrations.ts`. FTS5 full-text search on messages (trigram tokenizer). 32 service files covering accounts, messages, threads, labels, contacts, filters, templates, signatures, attachments, scheduled emails, image allowlist, search, settings, AI cache, bundle rules, calendar events, follow-up reminders, notification VIPs, thread categories, send-as aliases, smart folders, quick steps, link scan results, phishing allowlist, folder sync state, and smart label rules.
@@ -167,24 +194,62 @@ Tailwind CSS v4 — uses `@import "tailwindcss"`, `@theme {}` for custom propert
 
 Vitest + jsdom. Setup file: `src/test/setup.ts` (imports `@testing-library/jest-dom/vitest`). Config: `globals: true` (no imports needed for `describe`, `it`, `expect`). Tests are colocated with source files (e.g., `uiStore.test.ts` next to `uiStore.ts`). Zustand test pattern: `useStore.setState()` in beforeEach, assert via `.getState()`.
 
-132 test files across stores (8), services (70), utils (14), components (32), constants (3), router (1), hooks (2), and config (1).
+134 test files across stores (8), services (70), utils (14), components (32), constants (3), router (1), hooks (2), and config (1).
 
 ## Database
 
-SQLite via Tauri SQL plugin. 19 migrations (version-tracked in `_migrations` table, transactional). Custom `splitStatements()` handles BEGIN...END blocks in triggers.
+SQLite via Tauri SQL plugin. 23 migrations (version-tracked in `_migrations` table, transactional). Custom `splitStatements()` handles BEGIN...END blocks in triggers.
+
+Data lives in `~/.config/xyz.hochreiner.maish/maish.db` (WAL), logs in `~/.local/share/xyz.hochreiner.maish/logs/Maish.log`. The frontend has no log forwarding, so `console.log` never reaches that file — to trace frontend behaviour, add a temporary `#[tauri::command]` that calls `log::warn!` (app-level commands need no capability entry) rather than guessing.
 
 Key tables (37 total): `accounts` (with `provider` "gmail_api"|"imap", IMAP/SMTP host/port/security fields, `auth_method`, encrypted `imap_password`, optional `imap_username`), `messages` (with FTS5 index `messages_fts`, `auth_results`, `message_id_header`, `references_header`, `in_reply_to_header`, `imap_uid`, `imap_folder`), `threads` (with `is_pinned`, `is_muted`), `thread_labels`, `labels` (with `imap_folder_path`, `imap_special_use`), `contacts` (frequency-ranked for autocomplete, with `first_contacted_at`), `attachments` (with `cached_at`, `cache_size`, `imap_part_id`), `filter_rules` (criteria/actions as JSON), `scheduled_emails` (status: pending/sent/failed), `templates` (with optional keyboard shortcut), `signatures`, `image_allowlist`, `settings` (key-value store), `ai_cache`, `thread_categories`, `calendar_events`, `follow_up_reminders`, `notification_vips`, `unsubscribe_actions`, `bundle_rules`, `bundled_threads`, `send_as_aliases`, `smart_folders`, `link_scan_results`, `phishing_allowlist`, `quick_steps`, `folder_sync_state` (IMAP UIDVALIDITY/last_uid/modseq tracking per folder), `pending_operations` (offline action queue with retry/backoff), `local_drafts` (offline draft persistence), `writing_style_profiles` (AI writing style per account), `tasks` (full task management with priorities, subtasks, recurrence), `task_tags` (custom task tag colors), `smart_label_rules` (AI auto-labeling rules with optional criteria), `_migrations`.
 
+## Fork-specific behaviour
+
+These four depart from upstream. Each was verified against Stalwart and is
+offered upstream as a pull request.
+
+- **IMAP FETCH data lists are parenthesised** (`src-tauri/src/imap/client.rs`).
+  RFC 3501 §6.4.5 requires `(UID FLAGS INTERNALDATE BODY.PEEK[])`; `async-imap`
+  forwards the string verbatim. Dovecot tolerates the unparenthesised form,
+  Stalwart evaluates only the leading `UID` and answers without `BODY[]` — the
+  fetch succeeds and every message arrives empty
+- **Transactions run on a dedicated SQLite connection**, not the plugin's pool
+  (`src-tauri/src/db_tx.rs`, `src/services/db/connection.ts`). `tauri-plugin-sql`
+  calls `Pool::connect()`, so `BEGIN`, the statements and `COMMIT` would each
+  land on a different pooled connection — the one holding `BEGIN` keeps the
+  write lock while the others block on it. `withTransaction()` uses the
+  `db_tx_*` commands, and `getDb()` returns that same connection while a
+  transaction is open so the db modules join it. `PRAGMA busy_timeout` does not
+  fix this; it turns the immediate error into an indefinite hang. Two caveats:
+  `lastInsertId` is always `0` on that connection, and UI reads during a
+  transaction see uncommitted state
+- **CalDAV runs over `@tauri-apps/plugin-http`**, never the webview
+  (`src/services/calendar/davFetch.ts`). DAV servers send no CORS headers, so a
+  webview PROPFIND always fails with `Load failed`, whatever `connect-src`
+  allows. **Every `DAVClient` must be constructed with `fetch: davFetch`** —
+  tsdav resolves its transport once at import time and prefers
+  `globalThis.fetch`, so patching the global or aliasing `cross-fetch` does
+  nothing. `davFetch` also translates `redirect: "manual"` into
+  `maxRedirections: 0`, without which RFC 6764 discovery silently follows the
+  `/.well-known/caldav` hop and never sees the 3xx
+- **CalDAV settings attach to an existing account** (`saveCalDavAccount()` in
+  `src/services/db/accounts.ts`). `accounts.email` is UNIQUE and a calendar
+  usually belongs to an address that already has a mail account, so inserting a
+  second row fails. Discovery additionally probes `accounts.imap_host`, because
+  self-hosted setups routinely split mail domain and server host
+
 ## Key Gotchas
 
-- **Tauri SQL plugin config**: `preload` in tauri.conf.json must be an array `["sqlite:velo.db"]` — NOT an object/map
+- **Tauri SQL plugin config**: `preload` in tauri.conf.json must be an array `["sqlite:maish.db"]` — NOT an object/map
+- **The database filename lives in three places and they must agree**: `preload` in tauri.conf.json, `Database.load()` in `src/services/db/connection.ts`, and the `db_tx` path in `src-tauri/src/lib.rs` `setup()`. Miss one and the app splits in half — pooled reads and writes hit one file while everything inside a transaction hits another, so the UI reads an empty database while sync fills the other one
 - **Tauri Emitter trait**: Must `use tauri::Emitter;` to call `.emit()` on windows
 - **Tauri capabilities**: Any new plugin needs explicit permissions added to `src-tauri/capabilities/default.json`. Windows allow `"main"`, `"splashscreen"`, and `"thread-*"` wildcard
 - **Tauri window config**: Custom titlebar — macOS uses `titleBarStyle: "Overlay"`, Windows/Linux removes decorations programmatically in Rust setup. 1200x800 default, 800x600 minimum. Splash screen: 400x300, no decorations, center, always on top
 - **Single instance**: `tauri-plugin-single-instance` must be first plugin registered. Forwards args for deep linking
 - **Minimize-to-tray**: Use `.on_window_event()` on the Builder, not `window.on_window_event()`
 - **Windows WebView2**: `Chrome_WidgetWin_0` error on close is benign — ignore it
-- **Windows AUMID**: Set explicitly in Rust for proper notification identity (`com.velomail.app`)
+- **Windows AUMID**: Set explicitly in Rust for proper notification identity (`xyz.hochreiner.maish`)
 - **OAuth (Gmail)**: Localhost server tries ports 17248-17251. PKCE flow, no client secret. Client ID stored in SQLite settings table, configured by user in Settings
 - **IMAP message IDs**: Format is `imap-{accountId}-{folder}-{uid}` — not the RFC Message-ID header
 - **IMAP security mapping**: UI shows "SSL/TLS", "STARTTLS", "None" but config stores "ssl", "starttls", "none"
