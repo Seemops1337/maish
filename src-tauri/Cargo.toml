@@ -45,6 +45,8 @@ base64 = "0.22"
 utf7-imap = "0.3"
 socket2 = "0.5"
 reqwest = { version = "0.12", default-features = false, features = ["native-tls", "json"] }
+# Same major/minor as the one tauri-plugin-sql pulls in, so cargo unifies them.
+sqlx = { version = "0.8", default-features = false, features = ["sqlite", "runtime-tokio"] }
 
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.58", features = ["Win32_UI_Shell"] }
