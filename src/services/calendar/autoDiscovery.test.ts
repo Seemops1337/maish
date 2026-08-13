@@ -1,12 +1,22 @@
+import { fetch as tauriFetch } from "@tauri-apps/plugin-http";
 import { discoverCalDavSettings, testCalDavConnection } from "./autoDiscovery";
+import { davFetch } from "./davFetch";
 
 vi.mock("tsdav", () => ({
   DAVClient: vi.fn(),
 }));
 
+// Discovery goes through the Rust HTTP client, not the webview's fetch.
+vi.mock("@tauri-apps/plugin-http", () => ({
+  fetch: vi.fn(),
+}));
+
+const mockDavFetch = vi.mocked(tauriFetch);
+
 describe("discoverCalDavSettings", () => {
   afterEach(() => {
     vi.restoreAllMocks();
+    mockDavFetch.mockReset();
   });
 
   it("returns Google preset for gmail.com", async () => {
@@ -45,10 +55,7 @@ describe("discoverCalDavSettings", () => {
   });
 
   it("returns null caldavUrl for unknown domain with no .well-known", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockRejectedValue(new Error("Network error")),
-    );
+    mockDavFetch.mockRejectedValue(new Error("Network error"));
 
     const result = await discoverCalDavSettings("user@unknown-domain.example");
     expect(result).toEqual({
@@ -59,17 +66,27 @@ describe("discoverCalDavSettings", () => {
     });
   });
 
-  it("returns redirect Location for unknown domain with .well-known 301", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue({
-        status: 301,
-        ok: false,
-        headers: new Headers({
-          Location: "https://caldav.unknown-domain.example/dav/",
-        }),
+  it("returns redirect Location for unknown domain with .well-known 307", async () => {
+    mockDavFetch.mockResolvedValue({
+      status: 307,
+      ok: false,
+      headers: new Headers({
+        Location: "https://unknown-domain.example/dav/cal",
       }),
-    );
+    } as Response);
+
+    const result = await discoverCalDavSettings("user@unknown-domain.example");
+    expect(result.caldavUrl).toBe("https://unknown-domain.example/dav/cal");
+  });
+
+  it("returns redirect Location for unknown domain with .well-known 301", async () => {
+    mockDavFetch.mockResolvedValue({
+      status: 301,
+      ok: false,
+      headers: new Headers({
+        Location: "https://caldav.unknown-domain.example/dav/",
+      }),
+    } as Response);
 
     const result = await discoverCalDavSettings("user@unknown-domain.example");
     expect(result).toEqual({
@@ -105,6 +122,26 @@ describe("testCalDavConnection", () => {
       success: true,
       message: "Connected — found 2 calendars",
       calendarCount: 2,
+    });
+  });
+
+  it("routes DAV requests through the Rust HTTP client", async () => {
+    const { DAVClient } = await import("tsdav");
+
+    vi.mocked(DAVClient).mockImplementation(function () {
+      return {
+        login: vi.fn().mockResolvedValue(undefined),
+        fetchCalendars: vi.fn().mockResolvedValue([]),
+      } as unknown as InstanceType<typeof DAVClient>;
+    });
+
+    await testCalDavConnection("https://caldav.example.com", "user", "pass");
+
+    // tsdav resolves globalThis.fetch at import time and only falls back to
+    // cross-fetch, so the override has to be handed to the client explicitly —
+    // otherwise the webview issues the request and CORS kills it.
+    expect(vi.mocked(DAVClient).mock.calls[0]?.[0]).toMatchObject({
+      fetch: davFetch,
     });
   });
 

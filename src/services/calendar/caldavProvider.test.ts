@@ -1,4 +1,10 @@
+import { DAVClient } from "tsdav";
 import { CalDAVProvider } from "./caldavProvider";
+import { davFetch } from "./davFetch";
+
+vi.mock("@tauri-apps/plugin-http", () => ({
+  fetch: vi.fn(),
+}));
 
 const MOCK_ICAL_DATA =
   "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:test-uid\r\nSUMMARY:Test Event\r\nDTSTART:20240101T100000Z\r\nDTEND:20240101T110000Z\r\nEND:VEVENT\r\nEND:VCALENDAR";
@@ -41,6 +47,18 @@ describe("CalDAVProvider", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     provider = new CalDAVProvider("acc-1");
+  });
+
+  it("routes DAV requests through the Rust HTTP client", async () => {
+    mockFetchCalendars.mockResolvedValue([]);
+
+    await provider.listCalendars();
+
+    // Without an explicit override tsdav uses the webview's fetch, whose
+    // requests DAV servers answer without CORS headers.
+    expect(vi.mocked(DAVClient).mock.calls[0]?.[0]).toMatchObject({
+      fetch: davFetch,
+    });
   });
 
   describe("listCalendars", () => {
