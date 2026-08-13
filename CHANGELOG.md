@@ -1,5 +1,9 @@
 # Changelog
 
+Maish restarted versioning at 0.1.0 when it forked. Everything below 0.4.21 and
+older is Velo's release history, kept for reference — those version numbers do
+not correspond to Maish releases.
+
 ## [0.4.21](https://github.com/avihaymenahem/velo/compare/velo-v0.4.20...velo-v0.4.21) (2026-02-27)
 
 
