@@ -1,5 +1,5 @@
 [package]
-name = "velo"
+name = "maish"
 version = "0.4.21" # x-release-please-version
 description = "Email at the speed of thought"
 authors = ["Avihay"]
