@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { TextField } from "@/components/ui/TextField";
-import { insertCalDavAccount } from "@/services/db/accounts";
+import { saveCalDavAccount } from "@/services/db/accounts";
 import { useAccountStore } from "@/stores/accountStore";
 import { discoverCalDavSettings, testCalDavConnection } from "@/services/calendar/autoDiscovery";
 
@@ -41,6 +41,7 @@ export function AddCalDavAccount({ onClose, onSuccess, onBack }: AddCalDavAccoun
 
   // Creating account
   const [creating, setCreating] = useState(false);
+  const [attachedToExisting, setAttachedToExisting] = useState(false);
 
   const handleDiscoverAndNext = useCallback(async () => {
     if (!email.trim()) return;
@@ -68,9 +69,8 @@ export function AddCalDavAccount({ onClose, onSuccess, onBack }: AddCalDavAccoun
   const handleCreate = useCallback(async () => {
     setCreating(true);
     try {
-      const id = crypto.randomUUID();
-      await insertCalDavAccount({
-        id,
+      const { accountId, attachedToExisting } = await saveCalDavAccount({
+        id: crypto.randomUUID(),
         email,
         displayName: displayName || null,
         caldavUrl,
@@ -78,18 +78,26 @@ export function AddCalDavAccount({ onClose, onSuccess, onBack }: AddCalDavAccoun
         caldavPassword: password,
       });
 
-      addAccount({
-        id,
-        email,
-        displayName: displayName || null,
-        avatarUrl: null,
-        isActive: true,
-      });
+      // An existing account is already in the store — adding it again would
+      // duplicate it in the switcher.
+      if (!attachedToExisting) {
+        addAccount({
+          id: accountId,
+          email,
+          displayName: displayName || null,
+          avatarUrl: null,
+          isActive: true,
+        });
+      }
 
+      setAttachedToExisting(attachedToExisting);
       setStep("done");
     } catch (err) {
       console.error("Failed to create CalDAV account:", err);
-      setTestResult({ success: false, message: "Failed to save account" });
+      setTestResult({
+        success: false,
+        message: err instanceof Error ? err.message : "Failed to save account",
+      });
     } finally {
       setCreating(false);
     }
@@ -270,9 +278,13 @@ export function AddCalDavAccount({ onClose, onSuccess, onBack }: AddCalDavAccoun
         {step === "done" && (
           <div className="text-center py-6">
             <CheckCircle2 size={32} className="text-success mx-auto mb-3" />
-            <p className="text-sm font-medium text-text-primary">CalDAV account added!</p>
+            <p className="text-sm font-medium text-text-primary">
+              {attachedToExisting ? "CalDAV calendar connected!" : "CalDAV account added!"}
+            </p>
             <p className="text-xs text-text-tertiary mt-1">
-              Your calendars will sync automatically.
+              {attachedToExisting
+                ? `Added to your existing ${email} account. Your calendars will sync automatically.`
+                : "Your calendars will sync automatically."}
             </p>
             <button
               onClick={onSuccess}

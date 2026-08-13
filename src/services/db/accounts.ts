@@ -248,6 +248,38 @@ export async function insertCalDavAccount(account: {
   );
 }
 
+/**
+ * Store CalDAV settings for an address, creating the account only if needed.
+ *
+ * `accounts.email` is UNIQUE, and a CalDAV calendar usually belongs to an
+ * address that already has a mail account — inserting a second row for it fails
+ * with "UNIQUE constraint failed: accounts.email". Reports which account now
+ * carries the settings so callers can tell the two cases apart.
+ */
+export async function saveCalDavAccount(account: {
+  id: string;
+  email: string;
+  displayName: string | null;
+  caldavUrl: string;
+  caldavUsername: string;
+  caldavPassword: string;
+}): Promise<{ accountId: string; attachedToExisting: boolean }> {
+  const existing = await getAccountByEmail(account.email);
+
+  if (existing) {
+    await updateAccountCalDav(existing.id, {
+      caldavUrl: account.caldavUrl,
+      caldavUsername: account.caldavUsername,
+      caldavPassword: account.caldavPassword,
+      calendarProvider: "caldav",
+    });
+    return { accountId: existing.id, attachedToExisting: true };
+  }
+
+  await insertCalDavAccount(account);
+  return { accountId: account.id, attachedToExisting: false };
+}
+
 export async function updateAccountCalDav(
   accountId: string,
   fields: {
