@@ -2,6 +2,42 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Token hygiene — say this out loud, repeatedly
+
+**Recommend a fresh session whenever the topic changes, and again once a session
+has run long.** Do not wait to be asked, and do not mention it once and drop it.
+A user who declines still gets reminded at the next topic change.
+
+The reason is **quality, not cost**. Everything already in the window competes
+for attention: an unrelated debugging thread from an hour ago pulls answers
+toward stale files and dead hypotheses. Once the window fills, automatic
+compaction summarises the history and silently discards detail — often the one
+constraint that mattered. A fresh session with a written handover keeps the
+signal and drops the noise.
+
+Every reminder has **two parts**:
+
+1. Two to four sentences of plain language — what is about to be lost and why a
+   new session is the better move. No jargon, no token counts.
+2. A ready-to-paste prompt as a blockquote, so the next session starts warm.
+
+Example:
+
+> We have been on the CalDAV transport for a while, and you are now asking about
+> packaging — a different corner of the project. The old thread will keep pulling
+> my attention toward files that no longer matter, and once the history gets
+> compacted I may lose the details that made the fix work. Better to start fresh
+> and carry over only what counts. Paste this:
+>
+> > Maish (fork of Velo), `/home/simon/Desktop/github/velo`, branch `main`.
+> > Read `CLAUDE.md` first. Task: build Flatpak packaging for the renamed app.
+> > Relevant files: `xyz.hochreiner.maish.yml`, `maish.spec`. The rename to
+> > `xyz.hochreiner.maish` is done and pushed; the app identifier, database file
+> > and packaging metadata all moved. Nothing about CalDAV is needed here.
+
+Write the handover prompt so it stands on its own: repo path, branch, task,
+relevant files, decisions already made, and what explicitly does not matter.
+
 ## This is Maish, a fork of Velo
 
 Upstream is `avihaymenahem/velo` (Apache-2.0), remote `origin`. This fork is
@@ -17,11 +53,61 @@ Four changes depart from upstream — see Fork-specific behaviour below: IMAP
 FETCH parentheses, transactions on a dedicated SQLite connection, CalDAV over
 the Rust HTTP client, and CalDAV attaching to an existing account.
 
-**Branch policy.** `main` carries the fork, rename commits included. Branches
-intended for upstream (`fix/*`, `feat/*`) branch off `origin/main` and must stay
-free of Maish branding — never merge `main` into them. Publishing anything
-(push, PR, issue comment) needs the maintainer's approval of the exact text
-first.
+## Working rules
+
+**Branch per change.** Never commit to `main` directly — not for a one-line fix
+either. Branch, commit, verify, then merge. `fix/<slug>` for bugfixes,
+`feat/<slug>` for features, `docs/`, `chore/`, `debug/` for the rest. Throwaway
+branches for instrumentation get deleted once the question is answered.
+
+Branches intended for **upstream** branch off `origin/main`, must stay free of
+Maish branding, and must not carry drive-by refactors — a reviewer should see
+one idea per pull request. Never merge `main` into them.
+
+**Publishing needs approval.** Push, pull request, issue comment: draft the
+exact text, show it, wait. Local branches and commits need no permission.
+
+**Look it up instead of recalling it.** Library behaviour, RFC wording, API
+shapes and config keys get read from the source — the installed package under
+`node_modules`, the crate source, the actual RFC, current documentation on the
+web. Memory of a library is a snapshot of some past version and is wrong often
+enough to cost more time than the lookup. Two examples from this repository, both
+of which cost a full debugging round because they were assumed rather than read:
+tsdav prefers `globalThis.fetch` and treats `cross-fetch` as a fallback, and
+`@tauri-apps/plugin-http` ignores `redirect` and understands only
+`maxRedirections`.
+
+**Evidence before claims.** Do not report something as fixed, passing or done
+without having run the command and read the output. When a bug is not
+understood, instrument the boundaries and read what actually happens rather than
+reasoning forward from a plausible story — the guess is wrong often enough that
+the instrumentation is cheaper. Bugfixes start with a failing test.
+
+**Corrections go in NOTICE.** Any behavioural change to forked code is a
+modification under Apache-2.0 section 4(b) and belongs in `NOTICE`.
+
+## Versioning
+
+Semantic versioning, currently **0.1.0** — the fork restarted its numbering and
+does not continue Velo's 0.4.x line. `CHANGELOG.md` still holds Velo's history
+below that, marked as such.
+
+| Change | Bump | Commit type |
+|---|---|---|
+| Bugfix | +0.0.1 | `fix:` |
+| Feature | +0.1.0 | `feat:` |
+| First stable release | 1.0.0 | manual |
+
+release-please derives the bump from Conventional Commit types, so the commit
+type is the version decision — `docs:`, `chore:`, `refactor:`, `test:` and `ci:`
+trigger no release. `bump-minor-pre-major` keeps breaking changes at a minor
+bump until 1.0.0 is cut deliberately.
+
+The version appears in `package.json`, `src-tauri/Cargo.toml`,
+`src-tauri/tauri.conf.json`, `maish.spec`,
+`xyz.hochreiner.maish.metainfo.xml` and `.release-please-manifest.json`.
+release-please keeps them in sync; edit them by hand only when changing the
+scheme itself.
 
 ## Commands
 
