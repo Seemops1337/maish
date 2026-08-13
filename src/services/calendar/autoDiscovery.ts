@@ -39,6 +39,7 @@ const PRESETS: CalDavPreset[] = [
 ];
 
 import { davFetch } from "./davFetch";
+import { getAccountByEmail } from "@/services/db/accounts";
 
 export interface CalDavDiscoveryResult {
   providerName: string | null;
@@ -69,29 +70,55 @@ export async function discoverCalDavSettings(email: string): Promise<CalDavDisco
     }
   }
 
+  const hosts = await candidateHosts(email, domain);
+
   // Attempt .well-known/caldav discovery (RFC 6764)
-  const wellKnownUrl = await tryWellKnownDiscovery(domain);
-  if (wellKnownUrl) {
-    return {
-      providerName: null,
-      caldavUrl: wellKnownUrl,
-      authMethod: "basic",
-      needsAppPassword: false,
-    };
+  for (const host of hosts) {
+    const wellKnownUrl = await tryWellKnownDiscovery(host);
+    if (wellKnownUrl) {
+      return {
+        providerName: null,
+        caldavUrl: wellKnownUrl,
+        authMethod: "basic",
+        needsAppPassword: false,
+      };
+    }
   }
 
   // Try common Nextcloud path
-  const nextcloudUrl = await tryNextcloudDiscovery(domain);
-  if (nextcloudUrl) {
-    return {
-      providerName: "Nextcloud",
-      caldavUrl: nextcloudUrl,
-      authMethod: "basic",
-      needsAppPassword: false,
-    };
+  for (const host of hosts) {
+    const nextcloudUrl = await tryNextcloudDiscovery(host);
+    if (nextcloudUrl) {
+      return {
+        providerName: "Nextcloud",
+        caldavUrl: nextcloudUrl,
+        authMethod: "basic",
+        needsAppPassword: false,
+      };
+    }
   }
 
   return { providerName: null, caldavUrl: null, authMethod: "basic", needsAppPassword: false };
+}
+
+/**
+ * Hosts worth probing for this address, most likely first.
+ *
+ * Deriving the host from the address alone only holds where mail domain and
+ * server domain coincide. Self-hosted setups routinely split them — the address
+ * lives on a bare domain that serves no .well-known, while the CalDAV endpoint
+ * sits on the mail server. That host is already known from the IMAP setup.
+ */
+async function candidateHosts(email: string, domain: string): Promise<string[]> {
+  const hosts = [domain];
+
+  const account = await getAccountByEmail(email).catch(() => null);
+  const mailHost = account?.imap_host?.toLowerCase();
+  if (mailHost && !hosts.includes(mailHost)) {
+    hosts.push(mailHost);
+  }
+
+  return hosts;
 }
 
 async function tryWellKnownDiscovery(domain: string): Promise<string | null> {
