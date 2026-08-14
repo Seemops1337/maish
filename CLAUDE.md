@@ -303,7 +303,7 @@ Tailwind CSS v4 — uses `@import "tailwindcss"`, `@theme {}` for custom propert
 
 Vitest + jsdom. Setup file: `src/test/setup.ts` (imports `@testing-library/jest-dom/vitest`). Config: `globals: true` (no imports needed for `describe`, `it`, `expect`). Tests are colocated with source files (e.g., `uiStore.test.ts` next to `uiStore.ts`). Zustand test pattern: `useStore.setState()` in beforeEach, assert via `.getState()`.
 
-138 test files across stores (8), services (76), utils (14), components (33), constants (3), router (1), hooks (2), and config (1).
+139 test files across stores (8), services (76), utils (14), components (34), constants (3), router (1), hooks (2), and config (1).
 
 ## Database
 
@@ -341,7 +341,13 @@ Stalwart server.
   `globalThis.fetch`, so patching the global or aliasing `cross-fetch` does
   nothing. `davFetch` also translates `redirect: "manual"` into
   `maxRedirections: 0`, without which RFC 6764 discovery silently follows the
-  `/.well-known/caldav` hop and never sees the 3xx
+  `/.well-known/caldav` hop and never sees the 3xx. Two further traps live in
+  the same library: it merges a call's parameters over the client's defaults
+  one level deep, so a `headers` argument **replaces** the authorization header
+  set at login and every write comes back 401 — pass the etag on the calendar
+  object and let tsdav build the `If-Match` itself; and its write functions
+  return the raw response and throw only on a transport failure, so a status
+  has to be checked or a 401 or 412 passes for a successful save
 - **CalDAV settings attach to an existing account** (`saveCalDavAccount()` in
   `src/services/db/accounts.ts`). `accounts.email` is UNIQUE and a calendar
   usually belongs to an address that already has a mail account, so inserting a

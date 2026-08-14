@@ -40,6 +40,20 @@ Modifications made in this fork, as required by section 4(b) of the License:
   calendar object instead of regenerating the VEVENT, which previously
   discarded the recurrence rule, time zone, alarms and per-instance overrides.
   Single occurrences can be changed or removed separately from their series.
+- src/services/calendar/errors.ts (added),
+  src/services/calendar/caldavProvider.ts, src/services/calendar/icalEdit.ts,
+  src/services/calendar/recurrence.ts, src/services/calendar/types.ts,
+  src/services/calendar/googleCalendarProvider.ts,
+  src/components/calendar/EventDetailModal.tsx — corrections to the CalDAV
+  write paths. If-Match is now taken from the calendar object's etag rather
+  than passed as a headers parameter, which tsdav merges over the
+  authorization header so every PUT and DELETE was refused with 401. A refused
+  write raises an error instead of being reported as saved, with 412 shown as
+  a conflict. Splitting a series stores the remainder before bounding the
+  original and takes it back if that fails, and rebases the rule's COUNT so
+  the two halves add up to the original series. UNTIL is written with the
+  value type DTSTART uses, and cutting a series before its first instance
+  deletes the object instead of leaving a series that has no instances.
 - src/components/email/EmailRenderer.tsx, public/emailFrame.js (added) — the
   email body frame reports link clicks and its height over postMessage instead
   of relying on a listener the app attaches to the frame document, which WebKit
