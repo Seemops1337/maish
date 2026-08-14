@@ -1,6 +1,7 @@
 import { DAVClient } from "tsdav";
 import { CalDAVProvider } from "./caldavProvider";
 import { davFetch } from "./davFetch";
+import { CalendarWriteError } from "./errors";
 
 vi.mock("@tauri-apps/plugin-http", () => ({
   fetch: vi.fn(),
@@ -12,12 +13,16 @@ const MOCK_ICAL_DATA =
 const MOCK_ICAL_DATA_2 =
   "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:test-uid-2\r\nSUMMARY:Second Event\r\nDTSTART:20240102T140000Z\r\nDTEND:20240102T150000Z\r\nEND:VEVENT\r\nEND:VCALENDAR";
 
+/** tsdav hands back the raw fetch response, whatever the status. */
+const davResponse = (status: number, statusText = "") =>
+  new Response(null, { status, statusText });
+
 const mockLogin = vi.fn().mockResolvedValue(undefined);
 const mockFetchCalendars = vi.fn();
 const mockFetchCalendarObjects = vi.fn();
-const mockCreateCalendarObject = vi.fn().mockResolvedValue(undefined);
-const mockUpdateCalendarObject = vi.fn().mockResolvedValue(undefined);
-const mockDeleteCalendarObject = vi.fn().mockResolvedValue(undefined);
+const mockCreateCalendarObject = vi.fn().mockResolvedValue(davResponse(201));
+const mockUpdateCalendarObject = vi.fn().mockResolvedValue(davResponse(204));
+const mockDeleteCalendarObject = vi.fn().mockResolvedValue(davResponse(204));
 
 vi.mock("tsdav", () => {
   const MockDAVClient = vi.fn(function (this: Record<string, unknown>) {
@@ -357,6 +362,60 @@ describe("CalDAVProvider", () => {
           etag: undefined,
         },
       });
+    });
+  });
+
+  /**
+   * tsdav returns the raw response and never throws on an error status, so a
+   * refused write used to reach the UI as a success.
+   */
+  describe("writes the server refuses", () => {
+    beforeEach(() => {
+      mockFetchCalendarObjects.mockResolvedValue([
+        { data: MOCK_ICAL_DATA, url: "/cal/personal/test-uid.ics", etag: '"old-etag"' },
+      ]);
+    });
+
+    it("reports a failed update as a conflict when the etag no longer matches", async () => {
+      mockUpdateCalendarObject.mockResolvedValueOnce(davResponse(412, "Precondition Failed"));
+
+      const failure = provider.updateEvent(
+        "/cal/personal/",
+        "/cal/personal/test-uid.ics",
+        { summary: "Updated Event" },
+        '"stale-etag"',
+      );
+
+      await expect(failure).rejects.toBeInstanceOf(CalendarWriteError);
+      await expect(failure).rejects.toMatchObject({ status: 412, isConflict: true });
+    });
+
+    it("throws on any other error status", async () => {
+      mockUpdateCalendarObject.mockResolvedValueOnce(davResponse(401, "Unauthorized"));
+
+      await expect(
+        provider.updateEvent("/cal/personal/", "/cal/personal/test-uid.ics", { summary: "x" }),
+      ).rejects.toMatchObject({ status: 401, isConflict: false });
+    });
+
+    it("throws when creating an event fails", async () => {
+      mockCreateCalendarObject.mockResolvedValueOnce(davResponse(507, "Insufficient Storage"));
+
+      await expect(
+        provider.createEvent("/cal/personal/", {
+          summary: "New Meeting",
+          startTime: "2024-03-15T09:00:00Z",
+          endTime: "2024-03-15T10:00:00Z",
+        }),
+      ).rejects.toMatchObject({ status: 507 });
+    });
+
+    it("throws when deleting fails", async () => {
+      mockDeleteCalendarObject.mockResolvedValueOnce(davResponse(412, "Precondition Failed"));
+
+      await expect(
+        provider.deleteEvent("/cal/personal/", "/cal/personal/test-uid.ics", '"stale-etag"'),
+      ).rejects.toMatchObject({ status: 412, isConflict: true });
     });
   });
 

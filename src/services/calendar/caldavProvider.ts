@@ -19,6 +19,7 @@ import {
   truncateSeriesBefore,
   type EventEdits,
 } from "./icalEdit";
+import { CalendarWriteError } from "./errors";
 import { getAccount } from "@/services/db/accounts";
 
 export class CalDAVProvider implements CalendarProvider {
@@ -91,11 +92,12 @@ export class CalDAVProvider implements CalendarProvider {
     const icalData = generateVEvent(event, uid);
     const filename = `${uid}.ics`;
 
-    await client.createCalendarObject({
+    const response = await client.createCalendarObject({
       calendar: { url: calendarRemoteId } as DAVCalendar,
       filename,
       iCalString: icalData,
     });
+    assertWritten(response, "Creating the event");
 
     const parsed = parseVEvent(icalData, `${calendarRemoteId}${filename}`);
     return parsed;
@@ -128,11 +130,12 @@ export class CalDAVProvider implements CalendarProvider {
       const uid = crypto.randomUUID();
       const tail = splitSeriesFrom(existing.data, occurrence.recurrenceId, uid, edits);
       const filename = `${uid}.ics`;
-      await client.createCalendarObject({
+      const created = await client.createCalendarObject({
         calendar: { url: calendarRemoteId } as DAVCalendar,
         filename,
         iCalString: tail,
       });
+      assertWritten(created, "Saving the rest of the series");
 
       return parseVEvent(tail, `${calendarRemoteId}${filename}`);
     }
@@ -164,12 +167,13 @@ export class CalDAVProvider implements CalendarProvider {
       return;
     }
 
-    await client.deleteCalendarObject({
+    const response = await client.deleteCalendarObject({
       calendarObject: {
         url: remoteEventId,
         etag: etag ?? undefined,
       } as DAVObject,
     });
+    assertWritten(response, "Deleting the event");
   }
 
   private async fetchObject(
@@ -202,9 +206,10 @@ export class CalDAVProvider implements CalendarProvider {
     icalData: string,
     etag?: string,
   ): Promise<void> {
-    await client.updateCalendarObject({
+    const response = await client.updateCalendarObject({
       calendarObject: { url, data: icalData, etag: etag ?? undefined } as DAVObject,
     });
+    assertWritten(response, "Saving the event");
   }
 
   async syncEvents(calendarRemoteId: string, _syncToken?: string): Promise<CalendarSyncResult> {
@@ -252,6 +257,26 @@ export class CalDAVProvider implements CalendarProvider {
       return { success: false, message: err instanceof Error ? err.message : "Connection failed" };
     }
   }
+}
+
+/**
+ * Turn a refused write into an error.
+ *
+ * tsdav returns whatever the server answered and throws only on a transport
+ * failure, so a 401 or a 412 would otherwise pass for a successful save.
+ */
+function assertWritten(response: Response, what: string): void {
+  if (response.ok) return;
+
+  if (response.status === 412) {
+    throw new CalendarWriteError(
+      `${what} failed: it changed on the server since it was loaded`,
+      412,
+    );
+  }
+
+  const detail = response.statusText ? `${response.status} ${response.statusText}` : `${response.status}`;
+  throw new CalendarWriteError(`${what} failed: ${detail}`, response.status);
 }
 
 /** The composer speaks ISO strings; the iCal editor works in epoch seconds. */

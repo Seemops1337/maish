@@ -8,6 +8,7 @@ import type { DbCalendar } from "@/services/db/calendars";
 import type { OccurrenceTarget, RecurrenceScope } from "@/services/calendar/types";
 import { getCalendarProvider } from "@/services/calendar/providerFactory";
 import { describeRule } from "@/services/calendar/recurrence";
+import { CalendarWriteError } from "@/services/calendar/errors";
 import { deleteCalendarEvent as deleteCalendarEventDb } from "@/services/db/calendarEvents";
 
 interface EventDetailModalProps {
@@ -35,6 +36,7 @@ export function EventDetailModal({ event, calendars, accountId, onClose, onUpdat
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [scope, setScope] = useState<RecurrenceScope>("this");
+  const [error, setError] = useState<string | null>(null);
 
   const calendar = calendars.find((c) => c.id === event.calendar_id);
 
@@ -50,6 +52,7 @@ export function EventDetailModal({ event, calendars, accountId, onClose, onUpdat
 
   const handleSave = useCallback(async () => {
     setSaving(true);
+    setError(null);
     try {
       const provider = await getCalendarProvider(accountId);
       const calendarRemoteId = calendar?.remote_id ?? "primary";
@@ -66,6 +69,7 @@ export function EventDetailModal({ event, calendars, accountId, onClose, onUpdat
       onUpdated();
     } catch (err) {
       console.error("Failed to update event:", err);
+      setError(writeErrorMessage(err, "Could not save the event."));
     } finally {
       setSaving(false);
     }
@@ -73,6 +77,7 @@ export function EventDetailModal({ event, calendars, accountId, onClose, onUpdat
 
   const handleDelete = useCallback(async (chosen: RecurrenceScope) => {
     setDeleting(true);
+    setError(null);
     try {
       const provider = await getCalendarProvider(accountId);
       const calendarRemoteId = calendar?.remote_id ?? "primary";
@@ -95,6 +100,7 @@ export function EventDetailModal({ event, calendars, accountId, onClose, onUpdat
       onUpdated();
     } catch (err) {
       console.error("Failed to delete event:", err);
+      setError(writeErrorMessage(err, "Could not delete the event."));
     } finally {
       setDeleting(false);
     }
@@ -180,6 +186,8 @@ export function EventDetailModal({ event, calendars, accountId, onClose, onUpdat
             </fieldset>
           )}
 
+          {error && <p className="text-xs text-danger">{error}</p>}
+
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="secondary" size="md" onClick={() => setEditing(false)}>
               Cancel
@@ -251,6 +259,8 @@ export function EventDetailModal({ event, calendars, accountId, onClose, onUpdat
           </div>
         )}
 
+        {error && <p className="text-xs text-danger">{error}</p>}
+
         <div className="pt-2 border-t border-border-primary">
           {confirmDelete && isSeries ? (
             <div className="space-y-2">
@@ -306,6 +316,18 @@ export function EventDetailModal({ event, calendars, accountId, onClose, onUpdat
       </div>
     </Modal>
   );
+}
+
+/**
+ * What to tell the user about a refused write. A conflict is the one case they
+ * can do something about: the stored event moved on since it was opened, so the
+ * change has to be made again on the current version.
+ */
+function writeErrorMessage(err: unknown, fallback: string): string {
+  if (err instanceof CalendarWriteError && err.isConflict) {
+    return "This event was changed elsewhere. Close it, reopen it and try again.";
+  }
+  return fallback;
 }
 
 function toLocalISOString(date: Date): string {
