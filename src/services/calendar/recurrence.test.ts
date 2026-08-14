@@ -1,4 +1,4 @@
-import { expandOccurrences } from "./recurrence";
+import { countInstancesBefore, expandOccurrences } from "./recurrence";
 
 /**
  * Verbatim payload from a Stalwart server, written by Apple Calendar.
@@ -457,5 +457,29 @@ describe("per-instance overrides", () => {
       ts("2026-01-05T09:00:00Z"),
       ts("2026-01-19T09:00:00Z"),
     ]);
+  });
+});
+
+describe("countInstancesBefore", () => {
+  it("counts the instances the first half of a split keeps", () => {
+    const ical = series({ rrule: "FREQ=WEEKLY;COUNT=10" });
+
+    expect(countInstancesBefore(ical, ts("2026-01-05T09:00:00Z"))).toBe(0);
+    expect(countInstancesBefore(ical, ts("2026-01-26T09:00:00Z"))).toBe(3);
+  });
+
+  it("counts an excluded instance too, since it already used up the count", () => {
+    // EXDATE removes a date from the set the rule produced; it does not hand
+    // the count back (RFC 5545 §3.8.5.1).
+    const ical = series({
+      rrule: "FREQ=WEEKLY;COUNT=10",
+      extra: ["EXDATE:20260112T090000Z"],
+    });
+
+    expect(countInstancesBefore(ical, ts("2026-01-26T09:00:00Z"))).toBe(3);
+  });
+
+  it("returns nothing for an object without a readable event", () => {
+    expect(countInstancesBefore("BEGIN:VCALENDAR\r\nEND:VCALENDAR", 0)).toBe(0);
   });
 });

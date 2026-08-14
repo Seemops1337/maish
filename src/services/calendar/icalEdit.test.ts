@@ -270,6 +270,23 @@ describe("splitSeriesFrom", () => {
     expect([...startsIn(head), ...startsIn(tail)]).toEqual(startsIn(VIENNA_SERIES));
   });
 
+  it("takes the instances the head keeps out of a COUNT-bounded tail", () => {
+    // COUNT is relative to the rule's own start, so carrying it over unchanged
+    // makes the two halves add up to more instances than the original had.
+    const counted = VIENNA_SERIES.replace(
+      "RRULE:FREQ=WEEKLY;UNTIL=20270127T225959Z",
+      "RRULE:FREQ=WEEKLY;COUNT=10",
+    );
+    const window: [number, number] = [ts("2026-09-01T00:00:00Z"), ts("2027-03-01T00:00:00Z")];
+
+    const head = truncateSeriesBefore(counted, OCT_21);
+    const tail = splitSeriesFrom(counted, OCT_21, "new-uid-5", {});
+
+    expect(masterRule(tail)).toContain("COUNT=7");
+    expect([...startsIn(head, window), ...startsIn(tail, window)])
+      .toEqual(startsIn(counted, window));
+  });
+
   it("keeps the alarm and time zone in the new object", () => {
     const tail = splitSeriesFrom(VIENNA_SERIES, OCT_21, "new-uid-4", {});
 

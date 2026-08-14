@@ -672,6 +672,34 @@ export function seriesEnd(icalData: string): number | null {
   return last ? last.endTime : base.endTime;
 }
 
+/**
+ * How many instances the series produces before `recurrenceId`.
+ *
+ * Splitting a series has to know this: COUNT counts from the rule's own start,
+ * so the second half needs the instances the first half keeps taken off its
+ * count. Excluded dates are counted as well — the rule produces its COUNT
+ * instances first and EXDATE subtracts from that set afterwards (RFC 5545
+ * §3.8.5.1), so an exclusion does not hand the count back.
+ */
+export function countInstancesBefore(icalData: string, recurrenceId: number): number {
+  const { master } = splitCalendarObject(icalData);
+  if (!master || !master.start) return 0;
+
+  const base = eventDataFromFields(master, icalData);
+  const duration = Math.max(0, base.endTime - base.startTime);
+  const zone = seriesZone(master);
+
+  const starts = collectStarts(
+    master,
+    zone,
+    master.start.epoch - duration - 1,
+    recurrenceId,
+    duration,
+  );
+
+  return starts.filter((start) => start < recurrenceId).length;
+}
+
 /** The RRULE of the series master, for storing next to the event. */
 export function seriesRule(icalData: string): string | null {
   return splitCalendarObject(icalData).master?.rrule ?? null;

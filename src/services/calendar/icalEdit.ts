@@ -1,4 +1,5 @@
 import { formatDateTimeInZone } from "./icalHelper";
+import { countInstancesBefore } from "./recurrence";
 import { wallClockToEpoch } from "./timezone";
 
 /**
@@ -159,6 +160,15 @@ export function splitSeriesFrom(
 
   setProperty(master, "UID", `UID:${newUid}`);
   removeProperty(master, "RECURRENCE-ID");
+
+  // The tail starts its own count, so it may only claim the instances the head
+  // does not keep. Left as it was, a series of ten split after four would run
+  // to fourteen.
+  const ruleIndex = propertyIndex(master, "RRULE");
+  if (ruleIndex !== -1) {
+    const consumed = countInstancesBefore(icalData, recurrenceId);
+    master[ruleIndex] = `RRULE:${rebaseCount(valueOf(master[ruleIndex]!), consumed)}`;
+  }
 
   const start = edits.startTime ?? recurrenceId;
   const end = edits.endTime ?? start + duration;
@@ -530,6 +540,22 @@ function touch(
   const index = propertyIndex(event, "SEQUENCE");
   const current = index === -1 ? 0 : parseInt(valueOf(event[index]!), 10) || 0;
   setProperty(event, "SEQUENCE", `SEQUENCE:${current + 1}`);
+}
+
+/** Reduce a rule's COUNT by the instances that stayed with the other half. */
+function rebaseCount(rule: string, consumed: number): string {
+  if (consumed <= 0) return rule;
+
+  return rule
+    .split(";")
+    .map((part) => {
+      const eq = part.indexOf("=");
+      if (eq === -1 || part.slice(0, eq).toUpperCase() !== "COUNT") return part;
+      const count = parseInt(part.slice(eq + 1), 10);
+      if (!Number.isFinite(count)) return part;
+      return `COUNT=${Math.max(1, count - consumed)}`;
+    })
+    .join(";");
 }
 
 /** Add or tighten UNTIL on a rule, dropping COUNT since the two conflict. */
