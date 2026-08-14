@@ -79,6 +79,13 @@ writes in, which is usually German; that never leaks into a file or a commit.
 **Publishing needs approval.** Push, pull request, issue comment: draft the
 exact text, show it, wait. Local branches and commits need no permission.
 
+**Releasing is the maintainer's decision alone.** release-please keeps one pull
+request open and rewrites it on every push to `main`. That pull request is
+read-only here: never merge, close or edit it, and never create a tag or change a
+version number by hand. Read it and explain what it proposes when asked, then
+wait for the explicit instruction — merging it is what publishes a release, and
+nothing else may trigger one.
+
 **Look it up instead of recalling it.** Library behaviour, RFC wording, API
 shapes and config keys get read from the source — the installed package under
 `node_modules`, the crate source, the actual RFC, current documentation on the
@@ -101,19 +108,22 @@ modification under Apache-2.0 section 4(b) and belongs in `NOTICE`.
 ## Versioning
 
 Semantic versioning, currently **0.1.0** — the fork restarted its numbering and
-does not continue Velo's 0.4.x line. `CHANGELOG.md` still holds Velo's history
-below that, marked as such.
+does not continue Velo's 0.4.x line. `CHANGELOG.md` begins at that release and
+carries no Velo entries; its header records why the numbering restarts.
 
 | Change | Bump | Commit type |
 |---|---|---|
 | Bugfix | +0.0.1 | `fix:` |
 | Feature | +0.1.0 | `feat:` |
+| Breaking change, below 1.0.0 | +0.1.0 | `feat!:` / `BREAKING CHANGE:` |
 | First stable release | 1.0.0 | manual |
 
 release-please derives the bump from Conventional Commit types, so the commit
 type is the version decision — `docs:`, `chore:`, `refactor:`, `test:` and `ci:`
 trigger no release. `bump-minor-pre-major` keeps breaking changes at a minor
-bump until 1.0.0 is cut deliberately.
+bump until 1.0.0 is cut deliberately: while the version starts with `0.`, a
+`feat!:` produces 0.2.0, **not** 1.0.0. Reaching 1.0.0 is a manual act, never a
+side effect of a commit message.
 
 The version appears in `package.json`, `src-tauri/Cargo.toml`,
 `src-tauri/tauri.conf.json`, `maish.spec`,
