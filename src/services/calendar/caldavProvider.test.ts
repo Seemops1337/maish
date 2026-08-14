@@ -1,6 +1,7 @@
 import { DAVClient } from "tsdav";
 import { CalDAVProvider } from "./caldavProvider";
 import { davFetch } from "./davFetch";
+import { CalendarWriteError } from "./errors";
 
 vi.mock("@tauri-apps/plugin-http", () => ({
   fetch: vi.fn(),
@@ -12,12 +13,16 @@ const MOCK_ICAL_DATA =
 const MOCK_ICAL_DATA_2 =
   "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:test-uid-2\r\nSUMMARY:Second Event\r\nDTSTART:20240102T140000Z\r\nDTEND:20240102T150000Z\r\nEND:VEVENT\r\nEND:VCALENDAR";
 
+/** tsdav hands back the raw fetch response, whatever the status. */
+const davResponse = (status: number, statusText = "") =>
+  new Response(null, { status, statusText });
+
 const mockLogin = vi.fn().mockResolvedValue(undefined);
 const mockFetchCalendars = vi.fn();
 const mockFetchCalendarObjects = vi.fn();
-const mockCreateCalendarObject = vi.fn().mockResolvedValue(undefined);
-const mockUpdateCalendarObject = vi.fn().mockResolvedValue(undefined);
-const mockDeleteCalendarObject = vi.fn().mockResolvedValue(undefined);
+const mockCreateCalendarObject = vi.fn().mockResolvedValue(davResponse(201));
+const mockUpdateCalendarObject = vi.fn().mockResolvedValue(davResponse(204));
+const mockDeleteCalendarObject = vi.fn().mockResolvedValue(davResponse(204));
 
 vi.mock("tsdav", () => {
   const MockDAVClient = vi.fn(function (this: Record<string, unknown>) {
@@ -169,7 +174,6 @@ describe("CalDAVProvider", () => {
           data: expect.stringContaining("SUMMARY:Updated Event"),
           etag: '"old-etag"',
         },
-        headers: { "If-Match": '"old-etag"' },
       });
 
       expect(event.summary).toBe("Updated Event");
@@ -185,6 +189,242 @@ describe("CalDAVProvider", () => {
     });
   });
 
+  describe("updateEvent on a recurring series", () => {
+    const RECURRING = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "BEGIN:VTIMEZONE",
+      "TZID:Europe/Vienna",
+      "BEGIN:STANDARD",
+      "DTSTART:19961027T030000",
+      "RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=10",
+      "TZOFFSETFROM:+0200",
+      "TZOFFSETTO:+0100",
+      "END:STANDARD",
+      "END:VTIMEZONE",
+      "BEGIN:VEVENT",
+      "UID:series-uid",
+      "SUMMARY:Weekly",
+      "DTSTART:20260105T090000Z",
+      "DTEND:20260105T100000Z",
+      "RRULE:FREQ=WEEKLY;COUNT=6",
+      "BEGIN:VALARM",
+      "ACTION:DISPLAY",
+      "TRIGGER:-PT15M",
+      "END:VALARM",
+      "END:VEVENT",
+      "END:VCALENDAR",
+    ].join("\r\n");
+
+    const JAN_5 = Math.floor(Date.parse("2026-01-05T09:00:00Z") / 1000);
+    const JAN_12 = Math.floor(Date.parse("2026-01-12T09:00:00Z") / 1000);
+
+    const written = () =>
+      (mockUpdateCalendarObject.mock.calls[0]?.[0] as { calendarObject: { data: string } })
+        .calendarObject.data;
+
+    beforeEach(() => {
+      mockFetchCalendarObjects.mockResolvedValue([
+        { data: RECURRING, url: "/cal/personal/series-uid.ics", etag: '"old-etag"' },
+      ]);
+    });
+
+    it("preserves the rule, zone and alarm when the whole series changes", async () => {
+      // Regenerating the VEVENT from the edited fields used to drop all three.
+      await provider.updateEvent(
+        "/cal/personal/",
+        "/cal/personal/series-uid.ics",
+        { summary: "Renamed" },
+        '"old-etag"',
+        { recurrenceId: JAN_12, scope: "all" },
+      );
+
+      const data = written();
+      expect(data).toContain("RRULE:FREQ=WEEKLY;COUNT=6");
+      expect(data).toContain("BEGIN:VTIMEZONE");
+      expect(data).toContain("BEGIN:VALARM");
+      expect(data).toContain("SUMMARY:Renamed");
+    });
+
+    it("adds a RECURRENCE-ID override when only one instance changes", async () => {
+      await provider.updateEvent(
+        "/cal/personal/",
+        "/cal/personal/series-uid.ics",
+        { summary: "Just this week" },
+        '"old-etag"',
+        { recurrenceId: JAN_12, scope: "this" },
+      );
+
+      const data = written();
+      expect(data).toContain("RECURRENCE-ID:20260112T090000Z");
+      expect(data).toContain("SUMMARY:Just this week");
+      // The master keeps its own title and rule.
+      expect(data).toContain("SUMMARY:Weekly");
+      expect(data).toContain("RRULE:FREQ=WEEKLY;COUNT=6");
+    });
+
+    it("sends the etag so a concurrent change is not overwritten", async () => {
+      await provider.updateEvent(
+        "/cal/personal/",
+        "/cal/personal/series-uid.ics",
+        { summary: "x" },
+        '"old-etag"',
+        { recurrenceId: JAN_12, scope: "this" },
+      );
+
+      expect(mockUpdateCalendarObject).toHaveBeenCalledWith(
+        expect.objectContaining({
+          calendarObject: expect.objectContaining({ etag: '"old-etag"' }),
+        }),
+      );
+    });
+
+    it("splits the series into two objects for this-and-following", async () => {
+      await provider.updateEvent(
+        "/cal/personal/",
+        "/cal/personal/series-uid.ics",
+        { summary: "From now on" },
+        '"old-etag"',
+        { recurrenceId: JAN_12, scope: "thisAndFollowing" },
+      );
+
+      // The original is bounded in place...
+      const head = written();
+      expect(head).toContain("UNTIL=");
+      expect(head).not.toContain("COUNT=6");
+
+      // ...and the remainder is stored as a new object with its own UID.
+      expect(mockCreateCalendarObject).toHaveBeenCalledTimes(1);
+      const created = mockCreateCalendarObject.mock.calls[0]?.[0] as {
+        filename: string;
+        iCalString: string;
+      };
+      expect(created.iCalString).toContain("SUMMARY:From now on");
+      expect(created.iCalString).toContain("DTSTART:20260112T090000Z");
+      expect(created.iCalString).not.toContain("UID:series-uid");
+      expect(created.filename).toMatch(/\.ics$/);
+    });
+
+    /**
+     * The split writes two objects. Neither half may be left standing on its
+     * own: a stored tail without a bounded head shows the series twice, a
+     * bounded head without a tail loses every instance from the split point on.
+     */
+    describe("when half of a split fails", () => {
+      beforeEach(() => {
+        vi.spyOn(crypto, "randomUUID").mockReturnValue(
+          "tail-uuid" as `${string}-${string}-${string}-${string}-${string}`,
+        );
+      });
+
+      const split = () =>
+        provider.updateEvent(
+          "/cal/personal/",
+          "/cal/personal/series-uid.ics",
+          { summary: "From now on" },
+          '"old-etag"',
+          { recurrenceId: JAN_12, scope: "thisAndFollowing" },
+        );
+
+      it("leaves the original series untouched when the new half cannot be stored", async () => {
+        mockCreateCalendarObject.mockResolvedValueOnce(davResponse(507, "Insufficient Storage"));
+
+        await expect(split()).rejects.toMatchObject({ status: 507 });
+        expect(mockUpdateCalendarObject).not.toHaveBeenCalled();
+      });
+
+      it("removes the new half when the original cannot be bounded", async () => {
+        mockUpdateCalendarObject.mockResolvedValueOnce(davResponse(412, "Precondition Failed"));
+
+        await expect(split()).rejects.toMatchObject({ status: 412 });
+        expect(mockDeleteCalendarObject).toHaveBeenCalledWith({
+          calendarObject: { url: "/cal/personal/tail-uuid.ics", etag: undefined },
+        });
+      });
+    });
+
+    it("deletes one instance by adding an EXDATE rather than the object", async () => {
+      await provider.deleteEvent(
+        "/cal/personal/",
+        "/cal/personal/series-uid.ics",
+        '"old-etag"',
+        { recurrenceId: JAN_12, scope: "this" },
+      );
+
+      expect(mockDeleteCalendarObject).not.toHaveBeenCalled();
+      expect(written()).toContain("EXDATE:20260112T090000Z");
+    });
+
+    it("ends the series in place for this-and-following deletes", async () => {
+      await provider.deleteEvent(
+        "/cal/personal/",
+        "/cal/personal/series-uid.ics",
+        '"old-etag"',
+        { recurrenceId: JAN_12, scope: "thisAndFollowing" },
+      );
+
+      expect(mockDeleteCalendarObject).not.toHaveBeenCalled();
+      expect(written()).toContain("UNTIL=");
+    });
+
+    it("removes the whole object only when the scope is the entire series", async () => {
+      await provider.deleteEvent(
+        "/cal/personal/",
+        "/cal/personal/series-uid.ics",
+        '"old-etag"',
+        { recurrenceId: JAN_12, scope: "all" },
+      );
+
+      expect(mockDeleteCalendarObject).toHaveBeenCalledTimes(1);
+      expect(mockUpdateCalendarObject).not.toHaveBeenCalled();
+    });
+
+    /**
+     * Cutting a series before its very first instance leaves a rule that
+     * produces nothing — an object no view can show and no instance can be
+     * clicked to remove again. Nothing is left to keep, so the object goes.
+     */
+    describe("when the cut lands on the first instance", () => {
+      it("deletes the object rather than emptying the series", async () => {
+        const result = await provider.deleteEvent(
+          "/cal/personal/",
+          "/cal/personal/series-uid.ics",
+          '"old-etag"',
+          { recurrenceId: JAN_5, scope: "thisAndFollowing" },
+        );
+
+        expect(mockUpdateCalendarObject).not.toHaveBeenCalled();
+        expect(mockDeleteCalendarObject).toHaveBeenCalledTimes(1);
+        expect(result).toEqual({ objectRemoved: true });
+      });
+
+      it("reports that the object survives an ordinary tail cut", async () => {
+        const result = await provider.deleteEvent(
+          "/cal/personal/",
+          "/cal/personal/series-uid.ics",
+          '"old-etag"',
+          { recurrenceId: JAN_12, scope: "thisAndFollowing" },
+        );
+
+        expect(result).toEqual({ objectRemoved: false });
+      });
+
+      it("edits the master instead of splitting off a headless half", async () => {
+        await provider.updateEvent(
+          "/cal/personal/",
+          "/cal/personal/series-uid.ics",
+          { summary: "Renamed after all" },
+          '"old-etag"',
+          { recurrenceId: JAN_5, scope: "thisAndFollowing" },
+        );
+
+        expect(mockCreateCalendarObject).not.toHaveBeenCalled();
+        expect(written()).toContain("SUMMARY:Renamed after all");
+        expect(written()).toContain("RRULE:FREQ=WEEKLY;COUNT=6");
+      });
+    });
+  });
+
   describe("deleteEvent", () => {
     it("calls deleteCalendarObject with etag", async () => {
       await provider.deleteEvent("/cal/personal/", "/cal/personal/test-uid.ics", '"delete-etag"');
@@ -194,7 +434,6 @@ describe("CalDAVProvider", () => {
           url: "/cal/personal/test-uid.ics",
           etag: '"delete-etag"',
         },
-        headers: { "If-Match": '"delete-etag"' },
       });
     });
 
@@ -206,8 +445,123 @@ describe("CalDAVProvider", () => {
           url: "/cal/personal/test-uid.ics",
           etag: undefined,
         },
-        headers: {},
       });
+    });
+  });
+
+  /**
+   * tsdav returns the raw response and never throws on an error status, so a
+   * refused write used to reach the UI as a success.
+   */
+  describe("writes the server refuses", () => {
+    beforeEach(() => {
+      mockFetchCalendarObjects.mockResolvedValue([
+        { data: MOCK_ICAL_DATA, url: "/cal/personal/test-uid.ics", etag: '"old-etag"' },
+      ]);
+    });
+
+    it("reports a failed update as a conflict when the etag no longer matches", async () => {
+      mockUpdateCalendarObject.mockResolvedValueOnce(davResponse(412, "Precondition Failed"));
+
+      const failure = provider.updateEvent(
+        "/cal/personal/",
+        "/cal/personal/test-uid.ics",
+        { summary: "Updated Event" },
+        '"stale-etag"',
+      );
+
+      await expect(failure).rejects.toBeInstanceOf(CalendarWriteError);
+      await expect(failure).rejects.toMatchObject({ status: 412, isConflict: true });
+    });
+
+    it("throws on any other error status", async () => {
+      mockUpdateCalendarObject.mockResolvedValueOnce(davResponse(401, "Unauthorized"));
+
+      await expect(
+        provider.updateEvent("/cal/personal/", "/cal/personal/test-uid.ics", { summary: "x" }),
+      ).rejects.toMatchObject({ status: 401, isConflict: false });
+    });
+
+    it("throws when creating an event fails", async () => {
+      mockCreateCalendarObject.mockResolvedValueOnce(davResponse(507, "Insufficient Storage"));
+
+      await expect(
+        provider.createEvent("/cal/personal/", {
+          summary: "New Meeting",
+          startTime: "2024-03-15T09:00:00Z",
+          endTime: "2024-03-15T10:00:00Z",
+        }),
+      ).rejects.toMatchObject({ status: 507 });
+    });
+
+    it("throws when deleting fails", async () => {
+      mockDeleteCalendarObject.mockResolvedValueOnce(davResponse(412, "Precondition Failed"));
+
+      await expect(
+        provider.deleteEvent("/cal/personal/", "/cal/personal/test-uid.ics", '"stale-etag"'),
+      ).rejects.toMatchObject({ status: 412, isConflict: true });
+    });
+  });
+
+  /**
+   * tsdav merges the per-call parameters over the client's defaults one level
+   * deep, so a `headers` argument replaces the authorization header rather than
+   * adding to it — every PUT and DELETE then comes back 401. If-Match has to
+   * come from the calendar object's etag instead.
+   */
+  describe("authorization on write requests", () => {
+    it("leaves If-Match to tsdav rather than passing headers", async () => {
+      mockFetchCalendarObjects.mockResolvedValue([
+        { data: MOCK_ICAL_DATA, url: "/cal/personal/test-uid.ics", etag: '"old-etag"' },
+      ]);
+
+      await provider.updateEvent(
+        "/cal/personal/",
+        "/cal/personal/test-uid.ics",
+        { summary: "Updated Event" },
+        '"old-etag"',
+      );
+
+      const params = mockUpdateCalendarObject.mock.calls[0]?.[0] as Record<string, unknown>;
+      expect(params).not.toHaveProperty("headers");
+      expect(params.calendarObject).toMatchObject({ etag: '"old-etag"' });
+    });
+
+    it("passes no headers on delete either", async () => {
+      await provider.deleteEvent("/cal/personal/", "/cal/personal/test-uid.ics", '"delete-etag"');
+
+      const params = mockDeleteCalendarObject.mock.calls[0]?.[0] as Record<string, unknown>;
+      expect(params).not.toHaveProperty("headers");
+    });
+
+    it("loses the auth header in tsdav when headers are passed", async () => {
+      // The reason for the two tests above, checked against the real library so
+      // an upgrade that changes the merge does not go unnoticed.
+      const { DAVClient: RealDAVClient } = await vi.importActual<typeof import("tsdav")>("tsdav");
+      const sent: HeadersInit[] = [];
+      const stubFetch = (_url: string, init?: RequestInit) => {
+        sent.push(init?.headers ?? {});
+        return Promise.resolve(new Response(null, { status: 204 }));
+      };
+
+      const client = new RealDAVClient({
+        serverUrl: "https://caldav.example.com",
+        credentials: { username: "user@example.com", password: "secret" },
+        authMethod: "Basic",
+        fetch: stubFetch as unknown as typeof fetch,
+      });
+      // Skip login(), which would talk to the network; it only sets these.
+      (client as unknown as { authHeaders: Record<string, string> }).authHeaders = {
+        authorization: "Basic dXNlckBleGFtcGxlLmNvbTpzZWNyZXQ=",
+      };
+
+      const calendarObject = { url: "https://caldav.example.com/e.ics", data: "x", etag: '"e"' };
+      await client.updateCalendarObject({ calendarObject, headers: { "If-Match": '"e"' } });
+      await client.updateCalendarObject({ calendarObject });
+
+      expect(sent[0]).not.toHaveProperty("authorization");
+      expect(sent[1]).toHaveProperty("authorization");
+      expect(sent[1]).toMatchObject({ "If-Match": '"e"' });
     });
   });
 

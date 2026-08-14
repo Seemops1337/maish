@@ -775,6 +775,24 @@ const MIGRATIONS = [
     description: "Accept self-signed certificates for IMAP/SMTP",
     sql: `ALTER TABLE accounts ADD COLUMN accept_invalid_certs INTEGER DEFAULT 0;`,
   },
+  {
+    version: 24,
+    description: "Track recurrence on calendar events so series can be expanded",
+    sql: `
+      -- A recurring event is stored once, as the series master the CalDAV
+      -- server returns; its instances are expanded on read. The range query
+      -- therefore has to find masters whose own DTSTART lies before the
+      -- viewed window, which these two columns make possible without
+      -- parsing ical_data in SQL.
+      ALTER TABLE calendar_events ADD COLUMN rrule TEXT;
+      -- Last instant the series can produce an instance; NULL means it either
+      -- does not recur or recurs forever, disambiguated by rrule.
+      ALTER TABLE calendar_events ADD COLUMN recurrence_end INTEGER;
+
+      CREATE INDEX IF NOT EXISTS idx_cal_events_recurring
+        ON calendar_events(account_id, recurrence_end);
+    `,
+  },
 ];
 
 /**
@@ -921,4 +939,51 @@ export async function runMigrations(): Promise<void> {
       "INSERT OR REPLACE INTO settings (key, value) VALUES ('imap_attachment_repair_v1', '1')",
     );
   }
+
+  await backfillRecurrence(db);
+}
+
+/**
+ * Fill the recurrence columns for events stored before migration 24.
+ *
+ * The rule has to be read out of ical_data, which needs the component-aware
+ * parser rather than SQL: a VCALENDAR written by Apple Calendar carries the
+ * time zone's own yearly DST rules, so matching RRULE as text misidentifies
+ * plain events as recurring. Everything needed is already stored, so no
+ * resync is required.
+ */
+async function backfillRecurrence(db: Awaited<ReturnType<typeof getDb>>): Promise<void> {
+  const flag = await db.select<{ value: string }[]>(
+    "SELECT value FROM settings WHERE key = 'calendar_recurrence_backfill_v1'",
+  );
+  if (flag.length > 0) return;
+
+  const rows = await db.select<{ id: string; ical_data: string }[]>(
+    "SELECT id, ical_data FROM calendar_events WHERE ical_data IS NOT NULL AND rrule IS NULL",
+  );
+
+  if (rows.length > 0) {
+    const { seriesRule, seriesEnd } = await import("../calendar/recurrence");
+    let recurring = 0;
+
+    for (const row of rows) {
+      try {
+        const rule = seriesRule(row.ical_data);
+        if (!rule) continue;
+        await db.execute(
+          "UPDATE calendar_events SET rrule = $1, recurrence_end = $2 WHERE id = $3",
+          [rule, seriesEnd(row.ical_data), row.id],
+        );
+        recurring++;
+      } catch (err) {
+        console.warn("[backfill] Could not read recurrence for event", row.id, err);
+      }
+    }
+
+    console.log(`[backfill] Marked ${recurring} of ${rows.length} calendar events as recurring.`);
+  }
+
+  await db.execute(
+    "INSERT OR REPLACE INTO settings (key, value) VALUES ('calendar_recurrence_backfill_v1', '1')",
+  );
 }

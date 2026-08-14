@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useAccountStore } from "@/stores/accountStore";
-import { getCalendarEventsInRangeMulti, upsertCalendarEvent, type DbCalendarEvent } from "@/services/db/calendarEvents";
+import { upsertCalendarEvent } from "@/services/db/calendarEvents";
+import { getOccurrencesInRange, type CalendarOccurrence } from "@/services/calendar/occurrences";
+import { isRecurring, seriesEnd, seriesRule } from "@/services/calendar/recurrence";
 import { getVisibleCalendars, getCalendarsForAccount, upsertCalendar, type DbCalendar } from "@/services/db/calendars";
 import { getCalendarProvider, hasCalendarSupport } from "@/services/calendar/providerFactory";
 import type { CalendarEventData, CreateEventInput } from "@/services/calendar/types";
@@ -19,11 +21,11 @@ export function CalendarPage() {
   const activeAccount = accounts.find((a) => a.id === activeAccountId) ?? null;
   const [currentDate, setCurrentDate] = useState(new Date());
   const [view, setView] = useState<CalendarView>("month");
-  const [events, setEvents] = useState<DbCalendarEvent[]>([]);
+  const [events, setEvents] = useState<CalendarOccurrence[]>([]);
   const [calendars, setCalendars] = useState<DbCalendar[]>([]);
   const [loading, setLoading] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
-  const [selectedEvent, setSelectedEvent] = useState<DbCalendarEvent | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<CalendarOccurrence | null>(null);
   const [needsReauth, setNeedsReauth] = useState(false);
   const [calendarError, setCalendarError] = useState<string | null>(null);
   const [showCalendarList, setShowCalendarList] = useState(false);
@@ -82,7 +84,7 @@ export function CalendarPage() {
     try {
       const visibleCals = await getVisibleCalendars(activeAccountId);
       const calendarIds = visibleCals.map((c) => c.id);
-      const cached = await getCalendarEventsInRangeMulti(activeAccountId, calendarIds, startTs, endTs);
+      const cached = await getOccurrencesInRange(activeAccountId, calendarIds, startTs, endTs);
       setEvents(cached);
     } catch {
       // ignore cache errors
@@ -131,7 +133,7 @@ export function CalendarPage() {
 
       // Reload events from DB
       const calendarIds = visibleCals.map((c) => c.id);
-      const fresh = await getCalendarEventsInRangeMulti(activeAccountId, calendarIds, startTs, endTs);
+      const fresh = await getOccurrencesInRange(activeAccountId, calendarIds, startTs, endTs);
       setEvents(fresh);
       setNeedsReauth(false);
       setCalendarError(null);
@@ -243,7 +245,7 @@ export function CalendarPage() {
     }
   }, [activeAccountId, calendars, loadEvents]);
 
-  const handleEventClick = useCallback((event: DbCalendarEvent) => {
+  const handleEventClick = useCallback((event: CalendarOccurrence) => {
     setSelectedEvent(event);
   }, []);
 
@@ -377,6 +379,11 @@ async function upsertCalendarEventFromProvider(
   calendarId: string | null,
   event: CalendarEventData,
 ): Promise<void> {
+  // A recurring event is stored once, as the server's master. The rule and the
+  // end of the series are kept alongside it so the range query can find it in
+  // months its own DTSTART does not fall in.
+  const recurring = event.icalData ? isRecurring(event.icalData) : false;
+
   await upsertCalendarEvent({
     accountId,
     googleEventId: event.remoteEventId,
@@ -395,5 +402,7 @@ async function upsertCalendarEventFromProvider(
     etag: event.etag,
     icalData: event.icalData,
     uid: event.uid,
+    rrule: recurring ? seriesRule(event.icalData!) : null,
+    recurrenceEnd: recurring ? seriesEnd(event.icalData!) : null,
   });
 }

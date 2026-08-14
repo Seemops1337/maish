@@ -1022,6 +1022,21 @@ export const HELP_CATEGORIES: HelpCategory[] = [
           { text: "Events refresh automatically in the background." },
         ],
       },
+      {
+        id: "recurring-events",
+        icon: Repeat,
+        title: "Repeating events",
+        summary: "Every occurrence of a series shows on its own date.",
+        description:
+          "A repeating appointment appears on each date it actually falls on, not just the day it started. Opening one shows how often it repeats, and whether that particular date was changed on its own. Occurrences keep their local time across daylight-saving changes, so a 6 pm class stays at 6 pm when the clocks go back.",
+        tips: [
+          { text: "Click any occurrence to open it; the panel shows how often the event repeats." },
+          { text: "When editing, choose whether the change applies to this event, this and following events, or the whole series." },
+          { text: "Deleting offers the same three choices, so you can drop a single date and keep the rest." },
+          { text: "Changing one date on its own marks it as changed, and later edits to the series leave it alone." },
+          { text: "Works for CalDAV calendars; Google calendars already deliver each occurrence separately." },
+        ],
+      },
     ],
   },
   {

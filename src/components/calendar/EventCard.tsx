@@ -1,7 +1,7 @@
-import type { DbCalendarEvent } from "@/services/db/calendarEvents";
+import type { CalendarOccurrence } from "@/services/calendar/occurrences";
 
 interface EventCardProps {
-  event: DbCalendarEvent;
+  event: CalendarOccurrence;
   compact?: boolean;
   onClick?: () => void;
 }
