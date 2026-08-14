@@ -118,7 +118,7 @@ export function truncateSeriesBefore(icalData: string, recurrenceId: number): st
 
   const style = styleOf(master);
   // UNTIL is inclusive, so stop one second before the instance being cut.
-  const until = formatDateTimeInZone(recurrenceId - 1, "UTC", false);
+  const until = untilValue(recurrenceId - 1, style);
   master[index] = `RRULE:${boundRule(valueOf(master[index]!), until)}`;
 
   doc.events = doc.events.filter((event) => {
@@ -412,6 +412,20 @@ function styleParams(style: DateStyle): string {
 
 function dateLine(name: string, epochSeconds: number, style: DateStyle): string {
   return `${name}${styleParams(style)}:${formatDateTimeInZone(epochSeconds, style.zone, style.isDate)}`;
+}
+
+/**
+ * UNTIL written the way the series writes its dates.
+ *
+ * RFC 5545 §3.3.10 ties the value type to DTSTART's: a date-valued series
+ * needs a bare DATE and a floating one needs local time, while a DTSTART in
+ * UTC or with a TZID takes a UTC date-time. A UTC stamp everywhere happens to
+ * be accepted by Stalwart, but it is not what the spec asks of the other two.
+ */
+function untilValue(epochSeconds: number, style: DateStyle): string {
+  if (style.isDate) return formatDateTimeInZone(epochSeconds, null, true);
+  if (style.zone === null) return formatDateTimeInZone(epochSeconds, null, false);
+  return formatDateTimeInZone(epochSeconds, "UTC", false);
 }
 
 function valueToEpoch(line: string, fallback: DateStyle): number | null {

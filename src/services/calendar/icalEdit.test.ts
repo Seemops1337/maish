@@ -244,6 +244,59 @@ describe("truncateSeriesBefore", () => {
   });
 });
 
+/**
+ * RFC 5545 §3.3.10: UNTIL must carry the same value type as DTSTART — a DATE
+ * for a date-valued series, and local time for a floating one. Only a DTSTART
+ * in UTC or with a TZID takes a UTC date-time.
+ */
+describe("truncateSeriesBefore and the value type of UNTIL", () => {
+  /** Local midnight, which is what a floating DATE resolves to. */
+  const localDay = (day: number) => Math.floor(new Date(2026, 0, day).getTime() / 1000);
+  const localTime = (day: number, hour: number) =>
+    Math.floor(new Date(2026, 0, day, hour).getTime() / 1000);
+  const JANUARY: [number, number] = [localDay(1), localDay(31)];
+
+  const allDay = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "BEGIN:VEVENT",
+    "UID:all-day-1",
+    "SUMMARY:Stocktake",
+    "DTSTART;VALUE=DATE:20260105",
+    "DTEND;VALUE=DATE:20260106",
+    "RRULE:FREQ=DAILY;COUNT=5",
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].join("\r\n");
+
+  const floating = allDay
+    .replace("DTSTART;VALUE=DATE:20260105", "DTSTART:20260105T090000")
+    .replace("DTEND;VALUE=DATE:20260106", "DTEND:20260105T100000");
+
+  it("writes a bare DATE for an all-day series", () => {
+    const edited = truncateSeriesBefore(allDay, localDay(7));
+
+    expect(masterRule(edited)).toContain("UNTIL=20260106");
+    expect(masterRule(edited)).not.toMatch(/UNTIL=\d{8}T/);
+    expect(startsIn(edited, JANUARY)).toEqual([localDay(5), localDay(6)]);
+  });
+
+  it("keeps a floating series floating", () => {
+    const edited = truncateSeriesBefore(floating, localTime(7, 9));
+
+    // One second before the instance being cut, in the series' own local time.
+    expect(masterRule(edited)).toContain("UNTIL=20260107T085959");
+    expect(masterRule(edited)).not.toMatch(/UNTIL=\S*Z/);
+    expect(startsIn(edited, JANUARY)).toEqual([localTime(5, 9), localTime(6, 9)]);
+  });
+
+  it("still writes UTC when DTSTART names a zone", () => {
+    const edited = truncateSeriesBefore(VIENNA_SERIES, OCT_21);
+
+    expect(masterRule(edited)).toMatch(/UNTIL=\d{8}T\d{6}Z/);
+  });
+});
+
 describe("splitSeriesFrom", () => {
   it("carries the tail of the series into a new object", () => {
     const tail = splitSeriesFrom(VIENNA_SERIES, OCT_21, "new-uid-1", {
