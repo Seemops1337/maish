@@ -1,10 +1,11 @@
 import { render, waitFor } from "@testing-library/react";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { EmailRenderer } from "./EmailRenderer";
 import type { DbAttachment } from "@/services/db/attachments";
 
 // Mock dependencies
 vi.mock("@tauri-apps/plugin-opener", () => ({
-  openUrl: vi.fn(),
+  openUrl: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("@/utils/sanitize", () => ({
@@ -169,6 +170,70 @@ describe("EmailRenderer", () => {
       expect(mockFetchAttachment).toHaveBeenCalledTimes(2);
       expect(mockFetchAttachment).toHaveBeenCalledWith("msg-1", "g1");
       expect(mockFetchAttachment).toHaveBeenCalledWith("msg-1", "g2");
+    });
+  });
+
+  describe("link handling", () => {
+    function renderWithFrame(html: string) {
+      const { container } = render(<EmailRenderer html={html} text={null} />);
+      const iframe = container.querySelector("iframe") as HTMLIFrameElement;
+      return { iframe };
+    }
+
+    function postFromFrame(iframe: HTMLIFrameElement, data: unknown, source?: unknown) {
+      const event = new MessageEvent("message", { data });
+      Object.defineProperty(event, "source", {
+        value: source === undefined ? iframe.contentWindow : source,
+      });
+      window.dispatchEvent(event);
+    }
+
+    it("opens a link the frame reports via the system opener", () => {
+      const { iframe } = renderWithFrame('<a href="https://example.com/x">go</a>');
+
+      postFromFrame(iframe, { type: "maish:link", url: "https://example.com/x" });
+
+      expect(openUrl).toHaveBeenCalledWith("https://example.com/x");
+    });
+
+    it("opens mailto: links reported by the frame", () => {
+      const { iframe } = renderWithFrame('<a href="mailto:a@b.c">mail</a>');
+
+      postFromFrame(iframe, { type: "maish:link", url: "mailto:a@b.c" });
+
+      expect(openUrl).toHaveBeenCalledWith("mailto:a@b.c");
+    });
+
+    it("ignores messages that did not come from its own frame", () => {
+      const { iframe } = renderWithFrame('<a href="https://example.com/x">go</a>');
+
+      postFromFrame(iframe, { type: "maish:link", url: "https://evil.example/x" }, window);
+
+      expect(openUrl).not.toHaveBeenCalled();
+    });
+
+    it("refuses schemes outside the allowlist", () => {
+      const { iframe } = renderWithFrame("<p>body</p>");
+
+      postFromFrame(iframe, { type: "maish:link", url: "javascript:alert(1)" });
+      postFromFrame(iframe, { type: "maish:link", url: "file:///etc/passwd" });
+
+      expect(openUrl).not.toHaveBeenCalled();
+    });
+
+    it("sizes the iframe from the height the frame reports", () => {
+      const { iframe } = renderWithFrame("<p>body</p>");
+
+      postFromFrame(iframe, { type: "maish:height", height: 420 });
+
+      expect(iframe.style.height).toBe("420px");
+    });
+
+    it("keeps the frame sandboxed without same-origin access", () => {
+      const { iframe } = renderWithFrame("<p>body</p>");
+
+      const sandbox = iframe.getAttribute("sandbox") ?? "";
+      expect(sandbox.split(/\s+/)).not.toContain("allow-same-origin");
     });
   });
 
