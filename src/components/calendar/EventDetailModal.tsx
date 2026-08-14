@@ -1,20 +1,28 @@
 import { useState, useCallback } from "react";
-import { MapPin, Clock, User, Pencil, Trash2 } from "lucide-react";
+import { MapPin, Clock, User, Pencil, Trash2, Repeat } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { TextField } from "@/components/ui/TextField";
-import type { DbCalendarEvent } from "@/services/db/calendarEvents";
+import type { CalendarOccurrence } from "@/services/calendar/occurrences";
 import type { DbCalendar } from "@/services/db/calendars";
+import type { OccurrenceTarget, RecurrenceScope } from "@/services/calendar/types";
 import { getCalendarProvider } from "@/services/calendar/providerFactory";
+import { describeRule } from "@/services/calendar/recurrence";
 import { deleteCalendarEvent as deleteCalendarEventDb } from "@/services/db/calendarEvents";
 
 interface EventDetailModalProps {
-  event: DbCalendarEvent;
+  event: CalendarOccurrence;
   calendars: DbCalendar[];
   accountId: string;
   onClose: () => void;
   onUpdated: () => void;
 }
+
+const SCOPE_LABELS: { value: RecurrenceScope; label: string }[] = [
+  { value: "this", label: "This event" },
+  { value: "thisAndFollowing", label: "This and following events" },
+  { value: "all", label: "All events in the series" },
+];
 
 export function EventDetailModal({ event, calendars, accountId, onClose, onUpdated }: EventDetailModalProps) {
   const [editing, setEditing] = useState(false);
@@ -26,8 +34,19 @@ export function EventDetailModal({ event, calendars, accountId, onClose, onUpdat
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [scope, setScope] = useState<RecurrenceScope>("this");
 
   const calendar = calendars.find((c) => c.id === event.calendar_id);
+
+  // Only a generated instance can be changed for part of a series; a one-off
+  // event has nothing to choose between.
+  const isSeries = event.isSeriesInstance && event.occurrenceId !== null;
+  const repeatLabel = describeRule(event.rrule);
+
+  const targetFor = useCallback((chosen: RecurrenceScope): OccurrenceTarget | undefined => {
+    if (!isSeries || event.occurrenceId === null) return undefined;
+    return { recurrenceId: event.occurrenceId, scope: chosen };
+  }, [isSeries, event.occurrenceId]);
 
   const handleSave = useCallback(async () => {
     setSaving(true);
@@ -42,7 +61,7 @@ export function EventDetailModal({ event, calendars, accountId, onClose, onUpdat
         location: location || undefined,
         startTime: new Date(startTime).toISOString(),
         endTime: new Date(endTime).toISOString(),
-      }, event.etag ?? undefined);
+      }, event.etag ?? undefined, targetFor(scope));
 
       onUpdated();
     } catch (err) {
@@ -50,19 +69,28 @@ export function EventDetailModal({ event, calendars, accountId, onClose, onUpdat
     } finally {
       setSaving(false);
     }
-  }, [accountId, calendar, event, summary, description, location, startTime, endTime, onUpdated]);
+  }, [accountId, calendar, event, summary, description, location, startTime, endTime, scope, targetFor, onUpdated]);
 
-  const handleDelete = useCallback(async () => {
+  const handleDelete = useCallback(async (chosen: RecurrenceScope) => {
     setDeleting(true);
     try {
       const provider = await getCalendarProvider(accountId);
       const calendarRemoteId = calendar?.remote_id ?? "primary";
       const remoteEventId = event.remote_event_id ?? event.google_event_id;
 
-      await provider.deleteEvent(calendarRemoteId, remoteEventId, event.etag ?? undefined);
+      await provider.deleteEvent(
+        calendarRemoteId,
+        remoteEventId,
+        event.etag ?? undefined,
+        targetFor(chosen),
+      );
 
-      // Remove from local DB
-      await deleteCalendarEventDb(event.id);
+      // Removing part of a series only rewrites the stored object, so the row
+      // stays and is refreshed by the reload below. Only deleting the whole
+      // series removes it.
+      if (!isSeries || chosen === "all") {
+        await deleteCalendarEventDb(event.masterId);
+      }
 
       onUpdated();
     } catch (err) {
@@ -70,7 +98,7 @@ export function EventDetailModal({ event, calendars, accountId, onClose, onUpdat
     } finally {
       setDeleting(false);
     }
-  }, [accountId, calendar, event, onUpdated]);
+  }, [accountId, calendar, event, isSeries, targetFor, onUpdated]);
 
   const formatTime = (ts: number) => {
     return new Date(ts * 1000).toLocaleString(undefined, {
@@ -130,6 +158,28 @@ export function EventDetailModal({ event, calendars, accountId, onClose, onUpdat
             />
           </div>
 
+          {isSeries && (
+            <fieldset className="border-t border-border-primary pt-3">
+              <legend className="sr-only">Which events to change</legend>
+              <div className="text-xs text-text-secondary mb-1.5">Apply changes to</div>
+              <div className="space-y-1">
+                {SCOPE_LABELS.map((option) => (
+                  <label key={option.value} className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer">
+                    <input
+                      type="radio"
+                      name="edit-scope"
+                      value={option.value}
+                      checked={scope === option.value}
+                      onChange={() => setScope(option.value)}
+                      className="accent-[var(--color-accent)]"
+                    />
+                    {option.label}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          )}
+
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="secondary" size="md" onClick={() => setEditing(false)}>
               Cancel
@@ -164,6 +214,16 @@ export function EventDetailModal({ event, calendars, accountId, onClose, onUpdat
           </div>
         </div>
 
+        {repeatLabel && (
+          <div className="flex items-start gap-2.5 text-sm text-text-secondary">
+            <Repeat size={14} className="mt-0.5 shrink-0 text-text-tertiary" />
+            <span>
+              {repeatLabel}
+              {event.isOverride && " — this occurrence was changed"}
+            </span>
+          </div>
+        )}
+
         {event.location && (
           <div className="flex items-start gap-2.5 text-sm text-text-secondary">
             <MapPin size={14} className="mt-0.5 shrink-0 text-text-tertiary" />
@@ -191,11 +251,31 @@ export function EventDetailModal({ event, calendars, accountId, onClose, onUpdat
           </div>
         )}
 
-        <div className="flex justify-between pt-2 border-t border-border-primary">
-          {confirmDelete ? (
+        <div className="pt-2 border-t border-border-primary">
+          {confirmDelete && isSeries ? (
+            <div className="space-y-2">
+              <div className="text-xs text-danger">Delete which events?</div>
+              <div className="flex flex-wrap gap-2">
+                {SCOPE_LABELS.map((option) => (
+                  <Button
+                    key={option.value}
+                    variant="danger"
+                    size="xs"
+                    onClick={() => handleDelete(option.value)}
+                    disabled={deleting}
+                  >
+                    {option.label}
+                  </Button>
+                ))}
+                <Button variant="secondary" size="xs" onClick={() => setConfirmDelete(false)}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : confirmDelete ? (
             <div className="flex items-center gap-2">
               <span className="text-xs text-danger">Delete this event?</span>
-              <Button variant="danger" size="xs" onClick={handleDelete} disabled={deleting}>
+              <Button variant="danger" size="xs" onClick={() => handleDelete("all")} disabled={deleting}>
                 {deleting ? "Deleting..." : "Yes, delete"}
               </Button>
               <Button variant="secondary" size="xs" onClick={() => setConfirmDelete(false)}>
@@ -203,23 +283,25 @@ export function EventDetailModal({ event, calendars, accountId, onClose, onUpdat
               </Button>
             </div>
           ) : (
-            <Button
-              variant="ghost"
-              size="sm"
-              icon={<Trash2 size={14} />}
-              onClick={() => setConfirmDelete(true)}
-            >
-              Delete
-            </Button>
+            <div className="flex justify-between">
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<Trash2 size={14} />}
+                onClick={() => setConfirmDelete(true)}
+              >
+                Delete
+              </Button>
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<Pencil size={14} />}
+                onClick={() => setEditing(true)}
+              >
+                Edit
+              </Button>
+            </div>
           )}
-          <Button
-            variant="secondary"
-            size="sm"
-            icon={<Pencil size={14} />}
-            onClick={() => setEditing(true)}
-          >
-            Edit
-          </Button>
         </div>
       </div>
     </Modal>

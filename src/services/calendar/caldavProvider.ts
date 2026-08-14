@@ -6,10 +6,19 @@ import type {
   CalendarEventData,
   CalendarSyncResult,
   CreateEventInput,
+  OccurrenceTarget,
   UpdateEventInput,
 } from "./types";
 import { davFetch } from "./davFetch";
 import { generateVEvent, parseVEvent } from "./icalHelper";
+import {
+  editMaster,
+  editOccurrence,
+  excludeOccurrence,
+  splitSeriesFrom,
+  truncateSeriesBefore,
+  type EventEdits,
+} from "./icalEdit";
 import { getAccount } from "@/services/db/accounts";
 
 export class CalDAVProvider implements CalendarProvider {
@@ -92,54 +101,68 @@ export class CalDAVProvider implements CalendarProvider {
     return parsed;
   }
 
+  /**
+   * Patch the stored calendar object rather than regenerate it.
+   *
+   * Rebuilding the VEVENT from the fields the composer knows about used to
+   * drop everything else the object carried — the recurrence rule, the
+   * VTIMEZONE its DTSTART refers to, alarms and per-instance overrides — which
+   * turned any edit of a recurring event into a silent data loss.
+   */
   async updateEvent(
     calendarRemoteId: string,
     remoteEventId: string,
     event: UpdateEventInput,
     etag?: string,
+    occurrence?: OccurrenceTarget,
   ): Promise<CalendarEventData> {
     const client = await this.getClient();
+    const existing = await this.fetchObject(client, calendarRemoteId, remoteEventId);
+    const edits = toEdits(event);
 
-    // Fetch the existing object to get its current data
-    const objects = await client.fetchCalendarObjects({
-      calendar: { url: calendarRemoteId } as DAVCalendar,
-      objectUrls: [remoteEventId],
-    });
+    if (occurrence?.scope === "thisAndFollowing") {
+      // Split the series: bound the original, then store the tail separately.
+      const head = truncateSeriesBefore(existing.data, occurrence.recurrenceId);
+      await this.putObject(client, remoteEventId, head, etag ?? existing.etag);
 
-    const existing = objects[0];
-    if (!existing?.data) throw new Error("Event not found on server");
+      const uid = crypto.randomUUID();
+      const tail = splitSeriesFrom(existing.data, occurrence.recurrenceId, uid, edits);
+      const filename = `${uid}.ics`;
+      await client.createCalendarObject({
+        calendar: { url: calendarRemoteId } as DAVCalendar,
+        filename,
+        iCalString: tail,
+      });
 
-    // Parse existing, merge updates, regenerate
-    const parsed = parseVEvent(existing.data, remoteEventId);
-    const merged: CreateEventInput = {
-      summary: event.summary ?? parsed.summary ?? "",
-      description: event.description ?? parsed.description ?? undefined,
-      location: event.location ?? parsed.location ?? undefined,
-      startTime: event.startTime ?? new Date(parsed.startTime * 1000).toISOString(),
-      endTime: event.endTime ?? new Date(parsed.endTime * 1000).toISOString(),
-      isAllDay: event.isAllDay ?? parsed.isAllDay,
-    };
+      return parseVEvent(tail, `${calendarRemoteId}${filename}`);
+    }
 
-    const icalData = generateVEvent(merged, parsed.uid ?? undefined);
+    const updated = occurrence?.scope === "this"
+      ? editOccurrence(existing.data, occurrence.recurrenceId, edits)
+      : editMaster(existing.data, edits);
 
-    const headers: Record<string, string> = {};
-    if (etag) headers["If-Match"] = etag;
-
-    await client.updateCalendarObject({
-      calendarObject: {
-        url: remoteEventId,
-        data: icalData,
-        etag: etag ?? existing.etag ?? undefined,
-      } as DAVObject,
-      headers,
-    });
-
-    const result = parseVEvent(icalData, remoteEventId);
-    return result;
+    await this.putObject(client, remoteEventId, updated, etag ?? existing.etag);
+    return parseVEvent(updated, remoteEventId);
   }
 
-  async deleteEvent(_calendarRemoteId: string, remoteEventId: string, etag?: string): Promise<void> {
+  async deleteEvent(
+    calendarRemoteId: string,
+    remoteEventId: string,
+    etag?: string,
+    occurrence?: OccurrenceTarget,
+  ): Promise<void> {
     const client = await this.getClient();
+
+    // Removing part of a series rewrites the object; only "all" deletes it.
+    if (occurrence && occurrence.scope !== "all") {
+      const existing = await this.fetchObject(client, calendarRemoteId, remoteEventId);
+      const updated = occurrence.scope === "this"
+        ? excludeOccurrence(existing.data, occurrence.recurrenceId)
+        : truncateSeriesBefore(existing.data, occurrence.recurrenceId);
+
+      await this.putObject(client, remoteEventId, updated, etag ?? existing.etag);
+      return;
+    }
 
     const headers: Record<string, string> = {};
     if (etag) headers["If-Match"] = etag;
@@ -149,6 +172,36 @@ export class CalDAVProvider implements CalendarProvider {
         url: remoteEventId,
         etag: etag ?? undefined,
       } as DAVObject,
+      headers,
+    });
+  }
+
+  private async fetchObject(
+    client: DAVClient,
+    calendarRemoteId: string,
+    remoteEventId: string,
+  ): Promise<{ data: string; etag?: string }> {
+    const objects = await client.fetchCalendarObjects({
+      calendar: { url: calendarRemoteId } as DAVCalendar,
+      objectUrls: [remoteEventId],
+    });
+
+    const existing = objects[0];
+    if (!existing?.data) throw new Error("Event not found on server");
+    return { data: existing.data, etag: existing.etag ?? undefined };
+  }
+
+  private async putObject(
+    client: DAVClient,
+    url: string,
+    icalData: string,
+    etag?: string,
+  ): Promise<void> {
+    const headers: Record<string, string> = {};
+    if (etag) headers["If-Match"] = etag;
+
+    await client.updateCalendarObject({
+      calendarObject: { url, data: icalData, etag: etag ?? undefined } as DAVObject,
       headers,
     });
   }
@@ -198,6 +251,21 @@ export class CalDAVProvider implements CalendarProvider {
       return { success: false, message: err instanceof Error ? err.message : "Connection failed" };
     }
   }
+}
+
+/** The composer speaks ISO strings; the iCal editor works in epoch seconds. */
+function toEdits(event: UpdateEventInput): EventEdits {
+  const edits: EventEdits = {};
+  if (event.summary !== undefined) edits.summary = event.summary;
+  if (event.description !== undefined) edits.description = event.description ?? null;
+  if (event.location !== undefined) edits.location = event.location ?? null;
+  if (event.startTime !== undefined) {
+    edits.startTime = Math.floor(new Date(event.startTime).getTime() / 1000);
+  }
+  if (event.endTime !== undefined) {
+    edits.endTime = Math.floor(new Date(event.endTime).getTime() / 1000);
+  }
+  return edits;
 }
 
 function extractCalendarColor(cal: DAVCalendar): string | null {

@@ -1,10 +1,10 @@
 import { useMemo } from "react";
-import type { DbCalendarEvent } from "@/services/db/calendarEvents";
+import type { CalendarOccurrence } from "@/services/calendar/occurrences";
 
 interface DayViewProps {
   currentDate: Date;
-  events: DbCalendarEvent[];
-  onEventClick: (event: DbCalendarEvent) => void;
+  events: CalendarOccurrence[];
+  onEventClick: (event: CalendarOccurrence) => void;
 }
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
@@ -15,8 +15,8 @@ export function DayView({ currentDate, events, onEventClick }: DayViewProps) {
 
   // Pre-bucket events by hour (O(E) instead of O(24×E))
   const { hourEvents: hourEventMap, allDayEvents } = useMemo(() => {
-    const hMap = new Map<number, DbCalendarEvent[]>();
-    const allDay: DbCalendarEvent[] = [];
+    const hMap = new Map<number, CalendarOccurrence[]>();
+    const allDay: CalendarOccurrence[] = [];
     const dayTs = dayStart.getTime() / 1000;
 
     for (const e of events) {

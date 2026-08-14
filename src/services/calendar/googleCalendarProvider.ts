@@ -244,5 +244,9 @@ function mapGoogleEvent(event: GoogleCalendarEvent): CalendarEventData {
     attendeesJson: event.attendees ? JSON.stringify(event.attendees) : null,
     htmlLink: event.htmlLink ?? null,
     icalData: null,
+    // Google expands series server side (singleEvents=true), so every event
+    // that arrives here is already a single instance.
+    rrule: null,
+    recurrenceId: null,
   };
 }

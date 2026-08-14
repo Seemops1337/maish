@@ -1,11 +1,11 @@
 import { useMemo } from "react";
-import type { DbCalendarEvent } from "@/services/db/calendarEvents";
+import type { CalendarOccurrence } from "@/services/calendar/occurrences";
 import { EventCard } from "./EventCard";
 
 interface MonthViewProps {
   currentDate: Date;
-  events: DbCalendarEvent[];
-  onEventClick: (event: DbCalendarEvent) => void;
+  events: CalendarOccurrence[];
+  onEventClick: (event: CalendarOccurrence) => void;
 }
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -28,7 +28,7 @@ export function MonthView({ currentDate, events, onEventClick }: MonthViewProps)
 
   // Pre-bucket events by day (O(E×D) → O(E)) instead of filtering per cell
   const eventsByDay = useMemo(() => {
-    const map = new Map<number, DbCalendarEvent[]>();
+    const map = new Map<number, CalendarOccurrence[]>();
     for (let d = 1; d <= totalDays; d++) {
       const dayStart = new Date(year, month, d).getTime() / 1000;
       const dayEnd = new Date(year, month, d + 1).getTime() / 1000;

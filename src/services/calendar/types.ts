@@ -22,6 +22,10 @@ export interface CalendarEventData {
   attendeesJson: string | null;
   htmlLink: string | null;
   icalData: string | null;
+  /** Raw RRULE of the series master, null for a one-off event. */
+  rrule: string | null;
+  /** Epoch seconds identifying one instance of a series (RFC 5545 RECURRENCE-ID). */
+  recurrenceId: number | null;
 }
 
 export interface CreateEventInput {
@@ -51,6 +55,19 @@ export interface CalendarSyncResult {
   newCtag: string | null;
 }
 
+/**
+ * Which instances of a recurring series a change applies to. Only meaningful
+ * for CalDAV: Google expands series server side, so each instance already
+ * arrives as an event of its own.
+ */
+export type RecurrenceScope = "this" | "thisAndFollowing" | "all";
+
+export interface OccurrenceTarget {
+  /** Epoch seconds identifying the instance (RFC 5545 RECURRENCE-ID). */
+  recurrenceId: number;
+  scope: RecurrenceScope;
+}
+
 export interface CalendarProvider {
   readonly accountId: string;
   readonly type: CalendarProviderType;
@@ -59,8 +76,8 @@ export interface CalendarProvider {
 
   fetchEvents(calendarRemoteId: string, timeMin: string, timeMax: string): Promise<CalendarEventData[]>;
   createEvent(calendarRemoteId: string, event: CreateEventInput): Promise<CalendarEventData>;
-  updateEvent(calendarRemoteId: string, remoteEventId: string, event: UpdateEventInput, etag?: string): Promise<CalendarEventData>;
-  deleteEvent(calendarRemoteId: string, remoteEventId: string, etag?: string): Promise<void>;
+  updateEvent(calendarRemoteId: string, remoteEventId: string, event: UpdateEventInput, etag?: string, occurrence?: OccurrenceTarget): Promise<CalendarEventData>;
+  deleteEvent(calendarRemoteId: string, remoteEventId: string, etag?: string, occurrence?: OccurrenceTarget): Promise<void>;
 
   syncEvents(calendarRemoteId: string, syncToken?: string): Promise<CalendarSyncResult>;
 

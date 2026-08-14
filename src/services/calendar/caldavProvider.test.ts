@@ -185,6 +185,156 @@ describe("CalDAVProvider", () => {
     });
   });
 
+  describe("updateEvent on a recurring series", () => {
+    const RECURRING = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "BEGIN:VTIMEZONE",
+      "TZID:Europe/Vienna",
+      "BEGIN:STANDARD",
+      "DTSTART:19961027T030000",
+      "RRULE:FREQ=YEARLY;BYDAY=-1SU;BYMONTH=10",
+      "TZOFFSETFROM:+0200",
+      "TZOFFSETTO:+0100",
+      "END:STANDARD",
+      "END:VTIMEZONE",
+      "BEGIN:VEVENT",
+      "UID:series-uid",
+      "SUMMARY:Weekly",
+      "DTSTART:20260105T090000Z",
+      "DTEND:20260105T100000Z",
+      "RRULE:FREQ=WEEKLY;COUNT=6",
+      "BEGIN:VALARM",
+      "ACTION:DISPLAY",
+      "TRIGGER:-PT15M",
+      "END:VALARM",
+      "END:VEVENT",
+      "END:VCALENDAR",
+    ].join("\r\n");
+
+    const JAN_12 = Math.floor(Date.parse("2026-01-12T09:00:00Z") / 1000);
+
+    const written = () =>
+      (mockUpdateCalendarObject.mock.calls[0]?.[0] as { calendarObject: { data: string } })
+        .calendarObject.data;
+
+    beforeEach(() => {
+      mockFetchCalendarObjects.mockResolvedValue([
+        { data: RECURRING, url: "/cal/personal/series-uid.ics", etag: '"old-etag"' },
+      ]);
+    });
+
+    it("preserves the rule, zone and alarm when the whole series changes", async () => {
+      // Regenerating the VEVENT from the edited fields used to drop all three.
+      await provider.updateEvent(
+        "/cal/personal/",
+        "/cal/personal/series-uid.ics",
+        { summary: "Renamed" },
+        '"old-etag"',
+        { recurrenceId: JAN_12, scope: "all" },
+      );
+
+      const data = written();
+      expect(data).toContain("RRULE:FREQ=WEEKLY;COUNT=6");
+      expect(data).toContain("BEGIN:VTIMEZONE");
+      expect(data).toContain("BEGIN:VALARM");
+      expect(data).toContain("SUMMARY:Renamed");
+    });
+
+    it("adds a RECURRENCE-ID override when only one instance changes", async () => {
+      await provider.updateEvent(
+        "/cal/personal/",
+        "/cal/personal/series-uid.ics",
+        { summary: "Just this week" },
+        '"old-etag"',
+        { recurrenceId: JAN_12, scope: "this" },
+      );
+
+      const data = written();
+      expect(data).toContain("RECURRENCE-ID:20260112T090000Z");
+      expect(data).toContain("SUMMARY:Just this week");
+      // The master keeps its own title and rule.
+      expect(data).toContain("SUMMARY:Weekly");
+      expect(data).toContain("RRULE:FREQ=WEEKLY;COUNT=6");
+    });
+
+    it("sends If-Match so a concurrent change is not overwritten", async () => {
+      await provider.updateEvent(
+        "/cal/personal/",
+        "/cal/personal/series-uid.ics",
+        { summary: "x" },
+        '"old-etag"',
+        { recurrenceId: JAN_12, scope: "this" },
+      );
+
+      expect(mockUpdateCalendarObject).toHaveBeenCalledWith(
+        expect.objectContaining({ headers: { "If-Match": '"old-etag"' } }),
+      );
+    });
+
+    it("splits the series into two objects for this-and-following", async () => {
+      await provider.updateEvent(
+        "/cal/personal/",
+        "/cal/personal/series-uid.ics",
+        { summary: "From now on" },
+        '"old-etag"',
+        { recurrenceId: JAN_12, scope: "thisAndFollowing" },
+      );
+
+      // The original is bounded in place...
+      const head = written();
+      expect(head).toContain("UNTIL=");
+      expect(head).not.toContain("COUNT=6");
+
+      // ...and the remainder is stored as a new object with its own UID.
+      expect(mockCreateCalendarObject).toHaveBeenCalledTimes(1);
+      const created = mockCreateCalendarObject.mock.calls[0]?.[0] as {
+        filename: string;
+        iCalString: string;
+      };
+      expect(created.iCalString).toContain("SUMMARY:From now on");
+      expect(created.iCalString).toContain("DTSTART:20260112T090000Z");
+      expect(created.iCalString).not.toContain("UID:series-uid");
+      expect(created.filename).toMatch(/\.ics$/);
+    });
+
+    it("deletes one instance by adding an EXDATE rather than the object", async () => {
+      await provider.deleteEvent(
+        "/cal/personal/",
+        "/cal/personal/series-uid.ics",
+        '"old-etag"',
+        { recurrenceId: JAN_12, scope: "this" },
+      );
+
+      expect(mockDeleteCalendarObject).not.toHaveBeenCalled();
+      expect(written()).toContain("EXDATE:20260112T090000Z");
+    });
+
+    it("ends the series in place for this-and-following deletes", async () => {
+      await provider.deleteEvent(
+        "/cal/personal/",
+        "/cal/personal/series-uid.ics",
+        '"old-etag"',
+        { recurrenceId: JAN_12, scope: "thisAndFollowing" },
+      );
+
+      expect(mockDeleteCalendarObject).not.toHaveBeenCalled();
+      expect(written()).toContain("UNTIL=");
+    });
+
+    it("removes the whole object only when the scope is the entire series", async () => {
+      await provider.deleteEvent(
+        "/cal/personal/",
+        "/cal/personal/series-uid.ics",
+        '"old-etag"',
+        { recurrenceId: JAN_12, scope: "all" },
+      );
+
+      expect(mockDeleteCalendarObject).toHaveBeenCalledTimes(1);
+      expect(mockUpdateCalendarObject).not.toHaveBeenCalled();
+    });
+  });
+
   describe("deleteEvent", () => {
     it("calls deleteCalendarObject with etag", async () => {
       await provider.deleteEvent("/cal/personal/", "/cal/personal/test-uid.ics", '"delete-etag"');

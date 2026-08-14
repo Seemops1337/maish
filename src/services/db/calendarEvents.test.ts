@@ -189,9 +189,23 @@ describe("calendarEvents service", () => {
       expect(result).toEqual(events);
       expect(mockDb.select).toHaveBeenCalledTimes(1);
       const [sql, params] = mockDb.select.mock.calls[0] as [string, unknown[]];
-      expect(sql).toContain("WHERE account_id = $1 AND start_time < $3 AND end_time > $2");
+      expect(sql).toContain("account_id = $1");
+      expect(sql).toContain("start_time < $3");
+      expect(sql).toContain("end_time > $2");
       expect(sql).toContain("ORDER BY start_time ASC");
       expect(params).toEqual(["acc-1", 500, 2500]);
+    });
+
+    it("admits recurring masters whose own dates fall outside the range", async () => {
+      // A weekly series is stored once, on the date it started, so a plain
+      // overlap test would hide it in every later week.
+      mockDb.select.mockResolvedValueOnce([]);
+
+      await getCalendarEventsInRange("acc-1", 500, 2500);
+
+      const [sql] = mockDb.select.mock.calls[0] as [string, unknown[]];
+      expect(sql).toContain("rrule IS NOT NULL");
+      expect(sql).toContain("recurrence_end IS NULL OR recurrence_end > $2");
     });
 
     it("returns empty array when no events match", async () => {
@@ -232,7 +246,8 @@ describe("calendarEvents service", () => {
       const [sql, params] = mockDb.select.mock.calls[0] as [string, unknown[]];
       // Should use the simple range query (no calendar_id filter)
       expect(sql).not.toContain("calendar_id IN");
-      expect(sql).toContain("WHERE account_id = $1 AND start_time < $3 AND end_time > $2");
+      expect(sql).toContain("account_id = $1");
+      expect(sql).toContain("start_time < $3");
       expect(params).toEqual(["acc-1", 500, 2500]);
     });
   });

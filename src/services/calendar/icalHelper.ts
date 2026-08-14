@@ -1,4 +1,5 @@
 import type { CalendarEventData, CreateEventInput, UpdateEventInput } from "./types";
+import { epochToWallClock, wallClockToEpoch, type WallClock } from "./timezone";
 
 /**
  * Generate a VEVENT iCalendar string from event input.
@@ -50,70 +51,194 @@ export function generateVEvent(event: CreateEventInput | UpdateEventInput, uid?:
   return lines.join("\r\n");
 }
 
+// ---------------------------------------------------------------------------
+// Component-aware parsing
+// ---------------------------------------------------------------------------
+
+export interface IcalProperty {
+  /** Upper-case property name, e.g. DTSTART. */
+  name: string;
+  /** Upper-case parameter names mapped to their values, quotes stripped. */
+  params: Record<string, string>;
+  /** Raw value, still escaped. */
+  value: string;
+}
+
+export interface IcalComponent {
+  /** Upper-case component name, e.g. VEVENT. */
+  name: string;
+  props: IcalProperty[];
+  children: IcalComponent[];
+}
+
 /**
- * Parse a VEVENT from iCalendar data into CalendarEventData.
+ * Parse an iCalendar stream into a component tree.
+ *
+ * The tree matters: a VCALENDAR that Apple Calendar writes carries a VTIMEZONE
+ * with DAYLIGHT and STANDARD sub-components, and those have RRULE and DTSTART
+ * properties of their own. Reading the stream as a flat list of properties —
+ * which this parser used to do — makes the zone's yearly DST rule
+ * indistinguishable from the event's own recurrence rule.
  */
-export function parseVEvent(icalData: string, href?: string): CalendarEventData {
-  const lines = unfoldLines(icalData);
+export function parseIcalComponents(icalData: string): IcalComponent[] {
+  const roots: IcalComponent[] = [];
+  const stack: IcalComponent[] = [];
 
-  let uid: string | null = null;
-  let summary: string | null = null;
-  let description: string | null = null;
-  let location: string | null = null;
-  let dtstart: string | null = null;
-  let dtend: string | null = null;
-  let status = "confirmed";
-  let organizerEmail: string | null = null;
-  let isAllDay = false;
-  const attendees: { email: string; displayName?: string; responseStatus?: string }[] = [];
+  for (const line of unfoldLines(icalData)) {
+    const parsed = parsePropertyLine(line);
+    if (!parsed) continue;
 
-  for (const line of lines) {
-    const [nameWithParams, ...valueParts] = line.split(":");
-    if (!nameWithParams) continue;
-    const value = valueParts.join(":");
-    const nameParts = nameWithParams.split(";");
-    const propName = nameParts[0]!.toUpperCase();
-    const params = nameParts.slice(1).join(";").toUpperCase();
+    if (parsed.name === "BEGIN") {
+      const component: IcalComponent = {
+        name: parsed.value.toUpperCase(),
+        props: [],
+        children: [],
+      };
+      const parent = stack[stack.length - 1];
+      if (parent) parent.children.push(component);
+      else roots.push(component);
+      stack.push(component);
+      continue;
+    }
 
-    switch (propName) {
+    if (parsed.name === "END") {
+      stack.pop();
+      continue;
+    }
+
+    const current = stack[stack.length - 1];
+    if (current) current.props.push(parsed);
+  }
+
+  return roots;
+}
+
+/** Depth-first search for every component with the given name. */
+function collectComponents(components: IcalComponent[], name: string): IcalComponent[] {
+  const found: IcalComponent[] = [];
+  const walk = (list: IcalComponent[]) => {
+    for (const component of list) {
+      if (component.name === name) found.push(component);
+      walk(component.children);
+    }
+  };
+  walk(components);
+  return found;
+}
+
+/** Every VEVENT in the stream, in document order. */
+export function findVEvents(icalData: string): IcalComponent[] {
+  return collectComponents(parseIcalComponents(icalData), "VEVENT");
+}
+
+export interface IcalDateTime {
+  /** Raw value as it appeared, e.g. 20260930T180000. */
+  raw: string;
+  /** IANA zone from the TZID parameter, or null for UTC, DATE and floating values. */
+  tzid: string | null;
+  /** VALUE=DATE rather than a date-time. */
+  isDate: boolean;
+  wall: WallClock;
+  epoch: number;
+}
+
+export interface VEventFields {
+  uid: string | null;
+  summary: string | null;
+  description: string | null;
+  location: string | null;
+  status: string;
+  organizerEmail: string | null;
+  attendees: { email: string; displayName?: string; responseStatus?: string }[];
+  isAllDay: boolean;
+  start: IcalDateTime | null;
+  end: IcalDateTime | null;
+  /** Seconds, from a DURATION property when DTEND is absent. */
+  durationSeconds: number | null;
+  /** Raw RRULE value, e.g. FREQ=WEEKLY;UNTIL=20270127T225959Z. */
+  rrule: string | null;
+  rdates: IcalDateTime[];
+  exdates: IcalDateTime[];
+  /** Set on an override component that replaces one instance of a series. */
+  recurrenceId: IcalDateTime | null;
+  sequence: number;
+}
+
+/** Read the properties this app understands out of a single VEVENT component. */
+export function readVEventFields(component: IcalComponent): VEventFields {
+  const fields: VEventFields = {
+    uid: null,
+    summary: null,
+    description: null,
+    location: null,
+    status: "confirmed",
+    organizerEmail: null,
+    attendees: [],
+    isAllDay: false,
+    start: null,
+    end: null,
+    durationSeconds: null,
+    rrule: null,
+    rdates: [],
+    exdates: [],
+    recurrenceId: null,
+    sequence: 0,
+  };
+
+  for (const prop of component.props) {
+    switch (prop.name) {
       case "UID":
-        uid = value;
+        fields.uid = prop.value;
         break;
       case "SUMMARY":
-        summary = unescapeICalText(value);
+        fields.summary = unescapeICalText(prop.value);
         break;
       case "DESCRIPTION":
-        description = unescapeICalText(value);
+        fields.description = unescapeICalText(prop.value);
         break;
       case "LOCATION":
-        location = unescapeICalText(value);
+        fields.location = unescapeICalText(prop.value);
         break;
       case "DTSTART":
-        dtstart = value;
-        if (params.includes("VALUE=DATE") && !params.includes("VALUE=DATE-TIME")) {
-          isAllDay = true;
-        }
+        fields.start = readDateTime(prop);
+        fields.isAllDay = fields.start.isDate;
         break;
       case "DTEND":
-        dtend = value;
+        fields.end = readDateTime(prop);
+        break;
+      case "DURATION":
+        fields.durationSeconds = parseDuration(prop.value);
+        break;
+      case "RRULE":
+        fields.rrule = prop.value;
+        break;
+      case "RDATE":
+        fields.rdates.push(...readDateTimeList(prop));
+        break;
+      case "EXDATE":
+        fields.exdates.push(...readDateTimeList(prop));
+        break;
+      case "RECURRENCE-ID":
+        fields.recurrenceId = readDateTime(prop);
+        break;
+      case "SEQUENCE":
+        fields.sequence = parseInt(prop.value, 10) || 0;
         break;
       case "STATUS":
-        status = value.toLowerCase();
+        fields.status = prop.value.toLowerCase();
         break;
       case "ORGANIZER": {
-        const mailto = value.match(/mailto:(.+)/i);
-        if (mailto) organizerEmail = mailto[1]!;
+        const mailto = prop.value.match(/mailto:(.+)/i);
+        if (mailto) fields.organizerEmail = mailto[1]!;
         break;
       }
       case "ATTENDEE": {
-        const attendeeMailto = value.match(/mailto:(.+)/i);
-        if (attendeeMailto) {
-          const cnMatch = nameWithParams.match(/CN=([^;]+)/i);
-          const statusMatch = nameWithParams.match(/PARTSTAT=([^;]+)/i);
-          attendees.push({
-            email: attendeeMailto[1]!,
-            displayName: cnMatch?.[1]?.replace(/^"(.*)"$/, "$1"),
-            responseStatus: statusMatch?.[1]?.toLowerCase(),
+        const mailto = prop.value.match(/mailto:(.+)/i);
+        if (mailto) {
+          fields.attendees.push({
+            email: mailto[1]!,
+            displayName: prop.params.CN,
+            responseStatus: prop.params.PARTSTAT?.toLowerCase(),
           });
         }
         break;
@@ -121,32 +246,215 @@ export function parseVEvent(icalData: string, href?: string): CalendarEventData 
     }
   }
 
-  const startTime = dtstart ? parseICalDateTime(dtstart, isAllDay) : 0;
-  const endTime = dtend ? parseICalDateTime(dtend, isAllDay) : startTime + 3600;
+  return fields;
+}
+
+/**
+ * Split a calendar object into the series master and its per-instance
+ * overrides. CalDAV keeps every component sharing a UID in one resource
+ * (RFC 4791 §4.1), so a recurring event arrives as one master VEVENT plus one
+ * VEVENT per modified instance, each carrying a RECURRENCE-ID.
+ */
+export function splitCalendarObject(icalData: string): {
+  master: VEventFields | null;
+  overrides: VEventFields[];
+} {
+  const components = findVEvents(icalData).map(readVEventFields);
+  const master = components.find((c) => c.recurrenceId === null) ?? null;
+  const overrides = components.filter((c) => c.recurrenceId !== null);
+  return { master, overrides };
+}
+
+/**
+ * Parse a VEVENT from iCalendar data into CalendarEventData.
+ *
+ * Returns the series master when the object holds a recurring event; the
+ * individual instances are produced by the expander in recurrence.ts.
+ */
+export function parseVEvent(icalData: string, href?: string): CalendarEventData {
+  const events = findVEvents(icalData);
+  const component = events.find((c) => !c.props.some((p) => p.name === "RECURRENCE-ID"))
+    ?? events[0];
+  const fields = component
+    ? readVEventFields(component)
+    : readVEventFields({ name: "VEVENT", props: [], children: [] });
+
+  return eventDataFromFields(fields, icalData, href);
+}
+
+/** Build the stored/rendered shape from parsed VEVENT properties. */
+export function eventDataFromFields(
+  fields: VEventFields,
+  icalData: string,
+  href?: string,
+): CalendarEventData {
+  const startTime = fields.start ? fields.start.epoch : 0;
+  const endTime = resolveEnd(fields, startTime);
 
   return {
-    remoteEventId: href ?? uid ?? crypto.randomUUID(),
-    uid,
+    remoteEventId: href ?? fields.uid ?? crypto.randomUUID(),
+    uid: fields.uid,
     etag: null,
-    summary,
-    description,
-    location,
+    summary: fields.summary,
+    description: fields.description,
+    location: fields.location,
     startTime,
     endTime,
-    isAllDay,
-    status,
-    organizerEmail,
-    attendeesJson: attendees.length > 0 ? JSON.stringify(attendees) : null,
+    isAllDay: fields.isAllDay,
+    status: fields.status,
+    organizerEmail: fields.organizerEmail,
+    attendeesJson: fields.attendees.length > 0 ? JSON.stringify(fields.attendees) : null,
     htmlLink: null,
     icalData,
+    rrule: fields.rrule,
+    recurrenceId: fields.recurrenceId ? fields.recurrenceId.epoch : null,
   };
 }
 
+function resolveEnd(fields: VEventFields, startTime: number): number {
+  if (fields.end) return fields.end.epoch;
+  if (fields.durationSeconds !== null) return startTime + fields.durationSeconds;
+  // RFC 5545 §3.6.1: a DATE-valued start with no end lasts one day.
+  if (fields.isAllDay) return startTime + 86400;
+  return startTime + 3600;
+}
+
+// ---------------------------------------------------------------------------
+// Line-level parsing
+// ---------------------------------------------------------------------------
+
 /** Unfold continuation lines (RFC 5545 §3.1) */
 function unfoldLines(icalData: string): string[] {
-  const raw = icalData.replace(/\r\n[ \t]/g, "").replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+  const raw = icalData
+    .replace(/\r\n[ \t]/g, "")
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .replace(/\n[ \t]/g, "");
   return raw.split("\n").filter((l) => l.length > 0);
 }
+
+/**
+ * Split "DTSTART;TZID=Europe/Vienna:20260930T180000" into name, parameters and
+ * value. Quoted parameter values may contain both colons and semicolons —
+ * ATTENDEE;CN="Doe, John";X-URL="http://x/":mailto:… is legal — so the split
+ * has to track quoting rather than take the first separator it finds.
+ */
+function parsePropertyLine(line: string): IcalProperty | null {
+  let inQuotes = false;
+  let colon = -1;
+
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') inQuotes = !inQuotes;
+    else if (ch === ":" && !inQuotes) {
+      colon = i;
+      break;
+    }
+  }
+
+  if (colon === -1) return null;
+
+  const head = line.slice(0, colon);
+  const value = line.slice(colon + 1);
+  const segments = splitUnquoted(head, ";");
+  const name = segments[0]?.trim().toUpperCase();
+  if (!name) return null;
+
+  const params: Record<string, string> = {};
+  for (const segment of segments.slice(1)) {
+    const eq = segment.indexOf("=");
+    if (eq === -1) continue;
+    const key = segment.slice(0, eq).trim().toUpperCase();
+    params[key] = stripQuotes(segment.slice(eq + 1).trim());
+  }
+
+  return { name, params, value };
+}
+
+function splitUnquoted(text: string, separator: string): string[] {
+  const out: string[] = [];
+  let inQuotes = false;
+  let start = 0;
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '"') inQuotes = !inQuotes;
+    else if (ch === separator && !inQuotes) {
+      out.push(text.slice(start, i));
+      start = i + 1;
+    }
+  }
+
+  out.push(text.slice(start));
+  return out;
+}
+
+function stripQuotes(text: string): string {
+  return text.replace(/^"(.*)"$/, "$1");
+}
+
+function readDateTime(prop: IcalProperty): IcalDateTime {
+  const isDate = prop.params.VALUE === "DATE" || /^\d{8}$/.test(prop.value);
+  const tzid = prop.params.TZID ?? null;
+  return buildDateTime(prop.value, tzid, isDate);
+}
+
+function readDateTimeList(prop: IcalProperty): IcalDateTime[] {
+  const isDate = prop.params.VALUE === "DATE";
+  const tzid = prop.params.TZID ?? null;
+  return prop.value
+    .split(",")
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0)
+    .map((part) => buildDateTime(part, tzid, isDate || /^\d{8}$/.test(part)));
+}
+
+function buildDateTime(raw: string, tzid: string | null, isDate: boolean): IcalDateTime {
+  const isUtc = raw.endsWith("Z");
+  const cleaned = raw.replace("Z", "");
+
+  const wall: WallClock = {
+    year: parseInt(cleaned.substring(0, 4), 10) || 1970,
+    month: (parseInt(cleaned.substring(4, 6), 10) || 1),
+    day: parseInt(cleaned.substring(6, 8), 10) || 1,
+    hour: isDate ? 0 : parseInt(cleaned.substring(9, 11), 10) || 0,
+    minute: isDate ? 0 : parseInt(cleaned.substring(11, 13), 10) || 0,
+    second: isDate ? 0 : parseInt(cleaned.substring(13, 15), 10) || 0,
+  };
+
+  // A trailing Z always wins over TZID; RFC 5545 forbids combining them.
+  const zone = isUtc ? "UTC" : tzid;
+
+  return {
+    raw,
+    tzid: isUtc ? null : tzid,
+    isDate,
+    wall,
+    epoch: wallClockToEpoch(wall, zone),
+  };
+}
+
+/** RFC 5545 §3.3.6 duration, e.g. PT1H30M or -P1DT2H. Returns seconds. */
+export function parseDuration(value: string): number | null {
+  const match = value.match(
+    /^([+-])?P(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/,
+  );
+  if (!match) return null;
+
+  const [, sign, weeks, days, hours, minutes, seconds] = match;
+  const total =
+    (parseInt(weeks ?? "0", 10) || 0) * 604800 +
+    (parseInt(days ?? "0", 10) || 0) * 86400 +
+    (parseInt(hours ?? "0", 10) || 0) * 3600 +
+    (parseInt(minutes ?? "0", 10) || 0) * 60 +
+    (parseInt(seconds ?? "0", 10) || 0);
+
+  return sign === "-" ? -total : total;
+}
+
+// ---------------------------------------------------------------------------
+// Formatting helpers
+// ---------------------------------------------------------------------------
 
 function formatDateTimeUTC(date: Date): string {
   return date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
@@ -157,6 +465,25 @@ function formatDateOnly(date: Date): string {
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}${m}${d}`;
+}
+
+/**
+ * Render epoch seconds as an iCalendar value, for DTSTART, RECURRENCE-ID and
+ * EXDATE. Pass "UTC" for a Z-suffixed value and null for floating time, which
+ * is rendered in the machine's zone as a calendar client is expected to.
+ */
+export function formatDateTimeInZone(
+  epochSeconds: number,
+  zone: string | null,
+  isDate: boolean,
+): string {
+  const wall = epochToWallClock(epochSeconds, zone);
+  const p = (n: number, width = 2) => String(n).padStart(width, "0");
+  const day = `${p(wall.year, 4)}${p(wall.month)}${p(wall.day)}`;
+  if (isDate) return day;
+
+  const time = `${p(wall.hour)}${p(wall.minute)}${p(wall.second)}`;
+  return `${day}T${time}${zone === "UTC" ? "Z" : ""}`;
 }
 
 function escapeICalText(text: string): string {
@@ -173,30 +500,4 @@ function unescapeICalText(text: string): string {
     .replace(/\\,/g, ",")
     .replace(/\\;/g, ";")
     .replace(/\\\\/g, "\\");
-}
-
-function parseICalDateTime(value: string, isAllDay: boolean): number {
-  if (isAllDay) {
-    // Format: YYYYMMDD
-    const y = parseInt(value.substring(0, 4), 10);
-    const m = parseInt(value.substring(4, 6), 10) - 1;
-    const d = parseInt(value.substring(6, 8), 10);
-    return Math.floor(new Date(y, m, d).getTime() / 1000);
-  }
-
-  // Format: YYYYMMDDTHHMMSS or YYYYMMDDTHHMMSSZ
-  const isUTC = value.endsWith("Z");
-  const cleaned = value.replace("Z", "");
-  const y = parseInt(cleaned.substring(0, 4), 10);
-  const m = parseInt(cleaned.substring(4, 6), 10) - 1;
-  const d = parseInt(cleaned.substring(6, 8), 10);
-  const h = parseInt(cleaned.substring(9, 11), 10);
-  const min = parseInt(cleaned.substring(11, 13), 10);
-  const s = parseInt(cleaned.substring(13, 15), 10) || 0;
-
-  const date = isUTC
-    ? new Date(Date.UTC(y, m, d, h, min, s))
-    : new Date(y, m, d, h, min, s);
-
-  return Math.floor(date.getTime() / 1000);
 }
