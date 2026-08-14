@@ -1,0 +1,93 @@
+name: Build Release Artifacts
+
+# Builds the app and attaches the bundles, their .sig files and a merged
+# latest.json to an existing GitHub release.
+#
+# The release is always created first, by release-please. A release created with
+# the GITHUB_TOKEN does not fire the `release` event, so this workflow cannot
+# listen for it — release-please.yml calls it directly via `workflow_call`.
+# The `workflow_dispatch` trigger exists to re-run a failed build or to fill in a
+# release that was published before this workflow existed.
+
+on:
+  workflow_call:
+    inputs:
+      tag:
+        description: Tag of the release to build and upload assets to
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Tag of an existing release, e.g. maish-v0.1.1
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: macOS (aarch64)
+    runs-on: macos-latest
+
+    steps:
+      - name: Check out the released tag
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag }}
+
+      # tauri-action uploads to a release id. Passing the id rather than the tag
+      # matters: with `tagName` the action rewrites the release title and body,
+      # which would wipe the changelog release-please wrote.
+      - name: Resolve release
+        id: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          echo "id=$(gh release view "$TAG" --json databaseId --jq .databaseId)" >> "$GITHUB_OUTPUT"
+          {
+            echo 'notes<<MAISH_RELEASE_NOTES_EOF'
+            gh release view "$TAG" --json body --jq .body
+            echo 'MAISH_RELEASE_NOTES_EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-darwin
+
+      - name: Cache Rust build
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ./src-tauri -> target
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build and upload
+        uses: tauri-apps/tauri-action@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Both are mandatory. `tauri build` bundles first and signs afterwards,
+          # so a missing key fails the job after the bundles already exist. The
+          # password is not optional either: on CI the CLI substitutes an empty
+          # string for a missing password instead of treating the key as
+          # unencrypted, which a password-less key then rejects. The key must be
+          # the counterpart of plugins.updater.pubkey in src-tauri/tauri.conf.json.
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        with:
+          releaseId: ${{ steps.release.outputs.id }}
+          releaseBody: ${{ steps.release.outputs.notes }}
+          args: --target aarch64-apple-darwin
+          retryAttempts: 2
