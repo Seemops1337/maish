@@ -123,13 +123,16 @@ export class CalDAVProvider implements CalendarProvider {
     const edits = toEdits(event);
 
     if (occurrence?.scope === "thisAndFollowing") {
-      // Split the series: bound the original, then store the tail separately.
-      const head = truncateSeriesBefore(existing.data, occurrence.recurrenceId);
-      await this.putObject(client, remoteEventId, head, etag ?? existing.etag);
-
+      // Split the series into two objects. Store the tail first: neither half
+      // may end up standing alone, and this is the order where a failure can
+      // still be undone. A bounded original written first and a tail that then
+      // fails would silently drop every instance from the split point on,
+      // whereas a stored tail can be taken back.
       const uid = crypto.randomUUID();
-      const tail = splitSeriesFrom(existing.data, occurrence.recurrenceId, uid, edits);
       const filename = `${uid}.ics`;
+      const tailUrl = `${calendarRemoteId}${filename}`;
+      const tail = splitSeriesFrom(existing.data, occurrence.recurrenceId, uid, edits);
+
       const created = await client.createCalendarObject({
         calendar: { url: calendarRemoteId } as DAVCalendar,
         filename,
@@ -137,7 +140,17 @@ export class CalDAVProvider implements CalendarProvider {
       });
       assertWritten(created, "Saving the rest of the series");
 
-      return parseVEvent(tail, `${calendarRemoteId}${filename}`);
+      const head = truncateSeriesBefore(existing.data, occurrence.recurrenceId);
+      try {
+        await this.putObject(client, remoteEventId, head, etag ?? existing.etag);
+      } catch (err) {
+        // The original still runs to its own end, so leaving the tail behind
+        // would show every instance after the split twice.
+        await this.discard(client, tailUrl);
+        throw err;
+      }
+
+      return parseVEvent(tail, tailUrl);
     }
 
     const updated = occurrence?.scope === "this"
@@ -174,6 +187,22 @@ export class CalDAVProvider implements CalendarProvider {
       } as DAVObject,
     });
     assertWritten(response, "Deleting the event");
+  }
+
+  /**
+   * Take back an object that was written as one half of a failed change. The
+   * failure the caller is about to report is the one worth showing, so a
+   * rollback that fails too is only logged.
+   */
+  private async discard(client: DAVClient, url: string): Promise<void> {
+    try {
+      const response = await client.deleteCalendarObject({
+        calendarObject: { url } as DAVObject,
+      });
+      assertWritten(response, "Undoing the half-written series");
+    } catch (err) {
+      console.error("Could not remove the partially split series at", url, err);
+    }
   }
 
   private async fetchObject(

@@ -304,6 +304,44 @@ describe("CalDAVProvider", () => {
       expect(created.filename).toMatch(/\.ics$/);
     });
 
+    /**
+     * The split writes two objects. Neither half may be left standing on its
+     * own: a stored tail without a bounded head shows the series twice, a
+     * bounded head without a tail loses every instance from the split point on.
+     */
+    describe("when half of a split fails", () => {
+      beforeEach(() => {
+        vi.spyOn(crypto, "randomUUID").mockReturnValue(
+          "tail-uuid" as `${string}-${string}-${string}-${string}-${string}`,
+        );
+      });
+
+      const split = () =>
+        provider.updateEvent(
+          "/cal/personal/",
+          "/cal/personal/series-uid.ics",
+          { summary: "From now on" },
+          '"old-etag"',
+          { recurrenceId: JAN_12, scope: "thisAndFollowing" },
+        );
+
+      it("leaves the original series untouched when the new half cannot be stored", async () => {
+        mockCreateCalendarObject.mockResolvedValueOnce(davResponse(507, "Insufficient Storage"));
+
+        await expect(split()).rejects.toMatchObject({ status: 507 });
+        expect(mockUpdateCalendarObject).not.toHaveBeenCalled();
+      });
+
+      it("removes the new half when the original cannot be bounded", async () => {
+        mockUpdateCalendarObject.mockResolvedValueOnce(davResponse(412, "Precondition Failed"));
+
+        await expect(split()).rejects.toMatchObject({ status: 412 });
+        expect(mockDeleteCalendarObject).toHaveBeenCalledWith({
+          calendarObject: { url: "/cal/personal/tail-uuid.ics", etag: undefined },
+        });
+      });
+    });
+
     it("deletes one instance by adding an EXDATE rather than the object", async () => {
       await provider.deleteEvent(
         "/cal/personal/",
