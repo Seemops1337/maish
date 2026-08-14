@@ -1,6 +1,6 @@
 import { getDb } from "./connection";
 
-const MIGRATIONS = [
+export const MIGRATIONS = [
   {
     version: 1,
     description: "Initial schema",
@@ -798,14 +798,29 @@ const MIGRATIONS = [
 /**
  * Split a SQL string into individual statements, correctly handling
  * BEGIN...END blocks (e.g. inside CREATE TRIGGER) that contain semicolons.
+ *
+ * Exported for the tests: a migration that splits wrongly fails at startup and
+ * takes the whole app with it, so this is checked against the real migrations
+ * rather than a copy of the function.
  */
-function splitStatements(sql: string): string[] {
+export function splitStatements(sql: string): string[] {
   const statements: string[] = [];
   let current = "";
   let depth = 0;
   const upper = sql.toUpperCase();
 
   for (let i = 0; i < sql.length; i++) {
+    // Comments and string literals are carried over verbatim. A semicolon
+    // inside one is prose, not a statement boundary: splitting there tears
+    // the statement apart and leaves the remaining words where SQL is
+    // expected, which fails the migration and with it the whole startup.
+    const skipped = skipToEndOf(sql, i);
+    if (skipped !== i) {
+      current += sql.slice(i, skipped);
+      i = skipped - 1;
+      continue;
+    }
+
     // Check for BEGIN keyword at word boundary
     if (
       upper.startsWith("BEGIN", i) &&
@@ -838,6 +853,41 @@ function splitStatements(sql: string): string[] {
   if (trimmed.length > 0) statements.push(trimmed);
 
   return statements;
+}
+
+/**
+ * Index just past the comment or string literal starting at `start`, or
+ * `start` itself when nothing begins there. An unterminated one runs to the
+ * end of the input rather than throwing — the database rejects it soon enough,
+ * with a better message than this could give.
+ */
+function skipToEndOf(sql: string, start: number): number {
+  const char = sql[start];
+
+  if (char === "-" && sql[start + 1] === "-") {
+    const newline = sql.indexOf("\n", start);
+    return newline === -1 ? sql.length : newline;
+  }
+
+  if (char === "/" && sql[start + 1] === "*") {
+    const close = sql.indexOf("*/", start + 2);
+    return close === -1 ? sql.length : close + 2;
+  }
+
+  if (char === "'" || char === '"') {
+    for (let i = start + 1; i < sql.length; i++) {
+      if (sql[i] !== char) continue;
+      // A doubled quote escapes itself (RFC-free SQL, but universal).
+      if (sql[i + 1] === char) {
+        i++;
+        continue;
+      }
+      return i + 1;
+    }
+    return sql.length;
+  }
+
+  return start;
 }
 
 export async function runMigrations(): Promise<void> {
