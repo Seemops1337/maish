@@ -75,7 +75,7 @@ maish/
 │   │   ├── dnd/              # DndProvider (drag threads → sidebar labels)
 │   │   └── ui/               # EmptyState, Skeleton, ContextMenu, OfflineBanner, illustrations/
 │   ├── services/             # Business logic layer
-│   │   ├── db/               # SQLite queries (29 files), migrations, FTS5
+│   │   ├── db/               # SQLite queries (33 files), migrations, FTS5
 │   │   ├── email/            # EmailProvider abstraction, providerFactory,
 │   │   │                     # gmailProvider, imapSmtpProvider
 │   │   ├── gmail/            # GmailClient, tokenManager, syncManager
@@ -147,13 +147,14 @@ All business logic lives in `src/services/` as plain async functions (except `Gm
 
 | Service | Description |
 |---------|-------------|
-| `db/` | SQLite queries (29 files), migrations, FTS5 search |
+| `db/` | SQLite queries (33 files), migrations, FTS5 search |
 | `email/` | EmailProvider abstraction, provider factory, Gmail/IMAP adapters |
 | `gmail/` | Gmail client, token management, sync engine |
 | `imap/` | IMAP sync, folder-to-label mapping, auto-discovery, Tauri command wrappers |
 | `threading/` | JWZ threading algorithm for IMAP message grouping |
 | `ai/` | AI service with 3 providers (selectable models), categorization, Ask Inbox, writing style analysis, auto-drafts, task extraction |
 | `google/` | Google Calendar API |
+| `calendar/` | CalendarProvider abstraction over Google Calendar and CalDAV, iCalendar parsing and in-place editing, recurrence expansion, IANA time-zone conversion |
 | `composer/` | Draft auto-save (3s debounce) |
 | `search/` | Gmail-style query parser, SQL builder |
 | `filters/` | Auto-apply filter engine (AND logic) |
@@ -190,9 +191,9 @@ Nine Zustand stores manage ephemeral UI state:
 
 ## Database
 
-SQLite via Tauri SQL plugin. 19 migrations, 35 tables total.
+SQLite via Tauri SQL plugin. 24 migrations, 36 tables total.
 
-Key tables: `accounts` (with `provider`, IMAP/SMTP fields), `messages` (with FTS5 index, `auth_results`, IMAP headers, `imap_uid`, `imap_folder`), `threads` (with `is_pinned`, `is_muted`), `thread_labels`, `labels` (with `imap_folder_path`, `imap_special_use`), `contacts`, `attachments` (with `imap_part_id`), `filter_rules`, `scheduled_emails`, `templates`, `signatures`, `image_allowlist`, `settings`, `ai_cache`, `thread_categories`, `calendar_events`, `follow_up_reminders`, `notification_vips`, `unsubscribe_actions`, `bundle_rules`, `bundled_threads`, `send_as_aliases`, `smart_folders`, `link_scan_results`, `phishing_allowlist`, `quick_steps`, `folder_sync_state` (IMAP sync tracking), `pending_operations` (offline action queue), `local_drafts` (offline draft persistence), `writing_style_profiles` (AI writing style per account), `tasks` (full task management with priorities, subtasks, recurrence), `task_tags` (custom task tag colors), `smart_label_rules` (AI-powered auto-labeling rules).
+Key tables: `accounts` (with `provider`, IMAP/SMTP fields), `messages` (with FTS5 index, `auth_results`, IMAP headers, `imap_uid`, `imap_folder`), `threads` (with `is_pinned`, `is_muted`), `thread_labels`, `labels` (with `imap_folder_path`, `imap_special_use`), `contacts`, `attachments` (with `imap_part_id`), `filter_rules`, `scheduled_emails`, `templates`, `signatures`, `image_allowlist`, `settings`, `ai_cache`, `thread_categories`, `calendars`, `calendar_events` (with `ical_data`, and `rrule`/`recurrence_end` for recurring series), `follow_up_reminders`, `notification_vips`, `unsubscribe_actions`, `bundle_rules`, `bundled_threads`, `send_as_aliases`, `smart_folders`, `link_scan_results`, `phishing_allowlist`, `quick_steps`, `folder_sync_state` (IMAP sync tracking), `pending_operations` (offline action queue), `local_drafts` (offline draft persistence), `writing_style_profiles` (AI writing style per account), `tasks` (full task management with priorities, subtasks, recurrence), `task_tags` (custom task tag colors), `smart_label_rules` (AI-powered auto-labeling rules).
 
 ## Startup Sequence
 
