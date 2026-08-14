@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { vi } from "vitest";
 import { EventDetailModal } from "./EventDetailModal";
 import { CalendarWriteError } from "@/services/calendar/errors";
@@ -115,4 +115,29 @@ describe("EventDetailModal", () => {
     });
   });
 
+  describe("deleting part of a series", () => {
+    it("keeps the stored row while the calendar object survives", async () => {
+      mockDeleteEvent.mockResolvedValueOnce({ objectRemoved: false });
+      const { onUpdated } = renderModal();
+
+      fireEvent.click(screen.getByRole("button", { name: /delete/i }));
+      fireEvent.click(screen.getByRole("button", { name: /this and following events/i }));
+
+      await waitFor(() => expect(onUpdated).toHaveBeenCalled());
+      expect(mockDeleteCalendarEventDb).not.toHaveBeenCalled();
+    });
+
+    it("removes the stored row once the provider removed the object", async () => {
+      // Cutting a series before its first instance leaves nothing behind, so
+      // the provider deletes the whole object and the row has to follow.
+      mockDeleteEvent.mockResolvedValueOnce({ objectRemoved: true });
+      const { onUpdated } = renderModal();
+
+      fireEvent.click(screen.getByRole("button", { name: /delete/i }));
+      fireEvent.click(screen.getByRole("button", { name: /this and following events/i }));
+
+      await waitFor(() => expect(onUpdated).toHaveBeenCalled());
+      expect(mockDeleteCalendarEventDb).toHaveBeenCalledWith("row-1");
+    });
+  });
 });

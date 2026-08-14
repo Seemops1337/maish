@@ -83,17 +83,18 @@ export function EventDetailModal({ event, calendars, accountId, onClose, onUpdat
       const calendarRemoteId = calendar?.remote_id ?? "primary";
       const remoteEventId = event.remote_event_id ?? event.google_event_id;
 
-      await provider.deleteEvent(
+      const result = await provider.deleteEvent(
         calendarRemoteId,
         remoteEventId,
         event.etag ?? undefined,
         targetFor(chosen),
       );
 
-      // Removing part of a series only rewrites the stored object, so the row
-      // stays and is refreshed by the reload below. Only deleting the whole
-      // series removes it.
-      if (!isSeries || chosen === "all") {
+      // Removing part of a series usually only rewrites the stored object, so
+      // the row stays and is refreshed by the reload below. The provider says
+      // when the object itself is gone — deleting the whole series, or cutting
+      // one so early that nothing is left of it.
+      if (result.objectRemoved) {
         await deleteCalendarEventDb(event.masterId);
       }
 

@@ -216,6 +216,7 @@ describe("CalDAVProvider", () => {
       "END:VCALENDAR",
     ].join("\r\n");
 
+    const JAN_5 = Math.floor(Date.parse("2026-01-05T09:00:00Z") / 1000);
     const JAN_12 = Math.floor(Date.parse("2026-01-12T09:00:00Z") / 1000);
 
     const written = () =>
@@ -376,6 +377,51 @@ describe("CalDAVProvider", () => {
 
       expect(mockDeleteCalendarObject).toHaveBeenCalledTimes(1);
       expect(mockUpdateCalendarObject).not.toHaveBeenCalled();
+    });
+
+    /**
+     * Cutting a series before its very first instance leaves a rule that
+     * produces nothing — an object no view can show and no instance can be
+     * clicked to remove again. Nothing is left to keep, so the object goes.
+     */
+    describe("when the cut lands on the first instance", () => {
+      it("deletes the object rather than emptying the series", async () => {
+        const result = await provider.deleteEvent(
+          "/cal/personal/",
+          "/cal/personal/series-uid.ics",
+          '"old-etag"',
+          { recurrenceId: JAN_5, scope: "thisAndFollowing" },
+        );
+
+        expect(mockUpdateCalendarObject).not.toHaveBeenCalled();
+        expect(mockDeleteCalendarObject).toHaveBeenCalledTimes(1);
+        expect(result).toEqual({ objectRemoved: true });
+      });
+
+      it("reports that the object survives an ordinary tail cut", async () => {
+        const result = await provider.deleteEvent(
+          "/cal/personal/",
+          "/cal/personal/series-uid.ics",
+          '"old-etag"',
+          { recurrenceId: JAN_12, scope: "thisAndFollowing" },
+        );
+
+        expect(result).toEqual({ objectRemoved: false });
+      });
+
+      it("edits the master instead of splitting off a headless half", async () => {
+        await provider.updateEvent(
+          "/cal/personal/",
+          "/cal/personal/series-uid.ics",
+          { summary: "Renamed after all" },
+          '"old-etag"',
+          { recurrenceId: JAN_5, scope: "thisAndFollowing" },
+        );
+
+        expect(mockCreateCalendarObject).not.toHaveBeenCalled();
+        expect(written()).toContain("SUMMARY:Renamed after all");
+        expect(written()).toContain("RRULE:FREQ=WEEKLY;COUNT=6");
+      });
     });
   });
 

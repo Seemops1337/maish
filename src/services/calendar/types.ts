@@ -68,6 +68,15 @@ export interface OccurrenceTarget {
   scope: RecurrenceScope;
 }
 
+export interface DeleteEventResult {
+  /**
+   * Whether the calendar object itself is gone, so its stored row has to go
+   * with it. Removing part of a series normally only rewrites the object and
+   * leaves it in place — unless nothing is left of the series afterwards.
+   */
+  objectRemoved: boolean;
+}
+
 export interface CalendarProvider {
   readonly accountId: string;
   readonly type: CalendarProviderType;
@@ -77,7 +86,7 @@ export interface CalendarProvider {
   fetchEvents(calendarRemoteId: string, timeMin: string, timeMax: string): Promise<CalendarEventData[]>;
   createEvent(calendarRemoteId: string, event: CreateEventInput): Promise<CalendarEventData>;
   updateEvent(calendarRemoteId: string, remoteEventId: string, event: UpdateEventInput, etag?: string, occurrence?: OccurrenceTarget): Promise<CalendarEventData>;
-  deleteEvent(calendarRemoteId: string, remoteEventId: string, etag?: string, occurrence?: OccurrenceTarget): Promise<void>;
+  deleteEvent(calendarRemoteId: string, remoteEventId: string, etag?: string, occurrence?: OccurrenceTarget): Promise<DeleteEventResult>;
 
   syncEvents(calendarRemoteId: string, syncToken?: string): Promise<CalendarSyncResult>;
 

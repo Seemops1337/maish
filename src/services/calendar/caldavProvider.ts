@@ -6,6 +6,7 @@ import type {
   CalendarEventData,
   CalendarSyncResult,
   CreateEventInput,
+  DeleteEventResult,
   OccurrenceTarget,
   UpdateEventInput,
 } from "./types";
@@ -20,6 +21,7 @@ import {
   type EventEdits,
 } from "./icalEdit";
 import { CalendarWriteError } from "./errors";
+import { countInstancesBefore } from "./recurrence";
 import { getAccount } from "@/services/db/accounts";
 
 export class CalDAVProvider implements CalendarProvider {
@@ -122,7 +124,13 @@ export class CalDAVProvider implements CalendarProvider {
     const existing = await this.fetchObject(client, calendarRemoteId, remoteEventId);
     const edits = toEdits(event);
 
-    if (occurrence?.scope === "thisAndFollowing") {
+    // Splitting before the first instance would bound the original to nothing.
+    // With no earlier instance to keep, "this and following" covers the whole
+    // series, so the master is edited and the object stays single.
+    if (
+      occurrence?.scope === "thisAndFollowing"
+      && countInstancesBefore(existing.data, occurrence.recurrenceId) > 0
+    ) {
       // Split the series into two objects. Store the tail first: neither half
       // may end up standing alone, and this is the order where a failure can
       // still be undone. A bounded original written first and a tail that then
@@ -166,18 +174,27 @@ export class CalDAVProvider implements CalendarProvider {
     remoteEventId: string,
     etag?: string,
     occurrence?: OccurrenceTarget,
-  ): Promise<void> {
+  ): Promise<DeleteEventResult> {
     const client = await this.getClient();
 
     // Removing part of a series rewrites the object; only "all" deletes it.
     if (occurrence && occurrence.scope !== "all") {
       const existing = await this.fetchObject(client, calendarRemoteId, remoteEventId);
-      const updated = occurrence.scope === "this"
-        ? excludeOccurrence(existing.data, occurrence.recurrenceId)
-        : truncateSeriesBefore(existing.data, occurrence.recurrenceId);
+      const keepsInstances = occurrence.scope === "this"
+        || countInstancesBefore(existing.data, occurrence.recurrenceId) > 0;
 
-      await this.putObject(client, remoteEventId, updated, etag ?? existing.etag);
-      return;
+      if (keepsInstances) {
+        const updated = occurrence.scope === "this"
+          ? excludeOccurrence(existing.data, occurrence.recurrenceId)
+          : truncateSeriesBefore(existing.data, occurrence.recurrenceId);
+
+        await this.putObject(client, remoteEventId, updated, etag ?? existing.etag);
+        return { objectRemoved: false };
+      }
+      // Cutting the series before its first instance would leave a rule that
+      // produces nothing: an object no view can show and no instance can be
+      // clicked to get rid of it again. Nothing survives the cut, so the whole
+      // object goes.
     }
 
     const response = await client.deleteCalendarObject({
@@ -187,6 +204,7 @@ export class CalDAVProvider implements CalendarProvider {
       } as DAVObject,
     });
     assertWritten(response, "Deleting the event");
+    return { objectRemoved: true };
   }
 
   /**

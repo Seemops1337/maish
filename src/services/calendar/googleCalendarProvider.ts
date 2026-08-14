@@ -5,6 +5,7 @@ import type {
   CalendarEventData,
   CalendarSyncResult,
   CreateEventInput,
+  DeleteEventResult,
   UpdateEventInput,
 } from "./types";
 import { getGmailClient } from "@/services/gmail/tokenManager";
@@ -143,12 +144,17 @@ export class GoogleCalendarProvider implements CalendarProvider {
     return mapGoogleEvent(updated);
   }
 
-  async deleteEvent(calendarRemoteId: string, remoteEventId: string): Promise<void> {
+  /**
+   * Google expands series server side, so every instance is an event of its
+   * own and a delete always removes exactly the event that was asked for.
+   */
+  async deleteEvent(calendarRemoteId: string, remoteEventId: string): Promise<DeleteEventResult> {
     const client = await this.getClient();
     const encodedCalId = encodeURIComponent(calendarRemoteId);
     const encodedEventId = encodeURIComponent(remoteEventId);
     const url = `${CALENDAR_API_BASE}/calendars/${encodedCalId}/events/${encodedEventId}`;
     await client.request(url, { method: "DELETE" });
+    return { objectRemoved: true };
   }
 
   async syncEvents(calendarRemoteId: string, syncToken?: string): Promise<CalendarSyncResult> {
