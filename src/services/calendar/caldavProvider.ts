@@ -164,15 +164,11 @@ export class CalDAVProvider implements CalendarProvider {
       return;
     }
 
-    const headers: Record<string, string> = {};
-    if (etag) headers["If-Match"] = etag;
-
     await client.deleteCalendarObject({
       calendarObject: {
         url: remoteEventId,
         etag: etag ?? undefined,
       } as DAVObject,
-      headers,
     });
   }
 
@@ -191,18 +187,23 @@ export class CalDAVProvider implements CalendarProvider {
     return { data: existing.data, etag: existing.etag ?? undefined };
   }
 
+  /**
+   * PUT the object back, letting tsdav derive If-Match from the etag.
+   *
+   * Passing `headers` instead would take the conditional request away rather
+   * than add to it: tsdav merges the call's parameters over the client's
+   * defaults one level deep (`defaultParam`), so a `headers` argument replaces
+   * the authorization header the client put there at login and the server
+   * answers 401.
+   */
   private async putObject(
     client: DAVClient,
     url: string,
     icalData: string,
     etag?: string,
   ): Promise<void> {
-    const headers: Record<string, string> = {};
-    if (etag) headers["If-Match"] = etag;
-
     await client.updateCalendarObject({
       calendarObject: { url, data: icalData, etag: etag ?? undefined } as DAVObject,
-      headers,
     });
   }
 

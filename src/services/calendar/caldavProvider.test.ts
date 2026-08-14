@@ -169,7 +169,6 @@ describe("CalDAVProvider", () => {
           data: expect.stringContaining("SUMMARY:Updated Event"),
           etag: '"old-etag"',
         },
-        headers: { "If-Match": '"old-etag"' },
       });
 
       expect(event.summary).toBe("Updated Event");
@@ -258,7 +257,7 @@ describe("CalDAVProvider", () => {
       expect(data).toContain("RRULE:FREQ=WEEKLY;COUNT=6");
     });
 
-    it("sends If-Match so a concurrent change is not overwritten", async () => {
+    it("sends the etag so a concurrent change is not overwritten", async () => {
       await provider.updateEvent(
         "/cal/personal/",
         "/cal/personal/series-uid.ics",
@@ -268,7 +267,9 @@ describe("CalDAVProvider", () => {
       );
 
       expect(mockUpdateCalendarObject).toHaveBeenCalledWith(
-        expect.objectContaining({ headers: { "If-Match": '"old-etag"' } }),
+        expect.objectContaining({
+          calendarObject: expect.objectContaining({ etag: '"old-etag"' }),
+        }),
       );
     });
 
@@ -344,7 +345,6 @@ describe("CalDAVProvider", () => {
           url: "/cal/personal/test-uid.ics",
           etag: '"delete-etag"',
         },
-        headers: { "If-Match": '"delete-etag"' },
       });
     });
 
@@ -356,8 +356,69 @@ describe("CalDAVProvider", () => {
           url: "/cal/personal/test-uid.ics",
           etag: undefined,
         },
-        headers: {},
       });
+    });
+  });
+
+  /**
+   * tsdav merges the per-call parameters over the client's defaults one level
+   * deep, so a `headers` argument replaces the authorization header rather than
+   * adding to it — every PUT and DELETE then comes back 401. If-Match has to
+   * come from the calendar object's etag instead.
+   */
+  describe("authorization on write requests", () => {
+    it("leaves If-Match to tsdav rather than passing headers", async () => {
+      mockFetchCalendarObjects.mockResolvedValue([
+        { data: MOCK_ICAL_DATA, url: "/cal/personal/test-uid.ics", etag: '"old-etag"' },
+      ]);
+
+      await provider.updateEvent(
+        "/cal/personal/",
+        "/cal/personal/test-uid.ics",
+        { summary: "Updated Event" },
+        '"old-etag"',
+      );
+
+      const params = mockUpdateCalendarObject.mock.calls[0]?.[0] as Record<string, unknown>;
+      expect(params).not.toHaveProperty("headers");
+      expect(params.calendarObject).toMatchObject({ etag: '"old-etag"' });
+    });
+
+    it("passes no headers on delete either", async () => {
+      await provider.deleteEvent("/cal/personal/", "/cal/personal/test-uid.ics", '"delete-etag"');
+
+      const params = mockDeleteCalendarObject.mock.calls[0]?.[0] as Record<string, unknown>;
+      expect(params).not.toHaveProperty("headers");
+    });
+
+    it("loses the auth header in tsdav when headers are passed", async () => {
+      // The reason for the two tests above, checked against the real library so
+      // an upgrade that changes the merge does not go unnoticed.
+      const { DAVClient: RealDAVClient } = await vi.importActual<typeof import("tsdav")>("tsdav");
+      const sent: HeadersInit[] = [];
+      const stubFetch = (_url: string, init?: RequestInit) => {
+        sent.push(init?.headers ?? {});
+        return Promise.resolve(new Response(null, { status: 204 }));
+      };
+
+      const client = new RealDAVClient({
+        serverUrl: "https://caldav.example.com",
+        credentials: { username: "user@example.com", password: "secret" },
+        authMethod: "Basic",
+        fetch: stubFetch as unknown as typeof fetch,
+      });
+      // Skip login(), which would talk to the network; it only sets these.
+      (client as unknown as { authHeaders: Record<string, string> }).authHeaders = {
+        authorization: "Basic dXNlckBleGFtcGxlLmNvbTpzZWNyZXQ=",
+      };
+
+      const calendarObject = { url: "https://caldav.example.com/e.ics", data: "x", etag: '"e"' };
+      await client.updateCalendarObject({ calendarObject, headers: { "If-Match": '"e"' } });
+      await client.updateCalendarObject({ calendarObject });
+
+      expect(sent[0]).not.toHaveProperty("authorization");
+      expect(sent[1]).toHaveProperty("authorization");
+      expect(sent[1]).toMatchObject({ "If-Match": '"e"' });
     });
   });
 
