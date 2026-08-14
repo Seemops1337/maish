@@ -15,17 +15,30 @@ npm install
 npm run tauri build -- --no-bundle
 ```
 
+On macOS the system dependency is the Xcode command line tools, and Homebrew's
+`rustup` is keg-only — its shims are not linked into `/opt/homebrew/bin`, so the
+toolchain stays invisible until the directory is on `PATH`:
+
+```bash
+brew install rustup
+echo 'export PATH="/opt/homebrew/opt/rustup/bin:$PATH"' >> ~/.zshrc
+rustup default stable
+```
+
 Everything needed to build is in the repository — `package-lock.json` pins the
 frontend dependencies and `src-tauri/Cargo.lock` the Rust ones. The first Rust
 build takes several minutes; later ones are far quicker.
 
 Your mail is **not** in the repository, and must not be. Two files hold it, both
-named after the application identifier `xyz.hochreiner.maish`:
+named after the application identifier `xyz.hochreiner.maish`. Where they live
+depends on the platform: Tauri's config and data directories are two separate
+trees on Linux and the same folder on macOS.
 
-| What | Linux path |
-|---|---|
-| Database | `~/.config/xyz.hochreiner.maish/maish.db` |
-| Encryption key | `~/.local/share/xyz.hochreiner.maish/maish.key` |
+| What | Linux | macOS |
+|---|---|---|
+| Database | `~/.config/xyz.hochreiner.maish/maish.db` | `~/Library/Application Support/xyz.hochreiner.maish/maish.db` |
+| Encryption key | `~/.local/share/xyz.hochreiner.maish/maish.key` | `~/Library/Application Support/xyz.hochreiner.maish/maish.key` |
+| Log | `~/.local/share/xyz.hochreiner.maish/logs/Maish.log` | `~/Library/Logs/xyz.hochreiner.maish/Maish.log` |
 
 Starting without them gives you an empty client: add the account again and let
 it sync. To carry an existing setup across, copy **both** files. The key alone
@@ -33,11 +46,22 @@ is useless, and the database alone cannot be read — every stored password and
 token is encrypted with that key, and a missing key file is silently replaced by
 a fresh one, after which login fails without an error dialog.
 
+The key file is written lazily, on the first credential the app encrypts, so a
+fresh installation has none until an account is added. Put the copied key in
+place **before** the first start with the copied database, not after.
+
 Copy the database with SQLite rather than `cp`, so the write-ahead log is
-included:
+included — the WAL routinely holds several megabytes that the `.db` file does
+not:
 
 ```bash
+# Linux
 sqlite3 "file:$HOME/.config/xyz.hochreiner.maish/maish.db?mode=ro" ".backup /path/to/target/maish.db"
+```
+
+```bash
+# macOS
+sqlite3 "file:$HOME/Library/Application Support/xyz.hochreiner.maish/maish.db?mode=ro" ".backup /path/to/target/maish.db"
 ```
 
 ## Commands
