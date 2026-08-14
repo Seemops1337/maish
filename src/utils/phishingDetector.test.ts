@@ -4,7 +4,11 @@ import {
   analyzeLink,
   scanLinksInHtml,
   scanMessage,
+  applySensitivity,
+  shouldConfirmLink,
+  findLinkAnalysis,
 } from "./phishingDetector";
+import type { LinkAnalysis } from "./phishingDetector";
 
 // ── getRiskLevel ──────────────────────────────────────────────────
 
@@ -487,5 +491,95 @@ describe("scanMessage sensitivity", () => {
   it("default sensitivity shows banner for score 55", () => {
     const result = scanMessage("msg-sens-5", html55, "default");
     expect(result.showBanner).toBe(true);
+  });
+});
+
+// ── applySensitivity ────────────────────────────────────────────
+
+describe("applySensitivity", () => {
+  // A link with score 30 (shortener 15 + keyword 15)
+  const html30 = `<a href="https://bit.ly/login">Click</a>`;
+
+  it("recomputes showBanner for a result scanned at another sensitivity", () => {
+    const scanned = scanMessage("msg-apply-1", html30, "low");
+    expect(scanned.showBanner).toBe(false);
+
+    expect(applySensitivity(scanned, "high").showBanner).toBe(true);
+    expect(applySensitivity(scanned, "default").showBanner).toBe(false);
+  });
+
+  it("leaves the link analyses untouched", () => {
+    const scanned = scanMessage("msg-apply-2", html30, "low");
+    const reapplied = applySensitivity(scanned, "high");
+    expect(reapplied.links).toEqual(scanned.links);
+    expect(reapplied.maxRiskScore).toBe(scanned.maxRiskScore);
+    expect(reapplied.messageId).toBe("msg-apply-2");
+  });
+
+  it("does not mutate the input", () => {
+    const scanned = scanMessage("msg-apply-3", html30, "low");
+    applySensitivity(scanned, "high");
+    expect(scanned.showBanner).toBe(false);
+  });
+});
+
+// ── shouldConfirmLink ───────────────────────────────────────────
+
+describe("shouldConfirmLink", () => {
+  function link(riskScore: number): LinkAnalysis {
+    return {
+      url: "https://example.com/",
+      displayText: "Click",
+      riskScore,
+      riskLevel: getRiskLevel(riskScore),
+      triggeredRules: [],
+    };
+  }
+
+  it("confirms at or above the threshold for the sensitivity", () => {
+    expect(shouldConfirmLink(link(20), "high")).toBe(true);
+    expect(shouldConfirmLink(link(40), "default")).toBe(true);
+    expect(shouldConfirmLink(link(60), "low")).toBe(true);
+  });
+
+  it("stays silent below the threshold for the sensitivity", () => {
+    expect(shouldConfirmLink(link(19), "high")).toBe(false);
+    expect(shouldConfirmLink(link(39), "default")).toBe(false);
+    expect(shouldConfirmLink(link(59), "low")).toBe(false);
+  });
+
+  it("never confirms a link with no findings", () => {
+    expect(shouldConfirmLink(link(0), "high")).toBe(false);
+  });
+});
+
+// ── findLinkAnalysis ────────────────────────────────────────────
+
+describe("findLinkAnalysis", () => {
+  it("returns null when nothing matches", () => {
+    const links = scanLinksInHtml(`<a href="https://bit.ly/login">Click</a>`);
+    expect(findLinkAnalysis(links, "https://example.com/")).toBeNull();
+  });
+
+  it("matches a URL the frame reported in its resolved form", () => {
+    // The frame posts anchor.href, which appends the empty path
+    const links = scanLinksInHtml(`<a href="https://bit.ly">Click</a>`);
+    const found = findLinkAnalysis(links, "https://bit.ly/");
+    expect(found?.url).toBe("https://bit.ly");
+  });
+
+  it("ignores surrounding whitespace", () => {
+    const links = scanLinksInHtml(`<a href=" https://bit.ly/login ">Click</a>`);
+    expect(findLinkAnalysis(links, "https://bit.ly/login")).not.toBeNull();
+  });
+
+  it("returns the riskiest analysis when a URL appears more than once", () => {
+    const links = scanLinksInHtml(
+      `<a href="https://bit.ly/login">https://bit.ly/login</a>` +
+        `<a href="https://bit.ly/login">https://paypal.com/account</a>`,
+    );
+    const found = findLinkAnalysis(links, "https://bit.ly/login");
+    expect(found?.riskScore).toBe(Math.max(...links.map((l) => l.riskScore)));
+    expect(found?.triggeredRules.some((r) => r.ruleId === "display-mismatch")).toBe(true);
   });
 });

@@ -1,8 +1,20 @@
-import { scanMessage } from "@/utils/phishingDetector";
-import type { MessageScanResult, PhishingSensitivity } from "@/utils/phishingDetector";
+import { scanMessage, applySensitivity, shouldConfirmLink } from "@/utils/phishingDetector";
+import type { LinkAnalysis, MessageScanResult, PhishingSensitivity } from "@/utils/phishingDetector";
 import { getSetting } from "@/services/db/settings";
 import { isPhishingAllowlisted } from "@/services/db/phishingAllowlist";
 import { getCachedScanResult, cacheScanResult } from "@/services/db/linkScanResults";
+
+export interface MessagePhishingScan {
+  /** Scan result, with the banner decision made at the current sensitivity. */
+  result: MessageScanResult;
+  /** Links risky enough to confirm before opening, at the current sensitivity. */
+  riskyLinks: LinkAnalysis[];
+}
+
+async function getPhishingSensitivity(): Promise<PhishingSensitivity> {
+  const raw = await getSetting("phishing_sensitivity");
+  return raw === "low" || raw === "high" ? raw : "default";
+}
 
 /**
  * Orchestrates phishing link scanning for a message.
@@ -13,13 +25,17 @@ import { getCachedScanResult, cacheScanResult } from "@/services/db/linkScanResu
  * 3. Check cache for existing result
  * 4. Scan the message HTML
  * 5. Cache the result
+ *
+ * The cache stores link scores, which are independent of the sensitivity
+ * setting; the thresholds are applied afterwards, so changing the setting takes
+ * effect on already-scanned messages too.
  */
 export async function scanMessageLinks(
   accountId: string,
   messageId: string,
   bodyHtml: string | null,
   senderAddress: string | null,
-): Promise<MessageScanResult | null> {
+): Promise<MessagePhishingScan | null> {
   // 1. Check if phishing detection is enabled
   const enabled = await getSetting("phishing_detection_enabled");
   if (enabled === "false") {
@@ -34,20 +50,19 @@ export async function scanMessageLinks(
     }
   }
 
+  const sensitivity = await getPhishingSensitivity();
+
   // 3. Check cache
   const cached = await getCachedScanResult(accountId, messageId);
   if (cached) {
     try {
-      return JSON.parse(cached) as MessageScanResult;
+      return withSensitivity(JSON.parse(cached) as MessageScanResult, sensitivity);
     } catch {
       // Invalid cache entry — proceed with fresh scan
     }
   }
 
-  // 4. Read sensitivity setting and scan the message
-  const sensitivityRaw = await getSetting("phishing_sensitivity");
-  const sensitivity: PhishingSensitivity =
-    sensitivityRaw === "low" || sensitivityRaw === "high" ? sensitivityRaw : "default";
+  // 4. Scan the message
   const result = scanMessage(messageId, bodyHtml, sensitivity);
 
   // 5. Cache the result
@@ -57,5 +72,15 @@ export async function scanMessageLinks(
     console.error("Failed to cache phishing scan result:", err);
   }
 
-  return result;
+  return withSensitivity(result, sensitivity);
+}
+
+function withSensitivity(
+  result: MessageScanResult,
+  sensitivity: PhishingSensitivity,
+): MessagePhishingScan {
+  return {
+    result: applySensitivity(result, sensitivity),
+    riskyLinks: result.links.filter((link) => shouldConfirmLink(link, sensitivity)),
+  };
 }

@@ -1,7 +1,8 @@
-import { render, waitFor } from "@testing-library/react";
+import { render, waitFor, screen, fireEvent, act } from "@testing-library/react";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { EmailRenderer } from "./EmailRenderer";
 import type { DbAttachment } from "@/services/db/attachments";
+import type { LinkAnalysis } from "@/utils/phishingDetector";
 
 // Mock dependencies
 vi.mock("@tauri-apps/plugin-opener", () => ({
@@ -227,6 +228,112 @@ describe("EmailRenderer", () => {
       postFromFrame(iframe, { type: "maish:height", height: 420 });
 
       expect(iframe.style.height).toBe("420px");
+    });
+
+    describe("risky links", () => {
+      function makeLink(overrides: Partial<LinkAnalysis> = {}): LinkAnalysis {
+        return {
+          url: "http://192.168.1.1/login",
+          displayText: "Verify now",
+          riskScore: 55,
+          riskLevel: "medium",
+          triggeredRules: [
+            {
+              ruleId: "ip-address",
+              name: "IP Address URL",
+              score: 40,
+              detail: "URL points to raw IP address: 192.168.1.1",
+            },
+          ],
+          ...overrides,
+        };
+      }
+
+      function renderWithRisky(riskyLinks: LinkAnalysis[]) {
+        const { container } = render(
+          <EmailRenderer html="<p>body</p>" text={null} riskyLinks={riskyLinks} />,
+        );
+        return { iframe: container.querySelector("iframe") as HTMLIFrameElement };
+      }
+
+      // The frame's message arrives outside React's event system, so the
+      // resulting render has to be flushed explicitly.
+      function clickLink(iframe: HTMLIFrameElement, url: string) {
+        act(() => postFromFrame(iframe, { type: "maish:link", url }));
+      }
+
+      it("asks before opening a link the scan flagged", () => {
+        const { iframe } = renderWithRisky([makeLink()]);
+
+        clickLink(iframe, "http://192.168.1.1/login");
+
+        expect(openUrl).not.toHaveBeenCalled();
+        expect(screen.getByText("Suspicious Link")).toBeInTheDocument();
+        expect(screen.getByText("IP Address URL")).toBeInTheDocument();
+      });
+
+      it("labels a high-risk link as such", () => {
+        const { iframe } = renderWithRisky([makeLink({ riskScore: 70, riskLevel: "high" })]);
+
+        clickLink(iframe, "http://192.168.1.1/login");
+
+        expect(screen.getByText("High Risk Link")).toBeInTheDocument();
+      });
+
+      it("opens the link once the user confirms", () => {
+        const { iframe } = renderWithRisky([makeLink()]);
+
+        clickLink(iframe, "http://192.168.1.1/login");
+        fireEvent.click(screen.getByText("Open Anyway"));
+
+        expect(openUrl).toHaveBeenCalledWith("http://192.168.1.1/login");
+        expect(screen.queryByText("Suspicious Link")).not.toBeInTheDocument();
+      });
+
+      it("leaves the link unopened when the user goes back", () => {
+        const { iframe } = renderWithRisky([makeLink()]);
+
+        clickLink(iframe, "http://192.168.1.1/login");
+        fireEvent.click(screen.getByText("Go Back"));
+
+        expect(openUrl).not.toHaveBeenCalled();
+        expect(screen.queryByText("Suspicious Link")).not.toBeInTheDocument();
+      });
+
+      it("opens a link that is not on the risky list straight away", () => {
+        const { iframe } = renderWithRisky([makeLink()]);
+
+        clickLink(iframe, "https://example.com/x");
+
+        expect(openUrl).toHaveBeenCalledWith("https://example.com/x");
+        expect(screen.queryByText("Suspicious Link")).not.toBeInTheDocument();
+      });
+
+      it("matches the resolved URL the frame reports against the scanned href", () => {
+        const { iframe } = renderWithRisky([makeLink({ url: "https://bit.ly" })]);
+
+        clickLink(iframe, "https://bit.ly/");
+
+        expect(openUrl).not.toHaveBeenCalled();
+        expect(screen.getByText("Suspicious Link")).toBeInTheDocument();
+      });
+
+      it("shows the URL that will actually open", () => {
+        const { iframe } = renderWithRisky([makeLink({ url: "https://bit.ly" })]);
+
+        clickLink(iframe, "https://bit.ly/");
+
+        expect(screen.getByText("https://bit.ly/")).toBeInTheDocument();
+      });
+
+      it("still refuses schemes outside the allowlist", () => {
+        const { iframe } = renderWithRisky([makeLink({ url: "javascript:alert(1)" })]);
+
+        clickLink(iframe, "javascript:alert(1)");
+
+        expect(openUrl).not.toHaveBeenCalled();
+        expect(screen.queryByText("Suspicious Link")).not.toBeInTheDocument();
+      });
     });
 
     it("keeps the frame sandboxed without same-origin access", () => {

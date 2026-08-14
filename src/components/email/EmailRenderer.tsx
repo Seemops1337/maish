@@ -5,6 +5,9 @@ import { stripRemoteImages, hasBlockedImages } from "@/utils/imageBlocker";
 import { addToAllowlist } from "@/services/db/imageAllowlist";
 import { escapeHtml, sanitizeHtml } from "@/utils/sanitize";
 import { useUIStore } from "@/stores/uiStore";
+import { findLinkAnalysis } from "@/utils/phishingDetector";
+import { LinkConfirmDialog } from "./LinkConfirmDialog";
+import type { LinkAnalysis } from "@/utils/phishingDetector";
 import type { DbAttachment } from "@/services/db/attachments";
 
 // The frame is untrusted, so only schemes that are safe to hand to the system
@@ -28,6 +31,8 @@ interface EmailRendererProps {
   senderAllowlisted?: boolean;
   messageId?: string | null;
   inlineAttachments?: DbAttachment[];
+  /** Links the phishing scan flagged — clicking one asks for confirmation first. */
+  riskyLinks?: LinkAnalysis[];
 }
 
 export function EmailRenderer({
@@ -39,10 +44,12 @@ export function EmailRenderer({
   senderAllowlisted = false,
   messageId,
   inlineAttachments,
+  riskyLinks,
 }: EmailRendererProps) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const [overrideShow, setOverrideShow] = useState(false);
   const [cidMap, setCidMap] = useState<Map<string, string>>(new Map());
+  const [pendingLink, setPendingLink] = useState<LinkAnalysis | null>(null);
 
   const theme = useUIStore((s) => s.theme);
   const isDark = theme === "dark"
@@ -180,6 +187,15 @@ export function EmailRenderer({
 
       if (data.type === "maish:link" && typeof data.url === "string") {
         if (!isOpenableUrl(data.url)) return;
+
+        // A flagged link goes through the confirmation dialog first. The dialog
+        // shows the URL that will actually open, not the raw href the scan read.
+        const analysis = findLinkAnalysis(riskyLinks ?? [], data.url);
+        if (analysis) {
+          setPendingLink({ ...analysis, url: data.url });
+          return;
+        }
+
         openUrl(data.url).catch((err) => {
           console.error("Failed to open link:", err);
         });
@@ -188,7 +204,16 @@ export function EmailRenderer({
 
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
-  }, []);
+  }, [riskyLinks]);
+
+  const handleConfirmLink = useCallback(() => {
+    const url = pendingLink?.url;
+    setPendingLink(null);
+    if (!url) return;
+    openUrl(url).catch((err) => {
+      console.error("Failed to open link:", err);
+    });
+  }, [pendingLink]);
 
   const handleLoadImages = useCallback(() => {
     setOverrideShow(true);
@@ -233,6 +258,13 @@ export function EmailRenderer({
         style={{ overflow: "hidden" }}
         title="Email content"
       />
+      {pendingLink && (
+        <LinkConfirmDialog
+          linkAnalysis={pendingLink}
+          onCancel={() => setPendingLink(null)}
+          onConfirm={handleConfirmLink}
+        />
+      )}
     </div>
   );
 }

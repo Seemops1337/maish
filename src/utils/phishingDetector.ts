@@ -457,6 +457,59 @@ const SENSITIVITY_THRESHOLDS: Record<PhishingSensitivity, { scoreThreshold: numb
   high: { scoreThreshold: 20, countThreshold: 1 },
 };
 
+/**
+ * Recompute the banner decision for an existing result under another
+ * sensitivity. Link scores never depend on the setting, only the thresholds do,
+ * so a cached result stays usable after the user changes the setting.
+ */
+export function applySensitivity(
+  result: MessageScanResult,
+  sensitivity: PhishingSensitivity,
+): MessageScanResult {
+  const { scoreThreshold, countThreshold } = SENSITIVITY_THRESHOLDS[sensitivity];
+  return {
+    ...result,
+    showBanner:
+      result.maxRiskScore >= scoreThreshold || result.suspiciousLinkCount >= countThreshold,
+  };
+}
+
+/** Whether clicking this link should be confirmed before it is opened. */
+export function shouldConfirmLink(
+  analysis: LinkAnalysis,
+  sensitivity: PhishingSensitivity,
+): boolean {
+  return analysis.riskScore >= SENSITIVITY_THRESHOLDS[sensitivity].scoreThreshold;
+}
+
+/**
+ * URLs are compared in resolved form: the scan reads the raw `href` attribute
+ * while the email frame reports `anchor.href`, which the browser has already
+ * normalized (`https://example.com` becomes `https://example.com/`).
+ */
+function normalizeUrl(url: string): string {
+  const trimmed = url.trim();
+  try {
+    return new URL(trimmed).href;
+  } catch {
+    return trimmed;
+  }
+}
+
+/**
+ * Look up a clicked URL among analysed links. The same URL can appear several
+ * times with different link texts, so the riskiest match wins.
+ */
+export function findLinkAnalysis(links: LinkAnalysis[], url: string): LinkAnalysis | null {
+  const target = normalizeUrl(url);
+  let best: LinkAnalysis | null = null;
+  for (const link of links) {
+    if (normalizeUrl(link.url) !== target) continue;
+    if (!best || link.riskScore > best.riskScore) best = link;
+  }
+  return best;
+}
+
 export function scanMessage(messageId: string, html: string | null, sensitivity: PhishingSensitivity = "default"): MessageScanResult {
   if (!html) {
     return {
