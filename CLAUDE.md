@@ -108,8 +108,8 @@ modification under Apache-2.0 section 4(b) and belongs in `NOTICE`.
 ## Versioning
 
 Semantic versioning, currently **0.1.0** — the fork restarted its numbering and
-does not continue Velo's 0.4.x line. `CHANGELOG.md` still holds Velo's history
-below that, marked as such.
+does not continue Velo's 0.4.x line. `CHANGELOG.md` begins at that release and
+carries no Velo entries; its header records why the numbering restarts.
 
 | Change | Bump | Commit type |
 |---|---|---|
