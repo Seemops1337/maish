@@ -338,6 +338,7 @@ function toEdits(event: UpdateEventInput): EventEdits {
   if (event.endTime !== undefined) {
     edits.endTime = Math.floor(new Date(event.endTime).getTime() / 1000);
   }
+  if (event.recurrence !== undefined) edits.recurrence = event.recurrence;
   return edits;
 }
 

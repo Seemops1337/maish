@@ -7,9 +7,11 @@ import type { CalendarOccurrence } from "@/services/calendar/occurrences";
 import type { DbCalendar } from "@/services/db/calendars";
 import type { OccurrenceTarget, RecurrenceScope } from "@/services/calendar/types";
 import { getCalendarProvider } from "@/services/calendar/providerFactory";
-import { describeRule } from "@/services/calendar/recurrence";
+import { describeRule, seriesTimeZone } from "@/services/calendar/recurrence";
+import { parseRecurrenceForm, type RecurrenceForm } from "@/services/calendar/recurrenceForm";
 import { CalendarWriteError } from "@/services/calendar/errors";
 import { deleteCalendarEvent as deleteCalendarEventDb } from "@/services/db/calendarEvents";
+import { RecurrenceField } from "./RecurrenceField";
 
 interface EventDetailModalProps {
   event: CalendarOccurrence;
@@ -45,6 +47,35 @@ export function EventDetailModal({ event, calendars, accountId, onClose, onUpdat
   const isSeries = event.isSeriesInstance && event.occurrenceId !== null;
   const repeatLabel = describeRule(event.rrule);
 
+  // Changing a rule means patching the stored calendar object, so it is offered
+  // only where that object is at hand. Google expands its series server side
+  // and sends single instances with no iCalendar data behind them, which is
+  // also why an instance there has no rule to edit in the first place.
+  const canEditRepeat = Boolean(event.ical_data);
+  const [parsedRule] = useState(() =>
+    parseRecurrenceForm(event.rrule, seriesTimeZone(event.ical_data)),
+  );
+  const [recurrence, setRecurrence] = useState<RecurrenceForm | null>(
+    parsedRule.kind === "simple" ? parsedRule.form : null,
+  );
+  // A rule the control cannot state is left alone until it is deliberately
+  // replaced, and an untouched control sends nothing at all — so a change to
+  // the title never rewrites the repetition as a side effect.
+  const [customRule, setCustomRule] = useState(
+    parsedRule.kind === "custom" ? (repeatLabel ?? "Repeats on a custom schedule") : null,
+  );
+  const [repeatChanged, setRepeatChanged] = useState(false);
+
+  // An instance cannot carry a rule of its own: repetition belongs to the
+  // series, so it can only be changed together with one.
+  const repeatLocked = isSeries && scope === "this";
+
+  const handleRecurrenceChange = useCallback((next: RecurrenceForm | null) => {
+    setRecurrence(next);
+    setCustomRule(null);
+    setRepeatChanged(true);
+  }, []);
+
   const targetFor = useCallback((chosen: RecurrenceScope): OccurrenceTarget | undefined => {
     if (!isSeries || event.occurrenceId === null) return undefined;
     return { recurrenceId: event.occurrenceId, scope: chosen };
@@ -64,6 +95,9 @@ export function EventDetailModal({ event, calendars, accountId, onClose, onUpdat
         location: location || undefined,
         startTime: new Date(startTime).toISOString(),
         endTime: new Date(endTime).toISOString(),
+        // Leaving the field out keeps the stored rule, which is what has to
+        // happen whenever the repetition was not touched.
+        ...(repeatChanged && !repeatLocked ? { recurrence } : {}),
       }, event.etag ?? undefined, targetFor(scope));
 
       onUpdated();
@@ -73,7 +107,7 @@ export function EventDetailModal({ event, calendars, accountId, onClose, onUpdat
     } finally {
       setSaving(false);
     }
-  }, [accountId, calendar, event, summary, description, location, startTime, endTime, scope, targetFor, onUpdated]);
+  }, [accountId, calendar, event, summary, description, location, startTime, endTime, scope, recurrence, repeatChanged, repeatLocked, targetFor, onUpdated]);
 
   const handleDelete = useCallback(async (chosen: RecurrenceScope) => {
     setDeleting(true);
@@ -145,6 +179,20 @@ export function EventDetailModal({ event, calendars, accountId, onClose, onUpdat
               onChange={(e) => setEndTime(e.target.value)}
             />
           </div>
+
+          {canEditRepeat && (
+            <RecurrenceField
+              value={recurrence}
+              onChange={handleRecurrenceChange}
+              startDate={startTime.slice(0, 10)}
+              customRule={customRule}
+              disabledReason={
+                repeatLocked
+                  ? "Repetition belongs to the whole series. Choose another option below to change it."
+                  : undefined
+              }
+            />
+          )}
 
           <TextField
             label="Location"

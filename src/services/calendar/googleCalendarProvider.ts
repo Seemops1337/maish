@@ -8,6 +8,7 @@ import type {
   DeleteEventResult,
   UpdateEventInput,
 } from "./types";
+import { buildRRule, type RuleDateStyle } from "./recurrenceForm";
 import { getGmailClient } from "@/services/gmail/tokenManager";
 import type { GmailClient } from "@/services/gmail/client";
 
@@ -108,6 +109,10 @@ export class GoogleCalendarProvider implements CalendarProvider {
       body.attendees = event.attendees;
     }
 
+    if (event.recurrence) {
+      body.recurrence = [`RRULE:${buildRRule(event.recurrence, googleStyle(event.isAllDay))}`];
+    }
+
     const created = await client.request<GoogleCalendarEvent>(url, {
       method: "POST",
       body: JSON.stringify(body),
@@ -135,6 +140,14 @@ export class GoogleCalendarProvider implements CalendarProvider {
         body.start = { dateTime: new Date(event.startTime).toISOString(), timeZone: tz };
         body.end = { dateTime: new Date(event.endTime).toISOString(), timeZone: tz };
       }
+    }
+
+    // An empty list is how the API is told to drop a recurrence; leaving the
+    // field out keeps whatever the event already has.
+    if (event.recurrence !== undefined) {
+      body.recurrence = event.recurrence
+        ? [`RRULE:${buildRRule(event.recurrence, googleStyle(event.isAllDay))}`]
+        : [];
     }
 
     const updated = await client.request<GoogleCalendarEvent>(url, {
@@ -224,6 +237,14 @@ export class GoogleCalendarProvider implements CalendarProvider {
       return { success: false, message: err instanceof Error ? err.message : "Connection failed" };
     }
   }
+}
+
+/**
+ * The API takes an all-day event's dates as bare days and everything else as a
+ * timestamp, so UNTIL has to be written the same way.
+ */
+function googleStyle(isAllDay: boolean | undefined): RuleDateStyle {
+  return isAllDay ? { zone: null, isDate: true } : { zone: "UTC", isDate: false };
 }
 
 function mapGoogleEvent(event: GoogleCalendarEvent): CalendarEventData {

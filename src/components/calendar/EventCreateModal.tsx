@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { TextField } from "@/components/ui/TextField";
 import type { DbCalendar } from "@/services/db/calendars";
+import type { RecurrenceForm } from "@/services/calendar/recurrenceForm";
+import { RecurrenceField } from "./RecurrenceField";
 
 interface EventCreateModalProps {
   calendars?: DbCalendar[];
@@ -14,6 +16,7 @@ interface EventCreateModalProps {
     startTime: string;
     endTime: string;
     calendarId?: string;
+    recurrence: RecurrenceForm | null;
   }) => void;
 }
 
@@ -26,6 +29,7 @@ export function EventCreateModal({ calendars, onClose, onCreate }: EventCreateMo
   const [calendarId, setCalendarId] = useState<string>(
     calendars?.find((c) => c.is_primary)?.id ?? calendars?.[0]?.id ?? "",
   );
+  const [recurrence, setRecurrence] = useState<RecurrenceForm | null>(null);
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
@@ -37,8 +41,9 @@ export function EventCreateModal({ calendars, onClose, onCreate }: EventCreateMo
       startTime,
       endTime,
       calendarId: calendarId || undefined,
+      recurrence,
     });
-  }, [summary, description, location, startTime, endTime, calendarId, onCreate]);
+  }, [summary, description, location, startTime, endTime, calendarId, recurrence, onCreate]);
 
   return (
     <Modal isOpen={true} onClose={onClose} title="Create Event" width="w-full max-w-md">
@@ -84,6 +89,12 @@ export function EventCreateModal({ calendars, onClose, onCreate }: EventCreateMo
             onChange={(e) => setEndTime(e.target.value)}
           />
         </div>
+
+        <RecurrenceField
+          value={recurrence}
+          onChange={setRecurrence}
+          startDate={startTime.slice(0, 10)}
+        />
 
         <TextField
           label="Location"

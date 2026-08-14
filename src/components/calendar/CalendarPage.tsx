@@ -6,6 +6,7 @@ import { isRecurring, seriesEnd, seriesRule } from "@/services/calendar/recurren
 import { getVisibleCalendars, getCalendarsForAccount, upsertCalendar, type DbCalendar } from "@/services/db/calendars";
 import { getCalendarProvider, hasCalendarSupport } from "@/services/calendar/providerFactory";
 import type { CalendarEventData, CreateEventInput } from "@/services/calendar/types";
+import type { RecurrenceForm } from "@/services/calendar/recurrenceForm";
 import { CalendarToolbar, type CalendarView } from "./CalendarToolbar";
 import { MonthView } from "./MonthView";
 import { WeekView } from "./WeekView";
@@ -195,6 +196,7 @@ export function CalendarPage() {
     startTime: string;
     endTime: string;
     calendarId?: string;
+    recurrence: RecurrenceForm | null;
   }) => {
     if (!activeAccountId) return;
     try {
@@ -231,6 +233,7 @@ export function CalendarPage() {
         location: eventData.location || undefined,
         startTime: eventData.startTime,
         endTime: eventData.endTime,
+        recurrence: eventData.recurrence,
       };
 
       const created = await provider.createEvent(calendarRemoteId, input);

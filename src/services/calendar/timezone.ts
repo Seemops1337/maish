@@ -136,6 +136,26 @@ function utcFromWallClock(wall: WallClock): number {
 }
 
 /**
+ * Render epoch seconds as an iCalendar value, for DTSTART, RECURRENCE-ID,
+ * EXDATE and UNTIL. Pass "UTC" for a Z-suffixed value and null for floating
+ * time, which is rendered in the machine's zone as a calendar client is
+ * expected to.
+ */
+export function formatDateTimeInZone(
+  epochSeconds: number,
+  zone: string | null,
+  isDate: boolean,
+): string {
+  const wall = epochToWallClock(epochSeconds, zone);
+  const p = (n: number, width = 2) => String(n).padStart(width, "0");
+  const day = `${p(wall.year, 4)}${p(wall.month)}${p(wall.day)}`;
+  if (isDate) return day;
+
+  const time = `${p(wall.hour)}${p(wall.minute)}${p(wall.second)}`;
+  return `${day}T${time}${zone === "UTC" ? "Z" : ""}`;
+}
+
+/**
  * Wall clocks as a single comparable integer (YYYYMMDDhhmmss). The expander
  * compares thousands of candidate dates per range; doing that numerically
  * keeps the expensive zone conversion for the few that survive.

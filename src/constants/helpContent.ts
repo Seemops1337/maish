@@ -17,6 +17,7 @@ import {
   Layout,
   Undo2,
   CalendarClock,
+  CalendarSync,
   Archive,
   FileSignature,
   FileText,
@@ -1035,6 +1036,20 @@ export const HELP_CATEGORIES: HelpCategory[] = [
           { text: "Deleting offers the same three choices, so you can drop a single date and keep the rest." },
           { text: "Changing one date on its own marks it as changed, and later edits to the series leave it alone." },
           { text: "Works for CalDAV calendars; Google calendars already deliver each occurrence separately." },
+        ],
+      },
+      {
+        id: "setting-up-repetition",
+        icon: CalendarSync,
+        title: "Setting up a repetition",
+        summary: "Make an event repeat, or stop it repeating.",
+        description:
+          "The create and edit dialogs both carry a Repeat setting: choose daily, weekly, monthly or yearly, how many periods to skip between occurrences, and when the series should stop — never, after a number of times, or on a date you pick. A weekly repetition can also name the weekdays it falls on. Setting Repeat back to \"Does not repeat\" turns the series into a single event.",
+        tips: [
+          { text: "Leave the weekdays unselected and a weekly event follows the day it starts on." },
+          { text: "An end date is included: an occurrence on that day still happens." },
+          { text: "A repetition belongs to the whole series, so pick \"All events\" or \"This and following\" when changing it." },
+          { text: "A schedule another app wrote that is more detailed than these options — every third Thursday, say — is shown as it is and left alone unless you replace it deliberately." },
         ],
       },
     ],
