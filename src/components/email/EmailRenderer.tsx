@@ -7,6 +7,18 @@ import { escapeHtml, sanitizeHtml } from "@/utils/sanitize";
 import { useUIStore } from "@/stores/uiStore";
 import type { DbAttachment } from "@/services/db/attachments";
 
+// The frame is untrusted, so only schemes that are safe to hand to the system
+// opener get through. Anything else is dropped silently.
+const OPENABLE_SCHEMES = ["http:", "https:", "mailto:", "tel:"];
+
+function isOpenableUrl(url: string): boolean {
+  try {
+    return OPENABLE_SCHEMES.includes(new URL(url).protocol);
+  } catch {
+    return false;
+  }
+}
+
 interface EmailRendererProps {
   html: string | null;
   text: string | null;
@@ -29,8 +41,6 @@ export function EmailRenderer({
   inlineAttachments,
 }: EmailRendererProps) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
-  const observerRef = useRef<ResizeObserver | null>(null);
-  const rafRef = useRef<number>(0);
   const [overrideShow, setOverrideShow] = useState(false);
   const [cidMap, setCidMap] = useState<Map<string, string>>(new Map());
 
@@ -115,22 +125,14 @@ export function EmailRenderer({
     return hasBlockedImages(stripRemoteImages(sanitizedBody));
   }, [shouldBlock, sanitizedBody]);
 
-  // Write content directly into iframe document — synchronous, no srcDoc async parsing
-  useLayoutEffect(() => {
-    const iframe = iframeRef.current;
-    if (!iframe) return;
-
-    observerRef.current?.disconnect();
-
-    const doc = iframe.contentDocument;
-    if (!doc) return;
-
-    doc.open();
+  // The frame is sandboxed to an opaque origin, so its content is handed over as
+  // srcdoc and everything comes back over postMessage — see public/emailFrame.js
+  const frameDoc = useMemo(() => {
     // Plain text: blend with app theme (dark text on light bg, light text on dark bg)
     // HTML emails: always render on a light background since senders design for white/light
     const plainTextDark = isDark && isPlainText;
     const htmlDark = isDark && !isPlainText;
-    doc.write(`<!DOCTYPE html>
+    return `<!DOCTYPE html>
 <html>
 <head>
   <style>
@@ -158,47 +160,35 @@ export function EmailRenderer({
     table { max-width: 100%; }
   </style>
 </head>
-<body>${bodyHtml}</body>
-</html>`);
-    doc.close();
+<body>${bodyHtml}<script src="/emailFrame.js"></script></body>
+</html>`;
+  }, [bodyHtml, isDark, isPlainText]);
 
-    // Calculate and set height synchronously before paint
-    const applyHeight = () => {
-      if (!doc.body) return;
-      const h = doc.body.scrollHeight;
-      if (h > 0) {
-        iframe.style.height = h + "px";
+  // Height reports and link clicks arrive from the frame as messages
+  useLayoutEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      const iframe = iframeRef.current;
+      if (!iframe || event.source !== iframe.contentWindow) return;
+
+      const data = event.data as { type?: unknown; url?: unknown; height?: unknown };
+      if (!data || typeof data !== "object") return;
+
+      if (data.type === "maish:height" && typeof data.height === "number") {
+        iframe.style.height = data.height + "px";
+        return;
       }
-    };
-    applyHeight();
 
-    // Watch for dynamic changes (images loading, etc.) — batched with rAF
-    const resizeObserver = new ResizeObserver(() => {
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = requestAnimationFrame(applyHeight);
-    });
-    resizeObserver.observe(doc.body);
-    observerRef.current = resizeObserver;
-
-    // Open links in external browser via Tauri opener
-    const handleClick = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
-      const anchor = target.closest("a");
-      if (anchor?.href) {
-        e.preventDefault();
-        openUrl(anchor.href).catch((err) => {
+      if (data.type === "maish:link" && typeof data.url === "string") {
+        if (!isOpenableUrl(data.url)) return;
+        openUrl(data.url).catch((err) => {
           console.error("Failed to open link:", err);
         });
       }
     };
-    doc.addEventListener("click", handleClick);
 
-    return () => {
-      doc.removeEventListener("click", handleClick);
-      observerRef.current?.disconnect();
-      cancelAnimationFrame(rafRef.current);
-    };
-  }, [bodyHtml, isDark, isPlainText]);
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
 
   const handleLoadImages = useCallback(() => {
     setOverrideShow(true);
@@ -237,7 +227,8 @@ export function EmailRenderer({
       )}
       <iframe
         ref={iframeRef}
-        sandbox="allow-same-origin"
+        sandbox="allow-scripts"
+        srcDoc={frameDoc}
         className={`w-full border-0 ${isDark && !isPlainText ? "rounded-md" : ""}`}
         style={{ overflow: "hidden" }}
         title="Email content"
