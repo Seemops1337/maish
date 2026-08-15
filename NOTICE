@@ -54,6 +54,11 @@ Modifications made in this fork, as required by section 4(b) of the License:
   the two halves add up to the original series. UNTIL is written with the
   value type DTSTART uses, and cutting a series before its first instance
   deletes the object instead of leaving a series that has no instances.
+- src/services/calendar/googleCalendarProvider.ts — an all-day event from
+  Google Calendar now ends at midnight of the date the API reports as its end
+  rather than at 23:59:59 of it. That date is documented as the exclusive end,
+  and every calendar view buckets by half-open overlap, so a one-day event was
+  also drawn on the following day.
 - src/components/email/EmailRenderer.tsx, public/emailFrame.js (added) — the
   email body frame reports link clicks and its height over postMessage instead
   of relying on a listener the app attaches to the frame document, which WebKit
