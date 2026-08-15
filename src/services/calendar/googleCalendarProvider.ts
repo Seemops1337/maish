@@ -252,9 +252,14 @@ function mapGoogleEvent(event: GoogleCalendarEvent): CalendarEventData {
   const startTime = event.start.dateTime
     ? Math.floor(new Date(event.start.dateTime).getTime() / 1000)
     : Math.floor(new Date(event.start.date + "T00:00:00").getTime() / 1000);
+  // Google documents `end` as the exclusive end of the event, so an all-day
+  // event's `end.date` is the day after the last one it covers. Every view
+  // buckets by half-open overlap (start < dayEnd && end > dayStart), so the
+  // boundary is kept as midnight of that day: 23:59:59 of it would make the
+  // event reach one day too far.
   const endTime = event.end.dateTime
     ? Math.floor(new Date(event.end.dateTime).getTime() / 1000)
-    : Math.floor(new Date(event.end.date + "T23:59:59").getTime() / 1000);
+    : Math.floor(new Date(event.end.date + "T00:00:00").getTime() / 1000);
 
   return {
     remoteEventId: event.id,
