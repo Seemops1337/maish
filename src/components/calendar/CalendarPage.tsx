@@ -195,6 +195,7 @@ export function CalendarPage() {
     location: string;
     startTime: string;
     endTime: string;
+    isAllDay: boolean;
     calendarId?: string;
     recurrence: RecurrenceForm | null;
   }) => {
@@ -233,6 +234,7 @@ export function CalendarPage() {
         location: eventData.location || undefined,
         startTime: eventData.startTime,
         endTime: eventData.endTime,
+        isAllDay: eventData.isAllDay,
         recurrence: eventData.recurrence,
       };
 

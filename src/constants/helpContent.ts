@@ -1052,6 +1052,20 @@ export const HELP_CATEGORIES: HelpCategory[] = [
           { text: "A schedule another app wrote that is more detailed than these options — every third Thursday, say — is shown as it is and left alone unless you replace it deliberately." },
         ],
       },
+      {
+        id: "all-day-events",
+        icon: Sun,
+        title: "All-day events",
+        summary: "Mark an event as lasting whole days.",
+        description:
+          "Tick \"All day\" when creating an event and the start and end turn into plain dates. The event then sits in the all-day row above the hours in the day and week views instead of taking up a time slot. The end is the last day the event covers, so a single-day event carries the same date in both fields.",
+        tips: [
+          { text: "For a one-day event, leave Start and End on the same date." },
+          { text: "Moving the start past the end brings the end along, so the dates never run backwards." },
+          { text: "An all-day event can repeat like any other." },
+          { text: "Turning the switch off again brings back the times the event had before." },
+        ],
+      },
     ],
   },
   {
