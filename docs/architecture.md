@@ -65,7 +65,8 @@ maish/
 │   │   │                     # QuickStepEditor, SmartFolderEditor
 │   │   ├── accounts/         # AddAccount, AddImapAccount, AccountSwitcher, SetupClientId
 │   │   ├── calendar/         # CalendarPage, MonthView, WeekView, DayView,
-│   │   │                     # EventCard, EventCreateModal
+│   │   │                     # EventCard, EventCreateModal, EventDetailModal,
+│   │   │                     # RecurrenceField
 │   │   ├── attachments/      # AttachmentLibrary, AttachmentGridItem, AttachmentListItem
 │   │   ├── tasks/            # TasksPage, TaskItem, TaskSidebar, TaskQuickAdd,
 │   │   │                     # AiTaskExtractDialog
@@ -154,7 +155,7 @@ All business logic lives in `src/services/` as plain async functions (except `Gm
 | `threading/` | JWZ threading algorithm for IMAP message grouping |
 | `ai/` | AI service with 3 providers (selectable models), categorization, Ask Inbox, writing style analysis, auto-drafts, task extraction |
 | `google/` | Google Calendar API |
-| `calendar/` | CalendarProvider abstraction over Google Calendar and CalDAV, iCalendar parsing and in-place editing, recurrence expansion, IANA time-zone conversion |
+| `calendar/` | CalendarProvider abstraction over Google Calendar and CalDAV, iCalendar parsing and in-place editing, recurrence expansion and rule editing, IANA time-zone conversion |
 | `composer/` | Draft auto-save (3s debounce) |
 | `search/` | Gmail-style query parser, SQL builder |
 | `filters/` | Auto-apply filter engine (AND logic) |

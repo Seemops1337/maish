@@ -706,6 +706,18 @@ export function seriesRule(icalData: string): string | null {
 }
 
 /**
+ * The zone the series' rule is evaluated in. The repeat control needs it to
+ * place a UTC UNTIL stamp on the right calendar day: 20270101T045959Z is still
+ * 31 December in Sydney, and reading it as 1 January would hand the series an
+ * extra instance every time someone opened the dialog.
+ */
+export function seriesTimeZone(icalData: string | null): string | null {
+  if (!icalData) return null;
+  const { master } = splitCalendarObject(icalData);
+  return master ? seriesZone(master) : null;
+}
+
+/**
  * Whether the object holds a VEVENT the expander can work from.
  *
  * This separates "the series produces nothing in this window" — a truthful

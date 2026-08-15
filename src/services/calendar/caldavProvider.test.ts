@@ -148,6 +148,24 @@ describe("CalDAVProvider", () => {
       expect(event.summary).toBe("New Meeting");
       expect(event.remoteEventId).toBe("/cal/personal/generated-uuid.ics");
     });
+
+    it("writes the recurrence rule of a repeating event", async () => {
+      vi.spyOn(crypto, "randomUUID").mockReturnValue("generated-uuid" as `${string}-${string}-${string}-${string}-${string}`);
+
+      const event = await provider.createEvent("/cal/personal/", {
+        summary: "Standup",
+        startTime: "2024-03-15T09:00:00Z",
+        endTime: "2024-03-15T09:15:00Z",
+        recurrence: { frequency: "daily", interval: 1, byDay: [], end: { kind: "count", count: 5 } },
+      });
+
+      expect(mockCreateCalendarObject).toHaveBeenCalledWith(
+        expect.objectContaining({
+          iCalString: expect.stringContaining("RRULE:FREQ=DAILY;COUNT=5"),
+        }),
+      );
+      expect(event.rrule).toBe("FREQ=DAILY;COUNT=5");
+    });
   });
 
   describe("updateEvent", () => {
@@ -186,6 +204,61 @@ describe("CalDAVProvider", () => {
       await expect(
         provider.updateEvent("/cal/personal/", "/cal/personal/missing.ics", { summary: "Nope" }),
       ).rejects.toThrow("Event not found on server");
+    });
+
+    it("turns a one-off event into a series", async () => {
+      mockFetchCalendarObjects.mockResolvedValue([
+        { data: MOCK_ICAL_DATA, url: "/cal/personal/test-uid.ics", etag: '"old-etag"' },
+      ]);
+
+      await provider.updateEvent("/cal/personal/", "/cal/personal/test-uid.ics", {
+        recurrence: { frequency: "weekly", interval: 1, byDay: [2], end: { kind: "never" } },
+      });
+
+      expect(mockUpdateCalendarObject).toHaveBeenCalledWith({
+        calendarObject: expect.objectContaining({
+          data: expect.stringContaining("RRULE:FREQ=WEEKLY;BYDAY=TU"),
+        }),
+      });
+    });
+
+    it("leaves the stored rule alone when the dialog sends none", async () => {
+      // A rule too detailed for the repeat control must survive an edit of the
+      // title, which is only possible if the field is absent rather than null.
+      const recurring = MOCK_ICAL_DATA.replace(
+        "DTEND:20240101T110000Z",
+        "DTEND:20240101T110000Z\r\nRRULE:FREQ=MONTHLY;BYDAY=3TH",
+      );
+      mockFetchCalendarObjects.mockResolvedValue([
+        { data: recurring, url: "/cal/personal/test-uid.ics", etag: '"old-etag"' },
+      ]);
+
+      await provider.updateEvent("/cal/personal/", "/cal/personal/test-uid.ics", {
+        summary: "Renamed",
+      });
+
+      expect(mockUpdateCalendarObject).toHaveBeenCalledWith({
+        calendarObject: expect.objectContaining({
+          data: expect.stringContaining("RRULE:FREQ=MONTHLY;BYDAY=3TH"),
+        }),
+      });
+    });
+
+    it("removes the rule when the repetition is switched off", async () => {
+      const recurring = MOCK_ICAL_DATA.replace(
+        "DTEND:20240101T110000Z",
+        "DTEND:20240101T110000Z\r\nRRULE:FREQ=WEEKLY",
+      );
+      mockFetchCalendarObjects.mockResolvedValue([
+        { data: recurring, url: "/cal/personal/test-uid.ics", etag: '"old-etag"' },
+      ]);
+
+      await provider.updateEvent("/cal/personal/", "/cal/personal/test-uid.ics", {
+        recurrence: null,
+      });
+
+      const written = mockUpdateCalendarObject.mock.calls[0]?.[0].calendarObject.data as string;
+      expect(written).not.toContain("RRULE");
     });
   });
 

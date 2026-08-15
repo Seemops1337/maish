@@ -3,6 +3,9 @@ import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { TextField } from "@/components/ui/TextField";
 import type { DbCalendar } from "@/services/db/calendars";
+import type { RecurrenceForm } from "@/services/calendar/recurrenceForm";
+import { dayRange, toLocalISOString } from "@/services/calendar/allDay";
+import { RecurrenceField } from "./RecurrenceField";
 
 interface EventCreateModalProps {
   calendars?: DbCalendar[];
@@ -13,7 +16,9 @@ interface EventCreateModalProps {
     location: string;
     startTime: string;
     endTime: string;
+    isAllDay: boolean;
     calendarId?: string;
+    recurrence: RecurrenceForm | null;
   }) => void;
 }
 
@@ -23,9 +28,28 @@ export function EventCreateModal({ calendars, onClose, onCreate }: EventCreateMo
   const [location, setLocation] = useState("");
   const [startTime, setStartTime] = useState(getDefaultStart());
   const [endTime, setEndTime] = useState(getDefaultEnd());
+  const [allDay, setAllDay] = useState(false);
   const [calendarId, setCalendarId] = useState<string>(
     calendars?.find((c) => c.is_primary)?.id ?? calendars?.[0]?.id ?? "",
   );
+  const [recurrence, setRecurrence] = useState<RecurrenceForm | null>(null);
+
+  const startDate = startTime.slice(0, 10);
+  const endDate = endTime.slice(0, 10);
+
+  // The time of day is kept while the switch is on, so turning it off again
+  // brings back the hours the event started out with rather than midnight.
+  const setStartDate = useCallback((date: string) => {
+    setStartTime((current) => `${date}T${current.slice(11)}`);
+    // The end follows a start that moves past it. Left behind it would be a
+    // range no server takes, and the dialog would have to refuse to save
+    // instead of showing something sensible.
+    setEndTime((current) => (current.slice(0, 10) < date ? `${date}T${current.slice(11)}` : current));
+  }, []);
+
+  const setEndDate = useCallback((date: string) => {
+    setEndTime((current) => `${date}T${current.slice(11)}`);
+  }, []);
 
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
@@ -34,11 +58,12 @@ export function EventCreateModal({ calendars, onClose, onCreate }: EventCreateMo
       summary: summary.trim(),
       description,
       location,
-      startTime,
-      endTime,
+      ...dayRange(allDay, startTime, endTime),
+      isAllDay: allDay,
       calendarId: calendarId || undefined,
+      recurrence,
     });
-  }, [summary, description, location, startTime, endTime, calendarId, onCreate]);
+  }, [summary, description, location, startTime, endTime, allDay, calendarId, recurrence, onCreate]);
 
   return (
     <Modal isOpen={true} onClose={onClose} title="Create Event" width="w-full max-w-md">
@@ -70,20 +95,55 @@ export function EventCreateModal({ calendars, onClose, onCreate }: EventCreateMo
           </div>
         )}
 
+        <label className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer">
+          <input
+            type="checkbox"
+            checked={allDay}
+            onChange={(e) => setAllDay(e.target.checked)}
+            className="rounded accent-[var(--color-accent)]"
+          />
+          All day
+        </label>
+
         <div className="grid grid-cols-2 gap-3">
-          <TextField
-            label="Start"
-            type="datetime-local"
-            value={startTime}
-            onChange={(e) => setStartTime(e.target.value)}
-          />
-          <TextField
-            label="End"
-            type="datetime-local"
-            value={endTime}
-            onChange={(e) => setEndTime(e.target.value)}
-          />
+          {allDay ? (
+            <>
+              <TextField
+                label="Start"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+              <TextField
+                label="End"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </>
+          ) : (
+            <>
+              <TextField
+                label="Start"
+                type="datetime-local"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+              />
+              <TextField
+                label="End"
+                type="datetime-local"
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
+              />
+            </>
+          )}
         </div>
+
+        <RecurrenceField
+          value={recurrence}
+          onChange={setRecurrence}
+          startDate={startDate}
+        />
 
         <TextField
           label="Location"
@@ -139,9 +199,4 @@ function getDefaultEnd(): string {
   now.setMinutes(0, 0, 0);
   now.setHours(now.getHours() + 2);
   return toLocalISOString(now);
-}
-
-function toLocalISOString(date: Date): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
