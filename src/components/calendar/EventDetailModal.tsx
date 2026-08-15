@@ -9,6 +9,7 @@ import type { OccurrenceTarget, RecurrenceScope } from "@/services/calendar/type
 import { getCalendarProvider } from "@/services/calendar/providerFactory";
 import { describeRule, seriesTimeZone } from "@/services/calendar/recurrence";
 import { parseRecurrenceForm, type RecurrenceForm } from "@/services/calendar/recurrenceForm";
+import { dayRange, lastDayInstant, localDay, toLocalISOString } from "@/services/calendar/allDay";
 import { CalendarWriteError } from "@/services/calendar/errors";
 import { deleteCalendarEvent as deleteCalendarEventDb } from "@/services/db/calendarEvents";
 import { RecurrenceField } from "./RecurrenceField";
@@ -28,12 +29,21 @@ const SCOPE_LABELS: { value: RecurrenceScope; label: string }[] = [
 ];
 
 export function EventDetailModal({ event, calendars, accountId, onClose, onUpdated }: EventDetailModalProps) {
+  const allDay = event.is_all_day === 1;
+  // The stored end is the exclusive boundary, so the last day the event covers
+  // is the one holding the moment before it — the day to show and to ask for.
+  const lastInstant = lastDayInstant(event.start_time, event.end_time);
+
   const [editing, setEditing] = useState(false);
   const [summary, setSummary] = useState(event.summary ?? "");
   const [description, setDescription] = useState(event.description ?? "");
   const [location, setLocation] = useState(event.location ?? "");
   const [startTime, setStartTime] = useState(toLocalISOString(new Date(event.start_time * 1000)));
-  const [endTime, setEndTime] = useState(toLocalISOString(new Date(event.end_time * 1000)));
+  const [endTime, setEndTime] = useState(
+    allDay
+      ? `${localDay(lastInstant)}T00:00`
+      : toLocalISOString(new Date(event.end_time * 1000)),
+  );
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -76,6 +86,20 @@ export function EventDetailModal({ event, calendars, accountId, onClose, onUpdat
     setRepeatChanged(true);
   }, []);
 
+  const startDate = startTime.slice(0, 10);
+  const endDate = endTime.slice(0, 10);
+
+  const setStartDate = useCallback((date: string) => {
+    setStartTime((current) => `${date}T${current.slice(11)}`);
+    // The end follows a start that moves past it, so the range never runs
+    // backwards while it is being changed.
+    setEndTime((current) => (current.slice(0, 10) < date ? `${date}T${current.slice(11)}` : current));
+  }, []);
+
+  const setEndDate = useCallback((date: string) => {
+    setEndTime((current) => `${date}T${current.slice(11)}`);
+  }, []);
+
   const targetFor = useCallback((chosen: RecurrenceScope): OccurrenceTarget | undefined => {
     if (!isSeries || event.occurrenceId === null) return undefined;
     return { recurrenceId: event.occurrenceId, scope: chosen };
@@ -88,13 +112,20 @@ export function EventDetailModal({ event, calendars, accountId, onClose, onUpdat
       const provider = await getCalendarProvider(accountId);
       const calendarRemoteId = calendar?.remote_id ?? "primary";
       const remoteEventId = event.remote_event_id ?? event.google_event_id;
+      // The dialog holds the day the event ends on; a provider is handed the
+      // day after it.
+      const range = dayRange(allDay, startTime, endTime);
 
       await provider.updateEvent(calendarRemoteId, remoteEventId, {
         summary,
         description: description || undefined,
         location: location || undefined,
-        startTime: new Date(startTime).toISOString(),
-        endTime: new Date(endTime).toISOString(),
+        startTime: new Date(range.startTime).toISOString(),
+        endTime: new Date(range.endTime).toISOString(),
+        // Stated on every save: without it the Google provider writes
+        // start.dateTime, which turns an all-day event into a timed one behind
+        // the user's back.
+        isAllDay: allDay,
         // Leaving the field out keeps the stored rule, which is what has to
         // happen whenever the repetition was not touched.
         ...(repeatChanged && !repeatLocked ? { recurrence } : {}),
@@ -107,7 +138,7 @@ export function EventDetailModal({ event, calendars, accountId, onClose, onUpdat
     } finally {
       setSaving(false);
     }
-  }, [accountId, calendar, event, summary, description, location, startTime, endTime, scope, recurrence, repeatChanged, repeatLocked, targetFor, onUpdated]);
+  }, [accountId, calendar, event, summary, description, location, startTime, endTime, allDay, scope, recurrence, repeatChanged, repeatLocked, targetFor, onUpdated]);
 
   const handleDelete = useCallback(async (chosen: RecurrenceScope) => {
     setDeleting(true);
@@ -151,6 +182,14 @@ export function EventDetailModal({ event, calendars, accountId, onClose, onUpdat
     });
   };
 
+  const formatDay = (ts: number) => {
+    return new Date(ts * 1000).toLocaleDateString(undefined, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+    });
+  };
+
   const attendees = event.attendees_json ? JSON.parse(event.attendees_json) as { email: string; displayName?: string }[] : [];
 
   if (editing) {
@@ -165,19 +204,58 @@ export function EventDetailModal({ event, calendars, accountId, onClose, onUpdat
             autoFocus
           />
 
+          {/* Shown only where there is something to say: an inert switch on a
+              timed event would just invite a click that does nothing. */}
+          {allDay && (
+            <div>
+              <label className="flex items-center gap-2 text-sm text-text-secondary">
+                <input
+                  type="checkbox"
+                  checked
+                  readOnly
+                  disabled
+                  className="rounded accent-[var(--color-accent)]"
+                />
+                All day
+              </label>
+              <p className="text-xs text-text-tertiary mt-1">
+                An event cannot be changed between all day and timed here.
+              </p>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3">
-            <TextField
-              label="Start"
-              type="datetime-local"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-            />
-            <TextField
-              label="End"
-              type="datetime-local"
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-            />
+            {allDay ? (
+              <>
+                <TextField
+                  label="Start"
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                />
+                <TextField
+                  label="End"
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                />
+              </>
+            ) : (
+              <>
+                <TextField
+                  label="Start"
+                  type="datetime-local"
+                  value={startTime}
+                  onChange={(e) => setStartTime(e.target.value)}
+                />
+                <TextField
+                  label="End"
+                  type="datetime-local"
+                  value={endTime}
+                  onChange={(e) => setEndTime(e.target.value)}
+                />
+              </>
+            )}
           </div>
 
           {canEditRepeat && (
@@ -266,8 +344,20 @@ export function EventDetailModal({ event, calendars, accountId, onClose, onUpdat
         <div className="flex items-start gap-2.5 text-sm text-text-secondary">
           <Clock size={14} className="mt-0.5 shrink-0 text-text-tertiary" />
           <div>
-            <div>{formatTime(event.start_time)}</div>
-            <div>{formatTime(event.end_time)}</div>
+            {allDay ? (
+              <>
+                <div>
+                  {formatDay(event.start_time)}
+                  {localDay(event.start_time) !== localDay(lastInstant) && ` – ${formatDay(lastInstant)}`}
+                </div>
+                <div>All day</div>
+              </>
+            ) : (
+              <>
+                <div>{formatTime(event.start_time)}</div>
+                <div>{formatTime(event.end_time)}</div>
+              </>
+            )}
           </div>
         </div>
 
@@ -377,9 +467,4 @@ function writeErrorMessage(err: unknown, fallback: string): string {
     return "This event was changed elsewhere. Close it, reopen it and try again.";
   }
   return fallback;
-}
-
-function toLocalISOString(date: Date): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }

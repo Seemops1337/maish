@@ -4,6 +4,7 @@ import { Modal } from "@/components/ui/Modal";
 import { TextField } from "@/components/ui/TextField";
 import type { DbCalendar } from "@/services/db/calendars";
 import type { RecurrenceForm } from "@/services/calendar/recurrenceForm";
+import { dayRange, toLocalISOString } from "@/services/calendar/allDay";
 import { RecurrenceField } from "./RecurrenceField";
 
 interface EventCreateModalProps {
@@ -186,37 +187,6 @@ export function EventCreateModal({ calendars, onClose, onCreate }: EventCreateMo
   );
 }
 
-/**
- * The start and end the providers are handed.
- *
- * An all-day event ends on the day *after* its last one — RFC 5545 §3.6.1 makes
- * DTEND exclusive and the Google API says the same of `end.date` — while the
- * dialog asks for the day the event ends on, which is what a reader expects to
- * pick. So the chosen day is carried forward by one. An end before the start
- * collapses to a single day rather than a range no server would accept.
- */
-function dayRange(
-  allDay: boolean,
-  startTime: string,
-  endTime: string,
-): { startTime: string; endTime: string } {
-  if (!allDay) return { startTime, endTime };
-
-  const start = startTime.slice(0, 10);
-  const picked = endTime.slice(0, 10);
-  const last = picked < start ? start : picked;
-
-  // Handed on as local date-times: a bare date string parses as UTC, which is
-  // the day before west of Greenwich once it is read back as a local day.
-  return { startTime: `${start}T00:00`, endTime: `${dayAfter(last)}T00:00` };
-}
-
-function dayAfter(date: string): string {
-  const parsed = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
-  if (!parsed) return date;
-  return toLocalISOString(new Date(+parsed[1]!, +parsed[2]! - 1, +parsed[3]! + 1)).slice(0, 10);
-}
-
 function getDefaultStart(): string {
   const now = new Date();
   now.setMinutes(0, 0, 0);
@@ -229,9 +199,4 @@ function getDefaultEnd(): string {
   now.setMinutes(0, 0, 0);
   now.setHours(now.getHours() + 2);
   return toLocalISOString(now);
-}
-
-function toLocalISOString(date: Date): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }

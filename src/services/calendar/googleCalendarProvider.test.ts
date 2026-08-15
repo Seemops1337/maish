@@ -231,6 +231,27 @@ describe("GoogleCalendarProvider", () => {
       expect(body.start.dateTime).toBeDefined();
       expect(body.end.dateTime).toBeDefined();
     });
+
+    it("keeps an all-day event date-only when the flag is passed", async () => {
+      // Left out, the dates below would be written as start.dateTime and the
+      // event would quietly stop being an all-day one.
+      mockClient.request.mockResolvedValue({
+        id: "allday-evt",
+        summary: "Holiday",
+        start: { date: "2025-12-25" },
+        end: { date: "2025-12-27" },
+      });
+
+      await provider.updateEvent("cal-1", "allday-evt", {
+        startTime: "2025-12-25T00:00:00Z",
+        endTime: "2025-12-27T00:00:00Z",
+        isAllDay: true,
+      });
+
+      const body = JSON.parse(mockClient.request.mock.calls[0][1].body as string);
+      expect(body.start).toEqual({ date: "2025-12-25" });
+      expect(body.end).toEqual({ date: "2025-12-27" });
+    });
   });
 
   describe("deleteEvent", () => {

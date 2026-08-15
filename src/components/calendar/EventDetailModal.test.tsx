@@ -141,6 +141,107 @@ describe("EventDetailModal", () => {
     });
   });
 
+  describe("an all-day event", () => {
+    const DEC_25 = new Date(2025, 11, 25).getTime() / 1000;
+    const DEC_26 = new Date(2025, 11, 26).getTime() / 1000;
+
+    /** One day long: the stored end is the exclusive boundary after it. */
+    const allDay = (overrides: Partial<CalendarOccurrence> = {}) =>
+      makeOccurrence({
+        is_all_day: 1,
+        start_time: DEC_25,
+        end_time: DEC_26,
+        rrule: null,
+        isSeriesInstance: false,
+        occurrenceId: null,
+        ...overrides,
+      });
+
+    const savedUpdate = () => mockUpdateEvent.mock.calls[0]?.[2];
+
+    it("says all day instead of naming a time", () => {
+      renderModal(allDay());
+
+      expect(screen.getByText("All day")).toBeInTheDocument();
+      expect(screen.queryByText(/12:00 AM/i)).not.toBeInTheDocument();
+    });
+
+    it("asks for days rather than times", () => {
+      renderModal(allDay());
+      fireEvent.click(screen.getByRole("button", { name: /edit/i }));
+
+      expect(screen.getByLabelText(/^start$/i)).toHaveAttribute("type", "date");
+      expect(screen.getByLabelText(/^end$/i)).toHaveAttribute("type", "date");
+    });
+
+    it("shows the day the event ends on, not the boundary after it", () => {
+      renderModal(allDay());
+      fireEvent.click(screen.getByRole("button", { name: /edit/i }));
+
+      expect(screen.getByLabelText(/^start$/i)).toHaveValue("2025-12-25");
+      expect(screen.getByLabelText(/^end$/i)).toHaveValue("2025-12-25");
+    });
+
+    it("sends the day after the one that was picked", async () => {
+      const { onUpdated } = renderModal(allDay());
+
+      fireEvent.click(screen.getByRole("button", { name: /edit/i }));
+      fireEvent.change(screen.getByLabelText(/^end$/i), { target: { value: "2025-12-27" } });
+      fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+      await waitFor(() => expect(onUpdated).toHaveBeenCalled());
+      expect(savedUpdate()).toMatchObject({
+        isAllDay: true,
+        startTime: new Date(2025, 11, 25).toISOString(),
+        endTime: new Date(2025, 11, 28).toISOString(),
+      });
+    });
+
+    it("keeps the event all day when nothing about its dates was touched", async () => {
+      // Without the flag the Google provider writes start.dateTime, which turns
+      // the event into a timed one on the next save of any field at all.
+      const { onUpdated } = renderModal(allDay());
+
+      fireEvent.click(screen.getByRole("button", { name: /edit/i }));
+      fireEvent.change(screen.getByLabelText(/title/i), { target: { value: "Renamed" } });
+      fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+      await waitFor(() => expect(onUpdated).toHaveBeenCalled());
+      expect(savedUpdate()).toMatchObject({
+        isAllDay: true,
+        startTime: new Date(2025, 11, 25).toISOString(),
+        endTime: new Date(2025, 11, 26).toISOString(),
+      });
+    });
+
+    it("does not offer to turn the event into a timed one", () => {
+      // The stored CalDAV object dictates the value type of every date it
+      // carries, so the switch could not be honoured there.
+      renderModal(allDay());
+      fireEvent.click(screen.getByRole("button", { name: /edit/i }));
+
+      expect(screen.getByLabelText(/all day/i)).toBeDisabled();
+      expect(screen.getByLabelText(/all day/i)).toBeChecked();
+    });
+
+    it("leaves a timed event with its times and says so", async () => {
+      const { onUpdated } = renderModal(makeOccurrence({ isSeriesInstance: false, occurrenceId: null }));
+
+      fireEvent.click(screen.getByRole("button", { name: /edit/i }));
+      expect(screen.getByLabelText(/^start$/i)).toHaveAttribute("type", "datetime-local");
+      expect(screen.queryByLabelText(/all day/i)).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+      await waitFor(() => expect(onUpdated).toHaveBeenCalled());
+      expect(savedUpdate()).toMatchObject({
+        isAllDay: false,
+        startTime: new Date(JAN_5 * 1000).toISOString(),
+        endTime: new Date((JAN_5 + 3600) * 1000).toISOString(),
+      });
+    });
+  });
+
   describe("changing the repetition", () => {
     const SERIES_ICAL = [
       "BEGIN:VCALENDAR",
