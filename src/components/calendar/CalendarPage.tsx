@@ -333,7 +333,11 @@ export function CalendarPage() {
           />
         )}
 
-        <div className="flex-1 min-w-0">
+        {/* The views size themselves with flex-1, which needs a flex parent —
+            as a plain block this box left them at their content height, so a
+            six-week month overflowed the window and a five-week one fell
+            short of it. */}
+        <div className="flex flex-col flex-1 min-w-0 min-h-0">
           {view === "month" && (
             <MonthView
               currentDate={currentDate}
