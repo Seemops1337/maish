@@ -1,6 +1,11 @@
-import { formatDateTimeInZone } from "./icalHelper";
 import { countInstancesBefore } from "./recurrence";
-import { wallClockToEpoch } from "./timezone";
+import {
+  buildRRule,
+  formatUntil,
+  type RecurrenceForm,
+  type RuleDateStyle,
+} from "./recurrenceForm";
+import { formatDateTimeInZone, wallClockToEpoch } from "./timezone";
 
 /**
  * In-place editing of a stored calendar object.
@@ -21,14 +26,16 @@ export interface EventEdits {
   /** Epoch seconds. */
   startTime?: number;
   endTime?: number;
+  /**
+   * How the event repeats from now on. Left out the stored rule is kept as it
+   * is, null removes it. Only the series master takes one — an override has no
+   * rule of its own, so the occurrence editors ignore this.
+   */
+  recurrence?: RecurrenceForm | null;
 }
 
 /** How a component writes its date values, so edits keep the original form. */
-interface DateStyle {
-  /** "UTC", an IANA zone, or null for floating time. */
-  zone: string | null;
-  isDate: boolean;
-}
+type DateStyle = RuleDateStyle;
 
 /**
  * A calendar object split at its VEVENT boundaries: everything before the
@@ -52,7 +59,11 @@ export function editMaster(icalData: string, edits: EventEdits): string {
   const master = masterOf(doc);
   if (!master) return icalData;
 
-  applyEdits(master, edits, styleOf(master));
+  const style = styleOf(master);
+  applyEdits(master, edits, style);
+  if (edits.recurrence !== undefined) {
+    applyRule(doc, master, edits.recurrence, style);
+  }
   touch(master, { bumpSequence: true });
   return serialize(doc);
 }
@@ -118,7 +129,7 @@ export function truncateSeriesBefore(icalData: string, recurrenceId: number): st
 
   const style = styleOf(master);
   // UNTIL is inclusive, so stop one second before the instance being cut.
-  const until = untilValue(recurrenceId - 1, style);
+  const until = formatUntil(recurrenceId - 1, style);
   master[index] = `RRULE:${boundRule(valueOf(master[index]!), until)}`;
 
   doc.events = doc.events.filter((event) => {
@@ -161,13 +172,19 @@ export function splitSeriesFrom(
   setProperty(master, "UID", `UID:${newUid}`);
   removeProperty(master, "RECURRENCE-ID");
 
-  // The tail starts its own count, so it may only claim the instances the head
-  // does not keep. Left as it was, a series of ten split after four would run
-  // to fourteen.
-  const ruleIndex = propertyIndex(master, "RRULE");
-  if (ruleIndex !== -1) {
-    const consumed = countInstancesBefore(icalData, recurrenceId);
-    master[ruleIndex] = `RRULE:${rebaseCount(valueOf(master[ruleIndex]!), consumed)}`;
+  if (edits.recurrence !== undefined) {
+    // A rule stated in the dialog describes the tail on its own terms: its
+    // COUNT means "this many from here", so there is nothing to rebase.
+    applyRule(doc, master, edits.recurrence, style);
+  } else {
+    // The tail starts its own count, so it may only claim the instances the
+    // head does not keep. Left as it was, a series of ten split after four
+    // would run to fourteen.
+    const ruleIndex = propertyIndex(master, "RRULE");
+    if (ruleIndex !== -1) {
+      const consumed = countInstancesBefore(icalData, recurrenceId);
+      master[ruleIndex] = `RRULE:${rebaseCount(valueOf(master[ruleIndex]!), consumed)}`;
+    }
   }
 
   const start = edits.startTime ?? recurrenceId;
@@ -414,20 +431,6 @@ function dateLine(name: string, epochSeconds: number, style: DateStyle): string 
   return `${name}${styleParams(style)}:${formatDateTimeInZone(epochSeconds, style.zone, style.isDate)}`;
 }
 
-/**
- * UNTIL written the way the series writes its dates.
- *
- * RFC 5545 §3.3.10 ties the value type to DTSTART's: a date-valued series
- * needs a bare DATE and a floating one needs local time, while a DTSTART in
- * UTC or with a TZID takes a UTC date-time. A UTC stamp everywhere happens to
- * be accepted by Stalwart, but it is not what the spec asks of the other two.
- */
-function untilValue(epochSeconds: number, style: DateStyle): string {
-  if (style.isDate) return formatDateTimeInZone(epochSeconds, null, true);
-  if (style.zone === null) return formatDateTimeInZone(epochSeconds, null, false);
-  return formatDateTimeInZone(epochSeconds, "UTC", false);
-}
-
 function valueToEpoch(line: string, fallback: DateStyle): number | null {
   const value = valueOf(line).split(",")[0]?.trim();
   if (!value) return null;
@@ -501,6 +504,35 @@ function applyEdits(event: string[], edits: EventEdits, style: DateStyle): void 
     removeProperty(event, "DURATION");
     setProperty(event, "DTEND", dateLine("DTEND", edits.endTime, style));
   }
+}
+
+/**
+ * Set, replace or remove the series rule on the master.
+ *
+ * A different rule produces different instance times, and both EXDATE and the
+ * per-instance overrides are anchored to the times the old rule produced. Kept
+ * around they would describe instances the series no longer has: an EXDATE
+ * excluding nothing, and an override the expander still renders even though no
+ * instance of the rule matches its RECURRENCE-ID. So changing the rule clears
+ * them. RDATE survives — an explicitly added date stands on its own and does
+ * not depend on the rule at all.
+ */
+function applyRule(
+  doc: CalDoc,
+  master: string[],
+  recurrence: RecurrenceForm | null,
+  style: DateStyle,
+): void {
+  const index = propertyIndex(master, "RRULE");
+  const current = index === -1 ? null : valueOf(master[index]!);
+  const next = recurrence ? buildRRule(recurrence, style) : null;
+  if (current === next) return;
+
+  if (next === null) removeProperty(master, "RRULE");
+  else setProperty(master, "RRULE", `RRULE:${next}`);
+
+  removeProperty(master, "EXDATE");
+  doc.events = doc.events.filter((event) => event === master);
 }
 
 function buildOverride(

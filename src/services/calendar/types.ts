@@ -1,3 +1,5 @@
+import type { RecurrenceForm } from "./recurrenceForm";
+
 export type CalendarProviderType = "google_api" | "caldav";
 
 export interface CalendarInfo {
@@ -36,6 +38,8 @@ export interface CreateEventInput {
   endTime: string;   // ISO 8601
   isAllDay?: boolean;
   attendees?: { email: string }[];
+  /** How the event repeats. Absent or null creates a one-off event. */
+  recurrence?: RecurrenceForm | null;
 }
 
 export interface UpdateEventInput {
@@ -45,6 +49,14 @@ export interface UpdateEventInput {
   startTime?: string;
   endTime?: string;
   isAllDay?: boolean;
+  /**
+   * How the event repeats from now on. Left out the existing rule is kept
+   * untouched — which is what has to happen for a rule the repeat control
+   * cannot state — and null removes it, turning the series into one event.
+   * Only meaningful for the series master: an instance cannot carry a rule of
+   * its own, so this is ignored when a single occurrence is being changed.
+   */
+  recurrence?: RecurrenceForm | null;
 }
 
 export interface CalendarSyncResult {

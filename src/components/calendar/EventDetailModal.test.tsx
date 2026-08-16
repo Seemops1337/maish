@@ -140,4 +140,206 @@ describe("EventDetailModal", () => {
       expect(mockDeleteCalendarEventDb).toHaveBeenCalledWith("row-1");
     });
   });
+
+  describe("an all-day event", () => {
+    const DEC_25 = new Date(2025, 11, 25).getTime() / 1000;
+    const DEC_26 = new Date(2025, 11, 26).getTime() / 1000;
+
+    /** One day long: the stored end is the exclusive boundary after it. */
+    const allDay = (overrides: Partial<CalendarOccurrence> = {}) =>
+      makeOccurrence({
+        is_all_day: 1,
+        start_time: DEC_25,
+        end_time: DEC_26,
+        rrule: null,
+        isSeriesInstance: false,
+        occurrenceId: null,
+        ...overrides,
+      });
+
+    const savedUpdate = () => mockUpdateEvent.mock.calls[0]?.[2];
+
+    it("says all day instead of naming a time", () => {
+      renderModal(allDay());
+
+      expect(screen.getByText("All day")).toBeInTheDocument();
+      expect(screen.queryByText(/12:00 AM/i)).not.toBeInTheDocument();
+    });
+
+    it("asks for days rather than times", () => {
+      renderModal(allDay());
+      fireEvent.click(screen.getByRole("button", { name: /edit/i }));
+
+      expect(screen.getByLabelText(/^start$/i)).toHaveAttribute("type", "date");
+      expect(screen.getByLabelText(/^end$/i)).toHaveAttribute("type", "date");
+    });
+
+    it("shows the day the event ends on, not the boundary after it", () => {
+      renderModal(allDay());
+      fireEvent.click(screen.getByRole("button", { name: /edit/i }));
+
+      expect(screen.getByLabelText(/^start$/i)).toHaveValue("2025-12-25");
+      expect(screen.getByLabelText(/^end$/i)).toHaveValue("2025-12-25");
+    });
+
+    it("sends the day after the one that was picked", async () => {
+      const { onUpdated } = renderModal(allDay());
+
+      fireEvent.click(screen.getByRole("button", { name: /edit/i }));
+      fireEvent.change(screen.getByLabelText(/^end$/i), { target: { value: "2025-12-27" } });
+      fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+      await waitFor(() => expect(onUpdated).toHaveBeenCalled());
+      expect(savedUpdate()).toMatchObject({
+        isAllDay: true,
+        startTime: new Date(2025, 11, 25).toISOString(),
+        endTime: new Date(2025, 11, 28).toISOString(),
+      });
+    });
+
+    it("keeps the event all day when nothing about its dates was touched", async () => {
+      // Without the flag the Google provider writes start.dateTime, which turns
+      // the event into a timed one on the next save of any field at all.
+      const { onUpdated } = renderModal(allDay());
+
+      fireEvent.click(screen.getByRole("button", { name: /edit/i }));
+      fireEvent.change(screen.getByLabelText(/title/i), { target: { value: "Renamed" } });
+      fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+      await waitFor(() => expect(onUpdated).toHaveBeenCalled());
+      expect(savedUpdate()).toMatchObject({
+        isAllDay: true,
+        startTime: new Date(2025, 11, 25).toISOString(),
+        endTime: new Date(2025, 11, 26).toISOString(),
+      });
+    });
+
+    it("does not offer to turn the event into a timed one", () => {
+      // The stored CalDAV object dictates the value type of every date it
+      // carries, so the switch could not be honoured there.
+      renderModal(allDay());
+      fireEvent.click(screen.getByRole("button", { name: /edit/i }));
+
+      expect(screen.getByLabelText(/all day/i)).toBeDisabled();
+      expect(screen.getByLabelText(/all day/i)).toBeChecked();
+    });
+
+    it("leaves a timed event with its times and says so", async () => {
+      const { onUpdated } = renderModal(makeOccurrence({ isSeriesInstance: false, occurrenceId: null }));
+
+      fireEvent.click(screen.getByRole("button", { name: /edit/i }));
+      expect(screen.getByLabelText(/^start$/i)).toHaveAttribute("type", "datetime-local");
+      expect(screen.queryByLabelText(/all day/i)).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+      await waitFor(() => expect(onUpdated).toHaveBeenCalled());
+      expect(savedUpdate()).toMatchObject({
+        isAllDay: false,
+        startTime: new Date(JAN_5 * 1000).toISOString(),
+        endTime: new Date((JAN_5 + 3600) * 1000).toISOString(),
+      });
+    });
+  });
+
+  describe("changing the repetition", () => {
+    const SERIES_ICAL = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "BEGIN:VEVENT",
+      "UID:series-uid",
+      "DTSTART:20260105T090000Z",
+      "DTEND:20260105T100000Z",
+      "RRULE:FREQ=WEEKLY;COUNT=6",
+      "END:VEVENT",
+      "END:VCALENDAR",
+    ].join("\r\n");
+
+    const withIcal = (overrides = {}) =>
+      makeOccurrence({ ical_data: SERIES_ICAL, ...overrides });
+
+    /** The last argument of the update call the modal made, minus the scope. */
+    const savedUpdate = () => mockUpdateEvent.mock.calls[0]?.[2];
+
+    it("sends nothing about the rule when only the title changed", async () => {
+      // Resending the rule on every save would clear the exceptions and
+      // per-instance changes the series carries.
+      const { onUpdated } = renderModal(withIcal());
+
+      fireEvent.click(screen.getByRole("button", { name: /edit/i }));
+      fireEvent.change(screen.getByLabelText(/title/i), { target: { value: "Renamed" } });
+      fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+      await waitFor(() => expect(onUpdated).toHaveBeenCalled());
+      expect(savedUpdate()).not.toHaveProperty("recurrence");
+    });
+
+    it("seeds the control from the stored rule", () => {
+      renderModal(withIcal());
+      fireEvent.click(screen.getByRole("button", { name: /edit/i }));
+
+      expect(screen.getByLabelText(/^repeat$/i)).toHaveValue("weekly");
+      expect(screen.getByLabelText(/number of times/i)).toHaveValue(6);
+    });
+
+    it("sends the new rule once the control is touched", async () => {
+      const { onUpdated } = renderModal(withIcal());
+
+      fireEvent.click(screen.getByRole("button", { name: /edit/i }));
+      // "All events in the series" — a rule belongs to the series, not to one
+      // instance of it.
+      fireEvent.click(screen.getByRole("radio", { name: /all events/i }));
+      fireEvent.change(screen.getByLabelText(/^repeat$/i), { target: { value: "monthly" } });
+      fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+      await waitFor(() => expect(onUpdated).toHaveBeenCalled());
+      expect(savedUpdate().recurrence).toMatchObject({ frequency: "monthly" });
+    });
+
+    it("removes the repetition when it is switched off", async () => {
+      const { onUpdated } = renderModal(withIcal());
+
+      fireEvent.click(screen.getByRole("button", { name: /edit/i }));
+      fireEvent.click(screen.getByRole("radio", { name: /all events/i }));
+      fireEvent.change(screen.getByLabelText(/^repeat$/i), { target: { value: "none" } });
+      fireEvent.click(screen.getByRole("button", { name: /save/i }));
+
+      await waitFor(() => expect(onUpdated).toHaveBeenCalled());
+      expect(savedUpdate().recurrence).toBeNull();
+    });
+
+    it("does not rewrite the rule while a single occurrence is the target", async () => {
+      // "This event" writes an override, and an override cannot carry a rule.
+      const { onUpdated } = renderModal(withIcal());
+
+      fireEvent.click(screen.getByRole("button", { name: /edit/i }));
+      fireEvent.change(screen.getByLabelText(/^repeat$/i), { target: { value: "monthly" } });
+
+      expect(screen.getByText(/repetition belongs to the whole series/i)).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("button", { name: /save/i }));
+      await waitFor(() => expect(onUpdated).toHaveBeenCalled());
+      expect(savedUpdate()).not.toHaveProperty("recurrence");
+    });
+
+    it("shows a rule it cannot state without offering to edit it", () => {
+      renderModal(withIcal({
+        rrule: "FREQ=MONTHLY;BYDAY=3TH",
+        ical_data: SERIES_ICAL.replace("FREQ=WEEKLY;COUNT=6", "FREQ=MONTHLY;BYDAY=3TH"),
+      }));
+      fireEvent.click(screen.getByRole("button", { name: /edit/i }));
+
+      expect(screen.getByText(/kept as it is/i)).toBeInTheDocument();
+      expect(screen.queryByLabelText(/^repeat$/i)).not.toBeInTheDocument();
+    });
+
+    it("offers no repeat control where the calendar object is out of reach", () => {
+      // Google expands its series server side and sends single instances with
+      // no iCalendar data behind them, so there is nothing here to patch.
+      renderModal(makeOccurrence({ ical_data: null, rrule: null, isSeriesInstance: false }));
+      fireEvent.click(screen.getByRole("button", { name: /edit/i }));
+
+      expect(screen.queryByLabelText(/^repeat$/i)).not.toBeInTheDocument();
+    });
+  });
 });

@@ -338,6 +338,14 @@ function toEdits(event: UpdateEventInput): EventEdits {
   if (event.endTime !== undefined) {
     edits.endTime = Math.floor(new Date(event.endTime).getTime() / 1000);
   }
+  // isAllDay is deliberately not carried over. icalEdit derives the value type
+  // from the stored DTSTART and writes every date of the object in it —
+  // DTSTART, DTEND, EXDATE, RECURRENCE-ID and a rule's UNTIL — so switching an
+  // event between DATE and DATE-TIME means rewriting all of them together, and
+  // a RECURRENCE-ID left in the old form no longer matches its instance. The
+  // edit dialog therefore does not offer the switch, and an all-day event
+  // stays one.
+  if (event.recurrence !== undefined) edits.recurrence = event.recurrence;
   return edits;
 }
 

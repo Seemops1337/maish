@@ -62,6 +62,67 @@ describe("generateVEvent", () => {
     expect(result).not.toContain("DTSTART:2025");
   });
 
+  it("writes no rule for a one-off event", () => {
+    const event: CreateEventInput = {
+      summary: "Once",
+      startTime: "2025-06-20T14:00:00Z",
+      endTime: "2025-06-20T15:00:00Z",
+    };
+
+    expect(generateVEvent(event)).not.toContain("RRULE");
+  });
+
+  it("writes the recurrence rule of a repeating event", () => {
+    const event: CreateEventInput = {
+      summary: "Standup",
+      startTime: "2025-06-20T14:00:00Z",
+      endTime: "2025-06-20T15:00:00Z",
+      recurrence: {
+        frequency: "weekly",
+        interval: 2,
+        byDay: [1, 3],
+        end: { kind: "count", count: 12 },
+      },
+    };
+
+    expect(generateVEvent(event)).toContain("RRULE:FREQ=WEEKLY;INTERVAL=2;BYDAY=MO,WE;COUNT=12");
+  });
+
+  it("bounds an all-day series with a bare date", () => {
+    // A generated all-day event writes VALUE=DATE, and RFC 5545 §3.3.10 asks
+    // UNTIL to use the same value type as DTSTART.
+    const event: CreateEventInput = {
+      summary: "Holiday",
+      startTime: "2025-12-25T00:00:00Z",
+      endTime: "2025-12-26T00:00:00Z",
+      isAllDay: true,
+      recurrence: {
+        frequency: "yearly",
+        interval: 1,
+        byDay: [],
+        end: { kind: "onDate", date: "2030-12-25" },
+      },
+    };
+
+    expect(generateVEvent(event)).toContain("RRULE:FREQ=YEARLY;UNTIL=20301225");
+  });
+
+  it("bounds a timed series with a UTC stamp", () => {
+    const event: CreateEventInput = {
+      summary: "Standup",
+      startTime: "2025-06-20T14:00:00Z",
+      endTime: "2025-06-20T15:00:00Z",
+      recurrence: {
+        frequency: "daily",
+        interval: 1,
+        byDay: [],
+        end: { kind: "onDate", date: "2025-07-31" },
+      },
+    };
+
+    expect(generateVEvent(event)).toContain("RRULE:FREQ=DAILY;UNTIL=20250731T235959Z");
+  });
+
   it("includes description when provided", () => {
     const event: CreateEventInput = {
       summary: "Review",

@@ -101,6 +101,55 @@ describe("GoogleCalendarProvider", () => {
       expect(result[0].endTime).toBe(Math.floor(new Date("2025-06-15T11:00:00Z").getTime() / 1000));
     });
 
+    it("reads an all-day event's end date as the exclusive boundary", async () => {
+      // Google documents `end` as the exclusive end, so a single-day event on
+      // the 25th arrives with end.date on the 26th.
+      mockClient.request.mockResolvedValue({
+        items: [
+          {
+            id: "allday-1",
+            summary: "Holiday",
+            start: { date: "2025-12-25" },
+            end: { date: "2025-12-26" },
+            status: "confirmed",
+          },
+        ],
+      });
+
+      const result = await provider.fetchEvents("cal-id", "2025-12-01T00:00:00Z", "2025-12-31T23:59:59Z");
+
+      expect(result[0]!.isAllDay).toBe(true);
+      expect(result[0]!.startTime).toBe(new Date(2025, 11, 25).getTime() / 1000);
+      expect(result[0]!.endTime).toBe(new Date(2025, 11, 26).getTime() / 1000);
+    });
+
+    it("keeps a one-day all-day event off the following day", async () => {
+      mockClient.request.mockResolvedValue({
+        items: [
+          {
+            id: "allday-1",
+            summary: "Holiday",
+            start: { date: "2025-12-25" },
+            end: { date: "2025-12-26" },
+            status: "confirmed",
+          },
+        ],
+      });
+
+      const result = await provider.fetchEvents("cal-id", "2025-12-01T00:00:00Z", "2025-12-31T23:59:59Z");
+      const event = result[0]!;
+
+      // The half-open overlap test the calendar views bucket by.
+      const coversDay = (day: number) => {
+        const dayStart = new Date(2025, 11, day).getTime() / 1000;
+        const dayEnd = new Date(2025, 11, day + 1).getTime() / 1000;
+        return event.startTime < dayEnd && event.endTime > dayStart;
+      };
+
+      expect(coversDay(25)).toBe(true);
+      expect(coversDay(26)).toBe(false);
+    });
+
     it("encodes calendar ID in URL", async () => {
       mockClient.request.mockResolvedValue({ items: [] });
 
@@ -230,6 +279,27 @@ describe("GoogleCalendarProvider", () => {
       const body = JSON.parse(mockClient.request.mock.calls[0][1].body as string);
       expect(body.start.dateTime).toBeDefined();
       expect(body.end.dateTime).toBeDefined();
+    });
+
+    it("keeps an all-day event date-only when the flag is passed", async () => {
+      // Left out, the dates below would be written as start.dateTime and the
+      // event would quietly stop being an all-day one.
+      mockClient.request.mockResolvedValue({
+        id: "allday-evt",
+        summary: "Holiday",
+        start: { date: "2025-12-25" },
+        end: { date: "2025-12-27" },
+      });
+
+      await provider.updateEvent("cal-1", "allday-evt", {
+        startTime: "2025-12-25T00:00:00Z",
+        endTime: "2025-12-27T00:00:00Z",
+        isAllDay: true,
+      });
+
+      const body = JSON.parse(mockClient.request.mock.calls[0][1].body as string);
+      expect(body.start).toEqual({ date: "2025-12-25" });
+      expect(body.end).toEqual({ date: "2025-12-27" });
     });
   });
 
