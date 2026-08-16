@@ -50,7 +50,7 @@ Maish follows a **three-layer architecture** with clear separation of concerns.
 ```
 maish/
 ├── src/
-│   ├── components/           # React components (14 groups, ~94 files)
+│   ├── components/           # React components (15 groups, ~103 files)
 │   │   ├── layout/           # Sidebar, EmailList, ReadingPane, TitleBar
 │   │   ├── email/            # ThreadView, MessageItem, EmailRenderer,
 │   │   │                     # ContactSidebar, SmartReplySuggestions,
@@ -191,7 +191,7 @@ Nine Zustand stores manage ephemeral UI state:
 
 ## Database
 
-SQLite via Tauri SQL plugin. 24 migrations, 36 tables total.
+SQLite via Tauri SQL plugin. 25 migrations, 38 tables total.
 
 Key tables: `accounts` (with `provider`, IMAP/SMTP fields), `messages` (with FTS5 index, `auth_results`, IMAP headers, `imap_uid`, `imap_folder`), `threads` (with `is_pinned`, `is_muted`), `thread_labels`, `labels` (with `imap_folder_path`, `imap_special_use`), `contacts`, `attachments` (with `imap_part_id`), `filter_rules`, `scheduled_emails`, `templates`, `signatures`, `image_allowlist`, `settings`, `ai_cache`, `thread_categories`, `calendars`, `calendar_events` (with `ical_data`, and `rrule`/`recurrence_end` for recurring series), `follow_up_reminders`, `notification_vips`, `unsubscribe_actions`, `bundle_rules`, `bundled_threads`, `send_as_aliases`, `smart_folders`, `link_scan_results`, `phishing_allowlist`, `quick_steps`, `folder_sync_state` (IMAP sync tracking), `pending_operations` (offline action queue), `local_drafts` (offline draft persistence), `writing_style_profiles` (AI writing style per account), `tasks` (full task management with priorities, subtasks, recurrence), `task_tags` (custom task tag colors), `smart_label_rules` (AI-powered auto-labeling rules).
 

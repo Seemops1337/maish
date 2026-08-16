@@ -793,6 +793,97 @@ const MIGRATIONS = [
         ON calendar_events(account_id, recurrence_end);
     `,
   },
+  {
+    version: 25,
+    description: "CardDAV address books and contact provenance",
+    sql: `
+      -- Address books, the CardDAV counterpart of the calendars table.
+      CREATE TABLE IF NOT EXISTS address_books (
+        id TEXT PRIMARY KEY,
+        account_id TEXT NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
+        provider TEXT NOT NULL DEFAULT 'carddav',
+        remote_id TEXT NOT NULL,
+        display_name TEXT,
+        description TEXT,
+        is_read_only INTEGER DEFAULT 0,
+        is_visible INTEGER DEFAULT 1,
+        sync_token TEXT,
+        ctag TEXT,
+        created_at INTEGER DEFAULT (unixepoch()),
+        updated_at INTEGER DEFAULT (unixepoch()),
+        UNIQUE(account_id, remote_id)
+      );
+      CREATE INDEX IF NOT EXISTS idx_address_books_account ON address_books(account_id);
+
+      -- CardDAV credentials sit beside the CalDAV ones. They are separate
+      -- columns rather than shared because the two services have separate
+      -- home sets and a server may offer one without the other.
+      ALTER TABLE accounts ADD COLUMN carddav_url TEXT;
+      ALTER TABLE accounts ADD COLUMN carddav_username TEXT;
+      ALTER TABLE accounts ADD COLUMN carddav_password TEXT;
+      ALTER TABLE accounts ADD COLUMN carddav_principal_url TEXT;
+      ALTER TABLE accounts ADD COLUMN carddav_home_url TEXT;
+      ALTER TABLE accounts ADD COLUMN contacts_provider TEXT;
+
+      -- Rebuild contacts. Until now every row came from a mail header, so
+      -- email was NOT NULL UNIQUE. A vCard breaks both halves of that: it may
+      -- carry no address at all, and the same address may appear in two
+      -- address books. The uniqueness that still holds is per origin, so it
+      -- moves into two partial indexes.
+      CREATE TABLE contacts_rebuilt (
+        id TEXT PRIMARY KEY,
+        email TEXT,
+        display_name TEXT,
+        avatar_url TEXT,
+        frequency INTEGER DEFAULT 1,
+        last_contacted_at INTEGER,
+        first_contacted_at INTEGER,
+        notes TEXT,
+        created_at INTEGER DEFAULT (unixepoch()),
+        updated_at INTEGER DEFAULT (unixepoch()),
+        -- 'local' for a row derived from mail, 'carddav' for a synced vCard.
+        source TEXT NOT NULL DEFAULT 'local',
+        address_book_id TEXT REFERENCES address_books(id) ON DELETE CASCADE,
+        dav_uid TEXT,
+        dav_href TEXT,
+        dav_etag TEXT,
+        -- The card as stored on the server. Edits patch this rather than
+        -- regenerate it, so photos, custom properties and anything else
+        -- another client wrote survive a save.
+        vcard_data TEXT,
+        -- Every address of the card as a JSON array, so autocomplete can find
+        -- a contact by a secondary address while the row keeps one identity.
+        dav_emails TEXT,
+        dav_phones TEXT,
+        organization TEXT,
+        job_title TEXT
+      );
+
+      INSERT INTO contacts_rebuilt (
+        id, email, display_name, avatar_url, frequency,
+        last_contacted_at, first_contacted_at, notes, created_at, updated_at
+      )
+      SELECT
+        id, email, display_name, avatar_url, frequency,
+        last_contacted_at, first_contacted_at, notes, created_at, updated_at
+      FROM contacts;
+
+      DROP TABLE contacts;
+      ALTER TABLE contacts_rebuilt RENAME TO contacts;
+
+      -- One row per address for mail-derived contacts, which is what
+      -- upsertContact's ON CONFLICT target relies on.
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_contacts_local_email
+        ON contacts(email) WHERE address_book_id IS NULL;
+      -- One row per card per address book. UID is the vCard's own identity
+      -- (RFC 6350 section 6.7.6) and survives a rename of the card's file.
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_contacts_dav_uid
+        ON contacts(address_book_id, dav_uid) WHERE address_book_id IS NOT NULL;
+      CREATE INDEX IF NOT EXISTS idx_contacts_email ON contacts(email);
+      CREATE INDEX IF NOT EXISTS idx_contacts_frequency ON contacts(frequency DESC);
+      CREATE INDEX IF NOT EXISTS idx_contacts_book ON contacts(address_book_id);
+    `,
+  },
 ];
 
 /**
