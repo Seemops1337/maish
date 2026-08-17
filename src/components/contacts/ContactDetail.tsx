@@ -15,7 +15,7 @@ interface ContactDetailProps {
 }
 
 /** A JSON column written by the sync; a malformed one must not blank the page. */
-function readList(json: string | null): string[] {
+export function readList(json: string | null): string[] {
   if (!json) return [];
   try {
     const parsed: unknown = JSON.parse(json);

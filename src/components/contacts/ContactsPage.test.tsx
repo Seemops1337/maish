@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { ContactsPage } from "./ContactsPage";
+import { ContactsPage, contactSubtitle } from "./ContactsPage";
 import { getAllContacts, type DbContact } from "@/services/db/contacts";
 import { getAddressBooksForAccount } from "@/services/db/addressBooks";
 import { createDavContact, saveContact } from "@/services/contacts/contactActions";
@@ -184,5 +184,48 @@ describe("ContactsPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
 
     expect(await screen.findByText("it changed on the server")).toBeInTheDocument();
+  });
+});
+
+describe("contactSubtitle", () => {
+  it("shows the address when there is one", () => {
+    expect(contactSubtitle(contact())).toBe("anna@example.org");
+  });
+
+  it("falls back to the first phone number rather than claiming there is nothing", () => {
+    expect(
+      contactSubtitle(contact({ email: null, dav_phones: '["+43 664 1234567"]' })),
+    ).toBe("+43 664 1234567");
+  });
+
+  it("falls back to the organisation when there is neither", () => {
+    expect(
+      contactSubtitle(contact({ email: null, dav_phones: "[]" })),
+    ).toBe("Beispiel GmbH");
+  });
+
+  it("does not repeat the name when the organisation is the same", () => {
+    expect(
+      contactSubtitle(
+        contact({
+          email: null,
+          dav_phones: "[]",
+          display_name: "Dr. Primetshofer",
+          organization: "Dr. Primetshofer",
+        }),
+      ),
+    ).toBe("No address");
+  });
+
+  it("says so when the card really carries nothing to show", () => {
+    expect(
+      contactSubtitle(contact({ email: null, dav_phones: null, organization: null })),
+    ).toBe("No address");
+  });
+
+  it("survives a malformed JSON column", () => {
+    expect(
+      contactSubtitle(contact({ email: null, dav_phones: "{kaputt", organization: null })),
+    ).toBe("No address");
   });
 });

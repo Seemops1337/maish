@@ -13,7 +13,29 @@ import {
   syncContactsForAccount,
 } from "@/services/contacts/contactSync";
 import { createDavContact } from "@/services/contacts/contactActions";
-import { ContactDetail } from "./ContactDetail";
+import { ContactDetail, readList } from "./ContactDetail";
+
+/**
+ * The line under a contact's name in the list.
+ *
+ * A synced card need not carry an address at all — an address book exported
+ * from a phone is mostly numbers — and answering "no address" for a contact
+ * whose number is sitting right there in the detail pane reads as though the
+ * sync had dropped something. An organisation that merely repeats the name
+ * adds nothing either.
+ */
+export function contactSubtitle(contact: DbContact): string {
+  if (contact.email) return contact.email;
+
+  const phone = readList(contact.dav_phones)[0];
+  if (phone) return phone;
+
+  if (contact.organization && contact.organization !== contact.display_name) {
+    return contact.organization;
+  }
+
+  return "No address";
+}
 
 /** Which slice of the list is shown: everything, one book, or the local rows. */
 type Filter = { kind: "all" } | { kind: "book"; id: string } | { kind: "local" };
@@ -196,7 +218,7 @@ export function ContactsPage() {
                   {contact.display_name ?? contact.email ?? "Unnamed contact"}
                 </div>
                 <div className="text-xs text-text-tertiary truncate">
-                  {contact.email ?? contact.organization ?? "No address"}
+                  {contactSubtitle(contact)}
                 </div>
               </button>
             ))
