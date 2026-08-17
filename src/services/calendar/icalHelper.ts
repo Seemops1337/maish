@@ -1,5 +1,5 @@
 import type { CalendarEventData, CreateEventInput, UpdateEventInput } from "./types";
-import { epochToWallClock, wallClockToEpoch, type WallClock } from "./timezone";
+import { wallClockToEpoch, type WallClock } from "./timezone";
 // iCalendar and vCard share a line format, so they share its parser.
 import {
   escapeText,
@@ -7,6 +7,7 @@ import {
   unescapeText,
   unfoldLines,
 } from "@/services/dav/contentLine";
+import { buildRRule, type RuleDateStyle } from "./recurrenceForm";
 
 /**
  * Generate a VEVENT iCalendar string from event input.
@@ -38,6 +39,10 @@ export function generateVEvent(event: CreateEventInput | UpdateEventInput, uid?:
     }
   }
 
+  if (event.recurrence) {
+    lines.push(`RRULE:${buildRRule(event.recurrence, styleFor(event.isAllDay))}`);
+  }
+
   if (event.description) {
     lines.push(`DESCRIPTION:${escapeText(event.description)}`);
   }
@@ -56,6 +61,14 @@ export function generateVEvent(event: CreateEventInput | UpdateEventInput, uid?:
   lines.push("END:VCALENDAR");
 
   return lines.join("\r\n");
+}
+
+/**
+ * How a freshly generated event writes its dates, which is what UNTIL has to
+ * match: an all-day event gets bare DATE values, everything else a UTC stamp.
+ */
+function styleFor(isAllDay: boolean | undefined): RuleDateStyle {
+  return isAllDay ? { zone: null, isDate: true } : { zone: "UTC", isDate: false };
 }
 
 // ---------------------------------------------------------------------------
@@ -398,23 +411,4 @@ function formatDateOnly(date: Date): string {
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}${m}${d}`;
-}
-
-/**
- * Render epoch seconds as an iCalendar value, for DTSTART, RECURRENCE-ID and
- * EXDATE. Pass "UTC" for a Z-suffixed value and null for floating time, which
- * is rendered in the machine's zone as a calendar client is expected to.
- */
-export function formatDateTimeInZone(
-  epochSeconds: number,
-  zone: string | null,
-  isDate: boolean,
-): string {
-  const wall = epochToWallClock(epochSeconds, zone);
-  const p = (n: number, width = 2) => String(n).padStart(width, "0");
-  const day = `${p(wall.year, 4)}${p(wall.month)}${p(wall.day)}`;
-  if (isDate) return day;
-
-  const time = `${p(wall.hour)}${p(wall.minute)}${p(wall.second)}`;
-  return `${day}T${time}${zone === "UTC" ? "Z" : ""}`;
 }

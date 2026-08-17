@@ -28,12 +28,15 @@ export function CalendarToolbar({
   const title = formatTitle(currentDate, view);
 
   return (
-    <div className="flex items-center justify-between px-6 py-3 border-b border-border-primary">
-      <div className="flex items-center gap-3">
-        <h2 className="text-lg font-semibold text-text-primary">{title}</h2>
-        <div className="flex items-center gap-1">
+    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-6 py-3 border-b border-border-primary">
+      {/* Navigation comes before the title so a longer month name cannot push
+          the buttons sideways and move the click targets between views. */}
+      <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center gap-1 shrink-0">
           <button
             onClick={onPrev}
+            aria-label={`Previous ${view}`}
+            title={`Previous ${view}`}
             className="p-1.5 text-text-secondary hover:text-text-primary hover:bg-bg-hover rounded transition-colors"
           >
             <ChevronLeft size={16} />
@@ -46,14 +49,19 @@ export function CalendarToolbar({
           </button>
           <button
             onClick={onNext}
+            aria-label={`Next ${view}`}
+            title={`Next ${view}`}
             className="p-1.5 text-text-secondary hover:text-text-primary hover:bg-bg-hover rounded transition-colors"
           >
             <ChevronRight size={16} />
           </button>
         </div>
+        <h2 className="min-w-0 text-lg font-semibold text-text-primary truncate">
+          {title}
+        </h2>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 shrink-0">
         {showCalendarListButton && onToggleCalendarList && (
           <button
             onClick={onToggleCalendarList}

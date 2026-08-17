@@ -6,6 +6,7 @@ import { isRecurring, seriesEnd, seriesRule } from "@/services/calendar/recurren
 import { getVisibleCalendars, getCalendarsForAccount, upsertCalendar, type DbCalendar } from "@/services/db/calendars";
 import { getCalendarProvider, hasCalendarSupport } from "@/services/calendar/providerFactory";
 import type { CalendarEventData, CreateEventInput } from "@/services/calendar/types";
+import type { RecurrenceForm } from "@/services/calendar/recurrenceForm";
 import { CalendarToolbar, type CalendarView } from "./CalendarToolbar";
 import { MonthView } from "./MonthView";
 import { WeekView } from "./WeekView";
@@ -194,7 +195,9 @@ export function CalendarPage() {
     location: string;
     startTime: string;
     endTime: string;
+    isAllDay: boolean;
     calendarId?: string;
+    recurrence: RecurrenceForm | null;
   }) => {
     if (!activeAccountId) return;
     try {
@@ -231,6 +234,8 @@ export function CalendarPage() {
         location: eventData.location || undefined,
         startTime: eventData.startTime,
         endTime: eventData.endTime,
+        isAllDay: eventData.isAllDay,
+        recurrence: eventData.recurrence,
       };
 
       const created = await provider.createEvent(calendarRemoteId, input);
@@ -328,7 +333,11 @@ export function CalendarPage() {
           />
         )}
 
-        <div className="flex-1 min-w-0">
+        {/* The views size themselves with flex-1, which needs a flex parent —
+            as a plain block this box left them at their content height, so a
+            six-week month overflowed the window and a five-week one fell
+            short of it. */}
+        <div className="flex flex-col flex-1 min-w-0 min-h-0">
           {view === "month" && (
             <MonthView
               currentDate={currentDate}

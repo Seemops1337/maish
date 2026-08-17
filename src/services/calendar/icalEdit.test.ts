@@ -7,6 +7,7 @@ import {
   truncateSeriesBefore,
 } from "./icalEdit";
 import { expandOccurrences } from "./recurrence";
+import type { RecurrenceForm } from "./recurrenceForm";
 
 /** The same shape a real server returns: zone definition, rule, alarm. */
 const VIENNA_SERIES = [
@@ -346,5 +347,152 @@ describe("splitSeriesFrom", () => {
     expect(tail).toContain("BEGIN:VTIMEZONE");
     expect(tail).toContain("BEGIN:VALARM");
     expect(tail).toContain("SEQUENCE:0");
+  });
+
+  it("takes a rule stated in the dialog at face value", () => {
+    // A COUNT the user just typed means "this many from here on", so there is
+    // nothing of the head's to subtract from it.
+    const counted = VIENNA_SERIES.replace(
+      "RRULE:FREQ=WEEKLY;UNTIL=20270127T225959Z",
+      "RRULE:FREQ=WEEKLY;COUNT=10",
+    );
+
+    const tail = splitSeriesFrom(counted, OCT_21, "new-uid-6", {
+      recurrence: weekly({ end: { kind: "count", count: 4 } }),
+    });
+
+    expect(masterRule(tail)).toBe("FREQ=WEEKLY;COUNT=4");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Writing the rule itself
+// ---------------------------------------------------------------------------
+
+const weekly = (overrides: Partial<RecurrenceForm> = {}): RecurrenceForm => ({
+  frequency: "weekly",
+  interval: 1,
+  byDay: [],
+  end: { kind: "never" },
+  ...overrides,
+});
+
+const PLAIN_EVENT = [
+  "BEGIN:VCALENDAR",
+  "VERSION:2.0",
+  "BEGIN:VEVENT",
+  "UID:plain-uid",
+  "DTSTAMP:20260901T090000Z",
+  "DTSTART;TZID=Europe/Vienna:20261007T180000",
+  "DTEND;TZID=Europe/Vienna:20261007T200000",
+  "SUMMARY:One-off",
+  "END:VEVENT",
+  "END:VCALENDAR",
+].join("\r\n");
+
+/** A weekly series with the 14th skipped and the 21st moved, as a server keeps it. */
+const SERIES_WITH_EXCEPTIONS = [
+  "BEGIN:VCALENDAR",
+  "VERSION:2.0",
+  "BEGIN:VEVENT",
+  "UID:series-uid",
+  "DTSTAMP:20260901T090000Z",
+  "DTSTART;TZID=Europe/Vienna:20261007T180000",
+  "DTEND;TZID=Europe/Vienna:20261007T200000",
+  "RRULE:FREQ=WEEKLY",
+  "EXDATE;TZID=Europe/Vienna:20261014T180000",
+  "SUMMARY:Weekly",
+  "END:VEVENT",
+  "BEGIN:VEVENT",
+  "UID:series-uid",
+  "RECURRENCE-ID;TZID=Europe/Vienna:20261021T180000",
+  "DTSTAMP:20260901T090000Z",
+  "DTSTART;TZID=Europe/Vienna:20261021T200000",
+  "DTEND;TZID=Europe/Vienna:20261021T220000",
+  "SUMMARY:Moved that week",
+  "END:VEVENT",
+  "END:VCALENDAR",
+].join("\r\n");
+
+const OCT_7 = ts("2026-10-07T16:00:00Z");
+
+describe("editMaster and the recurrence rule", () => {
+  it("turns a one-off event into a series", () => {
+    const edited = editMaster(PLAIN_EVENT, { recurrence: weekly() });
+
+    expect(masterRule(edited)).toBe("FREQ=WEEKLY");
+    expect(startsIn(edited)).toEqual([
+      OCT_7,
+      ts("2026-10-14T16:00:00Z"),
+      OCT_21,
+      OCT_28,
+    ]);
+  });
+
+  it("writes the end date in the value type the series' DTSTART uses", () => {
+    const edited = editMaster(PLAIN_EVENT, {
+      recurrence: weekly({ end: { kind: "onDate", date: "2026-10-21" } }),
+    });
+
+    // DTSTART carries a TZID, so UNTIL has to be a UTC date-time — and it has
+    // to reach the end of the 21st in Vienna, not in UTC.
+    expect(masterRule(edited)).toBe("FREQ=WEEKLY;UNTIL=20261021T215959Z");
+    expect(startsIn(edited)).toEqual([OCT_7, ts("2026-10-14T16:00:00Z"), OCT_21]);
+  });
+
+  it("removes the rule and leaves a single event behind", () => {
+    const edited = editMaster(SERIES_WITH_EXCEPTIONS, { recurrence: null });
+
+    expect(masterRule(edited)).toBeNull();
+    expect(startsIn(edited)).toEqual([OCT_7]);
+  });
+
+  it("clears exceptions and overrides the old rule anchored", () => {
+    // Both point at instance times the new rule does not produce. Kept around,
+    // the override would still be rendered — an occurrence belonging to no
+    // instance of the series.
+    const edited = editMaster(SERIES_WITH_EXCEPTIONS, {
+      recurrence: weekly({ frequency: "daily" }),
+    });
+
+    expect(masterRule(edited)).toBe("FREQ=DAILY");
+    expect(edited).not.toContain("EXDATE");
+    expect(edited).not.toContain("RECURRENCE-ID");
+    expect(edited).not.toContain("Moved that week");
+  });
+
+  it("leaves exceptions and overrides alone when the rule is unchanged", () => {
+    // Saving a new title resends the same rule; that must not count as a change.
+    const edited = editMaster(SERIES_WITH_EXCEPTIONS, {
+      summary: "Renamed",
+      recurrence: weekly(),
+    });
+
+    expect(edited).toContain("EXDATE;TZID=Europe/Vienna:20261014T180000");
+    expect(edited).toContain("Moved that week");
+    expect(startsIn(edited)).toEqual([
+      OCT_7,
+      ts("2026-10-21T18:00:00Z"), // the moved instance, two hours later
+      OCT_28,
+    ]);
+  });
+
+  it("keeps a rule the dialog never sent", () => {
+    const edited = editMaster(VIENNA_SERIES, { summary: "Renamed" });
+    expect(masterRule(edited)).toBe("FREQ=WEEKLY;UNTIL=20270127T225959Z");
+  });
+});
+
+describe("editOccurrence and the recurrence rule", () => {
+  it("never writes a rule onto a single instance", () => {
+    // An override describes one occurrence; a rule on it would be a second
+    // series sharing the first one's UID.
+    const edited = editOccurrence(SERIES_WITH_EXCEPTIONS, OCT_28, {
+      summary: "Just this one",
+      recurrence: weekly({ frequency: "daily" }),
+    });
+
+    expect(masterRule(edited)).toBe("FREQ=WEEKLY");
+    expect(edited.match(/RRULE:/g)).toHaveLength(1);
   });
 });
