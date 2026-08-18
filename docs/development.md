@@ -125,6 +125,63 @@ Produces native installers:
 - **macOS** -- `.dmg` / `.app`
 - **Linux** -- `.deb` / `.AppImage`
 
+`bundle.createUpdaterArtifacts` is on, so every build also writes an updater
+bundle (`.app.tar.gz` on macOS, the `.AppImage` on Linux, the installers on
+Windows) next to the installers, and then signs it.
+
+**Bundling now needs the updater signing key.** The bundles are written first and
+the signing step runs after them, so without `TAURI_SIGNING_PRIVATE_KEY` the
+command fails at the very end with `A public key has been found, but no private
+key`. Two ways around it locally:
+
+```bash
+# Skip bundling entirely -- what this fork normally uses
+npm run tauri build -- --no-bundle
+
+# Bundle, but skip the signature
+npm run tauri build -- --no-sign
+```
+
+## Release Artifacts
+
+Releases are published by merging the release-please pull request. That creates
+the tag and the GitHub release; `.github/workflows/build-release.yml` then builds
+the app and attaches the bundles, their `.sig` files and a merged `latest.json`.
+The updater reads that file from
+`releases/latest/download/latest.json` (`plugins.updater.endpoints` in
+`src-tauri/tauri.conf.json`).
+
+The build runs on macOS arm64 only. Other platforms have to be added to the
+workflow before their users see updates.
+
+Two repository secrets are required:
+
+| Secret | Purpose |
+|---|---|
+| `TAURI_SIGNING_PRIVATE_KEY` | Contents of the minisign private key matching `plugins.updater.pubkey` |
+| `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` | The password that key was generated with |
+
+**The key must have a password, and the second secret is not optional**, even
+though Tauri's own documentation calls it so. On CI the CLI substitutes an empty
+string for a missing password rather than treating the key as unencrypted, so a
+key generated without one fails the build with `incorrect updater private key
+password: Wrong password for that key`. Verified against CLI 2.10.0.
+
+A new key pair is generated with:
+
+```bash
+npm run tauri signer generate -- -w ~/.tauri/maish.key -p '<password>'
+```
+
+The public half has to be copied into `plugins.updater.pubkey`. Replacing the key
+invalidates every update for clients that already shipped with the old public
+key, so this is a one-way step.
+
+Re-running a build, or filling in a release published before this workflow
+existed, is done by dispatching **Build Release Artifacts** manually with the tag
+(for example `maish-v0.1.1`). Tags older than the `createUpdaterArtifacts` change
+produce installers but no `.sig` files and no `latest.json`.
+
 ## Email Account Setup
 
 ### Gmail (OAuth)
