@@ -19,7 +19,7 @@ export function PhishingBanner({ scanResult, onTrustSender }: PhishingBannerProp
     : "text-warning hover:text-warning/80 border-warning/30 hover:bg-warning/5";
 
   return (
-    <div className={`mx-4 my-2 px-3 py-2.5 rounded-lg border ${bgClass} flex items-center gap-3`}>
+    <div className={`mb-3 px-3 py-2.5 rounded-lg border ${bgClass} flex items-center gap-3`}>
       <ShieldAlert size={18} className={`shrink-0 ${iconClass}`} />
       <div className="flex-1 min-w-0">
         <p className={`text-xs font-medium ${textClass}`}>

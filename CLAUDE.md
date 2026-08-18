@@ -306,7 +306,7 @@ Tailwind CSS v4 — uses `@import "tailwindcss"`, `@theme {}` for custom propert
 
 Vitest + jsdom. Setup file: `src/test/setup.ts` (imports `@testing-library/jest-dom/vitest`). Config: `globals: true` (no imports needed for `describe`, `it`, `expect`). Tests are colocated with source files (e.g., `uiStore.test.ts` next to `uiStore.ts`). Zustand test pattern: `useStore.setState()` in beforeEach, assert via `.getState()`.
 
-155 test files across stores (8), services (87), utils (15), components (38), constants (3), router (1), hooks (2), and config (1).
+156 test files across stores (8), services (88), utils (15), components (38), constants (3), router (1), hooks (2), and config (1).
 
 ## Database
 
@@ -395,7 +395,7 @@ Stalwart server.
 - **AI providers**: API keys stored in SQLite settings table. Provider selected per-feature in settings. Results cached in `ai_cache` table
 - **Deep links**: `mailto:` scheme registered via tauri-plugin-deep-link. Opens compose window with pre-filled recipient
 - **Autostart**: Uses `--hidden` flag to start minimized to tray
-- **Phishing detection**: 10 heuristic rules (IP URLs, homograph, suspicious TLDs, URL shorteners, display/href mismatch, suspicious paths, brand impersonation, dangerous protocols, free email impostor, subdomain spoofing). Sensitivity configurable (low/default/high). Results cached in `link_scan_results`
+- **Phishing detection**: 10 heuristic rules (IP URLs, homograph, suspicious TLDs, URL shorteners, display/href mismatch, suspicious paths, brand impersonation, dangerous protocols, free email impostor, subdomain spoofing). Sensitivity configurable (low/default/high). Results cached in `link_scan_results`. Wired in two places: `MessageItem` calls `scanMessageLinks()` when a message expands and renders `PhishingBanner` above the body, and passes the risky links to `EmailRenderer`, which shows `LinkConfirmDialog` before handing a flagged URL to `openUrl()`. "Trust this sender" writes to `phishing_allowlist`, which suppresses both. The cache stores link scores only — the sensitivity thresholds are applied on read (`applySensitivity()`), so changing the setting also affects messages scanned earlier
 - **Auth display**: SPF/DKIM/DMARC parsed from `Authentication-Results` header. Aggregate verdict: pass/fail/warning/unknown. Stored in `messages.auth_results` column
 - **Mute threads**: Sets `is_muted` flag, auto-archives. Muted threads suppressed from notifications during delta sync
 - **Send-as aliases**: Fetched from Gmail `/settings/sendAs` API on account init (Gmail only). `FromSelector` shown in composer when account has multiple aliases
