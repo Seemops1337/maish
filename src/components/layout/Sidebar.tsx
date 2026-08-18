@@ -39,6 +39,7 @@ import {
   MailOpen,
   Paperclip,
   FolderSearch,
+  BookUser,
   Loader2,
   type LucideIcon,
 } from "lucide-react";
@@ -49,20 +50,28 @@ interface SidebarProps {
   onAddAccount: () => void;
 }
 
-export const ALL_NAV_ITEMS: { id: string; label: string; icon: LucideIcon }[] = [
-  { id: "inbox", label: "Inbox", icon: Inbox },
-  { id: "starred", label: "Starred", icon: Star },
-  { id: "snoozed", label: "Snoozed", icon: Clock },
-  { id: "sent", label: "Sent", icon: Send },
-  { id: "drafts", label: "Drafts", icon: FileEdit },
-  { id: "trash", label: "Trash", icon: Trash2 },
-  { id: "spam", label: "Spam", icon: Ban },
-  { id: "all", label: "All Mail", icon: Mail },
-  { id: "tasks", label: "Tasks", icon: CheckSquare },
-  { id: "calendar", label: "Calendar", icon: Calendar },
-  { id: "attachments", label: "Attachments", icon: Paperclip },
-  { id: "smart-folders", label: "Smart Folders", icon: FolderSearch },
-  { id: "labels", label: "Labels", icon: Tag },
+/**
+ * "mail" items are mailboxes, "modules" are the separate areas of the app.
+ * The sidebar draws a divider wherever the group changes, so the grouping
+ * survives the reordering the user can do in Settings.
+ */
+export type NavGroup = "mail" | "modules";
+
+export const ALL_NAV_ITEMS: { id: string; label: string; icon: LucideIcon; group: NavGroup }[] = [
+  { id: "inbox", label: "Inbox", icon: Inbox, group: "mail" },
+  { id: "starred", label: "Starred", icon: Star, group: "mail" },
+  { id: "snoozed", label: "Snoozed", icon: Clock, group: "mail" },
+  { id: "sent", label: "Sent", icon: Send, group: "mail" },
+  { id: "drafts", label: "Drafts", icon: FileEdit, group: "mail" },
+  { id: "trash", label: "Trash", icon: Trash2, group: "mail" },
+  { id: "spam", label: "Spam", icon: Ban, group: "mail" },
+  { id: "all", label: "All Mail", icon: Mail, group: "mail" },
+  { id: "tasks", label: "Tasks", icon: CheckSquare, group: "modules" },
+  { id: "calendar", label: "Calendar", icon: Calendar, group: "modules" },
+  { id: "contacts", label: "Contacts", icon: BookUser, group: "modules" },
+  { id: "attachments", label: "Attachments", icon: Paperclip, group: "modules" },
+  { id: "smart-folders", label: "Smart Folders", icon: FolderSearch, group: "mail" },
+  { id: "labels", label: "Labels", icon: Tag, group: "mail" },
 ];
 
 const CATEGORY_ITEMS: { id: string; label: string; icon: LucideIcon }[] = [
@@ -360,11 +369,15 @@ export function Sidebar({ collapsed, onAddAccount }: SidebarProps) {
       </div>
 
       <nav className="flex-1 overflow-y-auto py-2">
-        {visibleNavItems.map((item) => {
+        {visibleNavItems.map((item, index) => {
           const Icon = item.icon;
           const isInbox = item.id === "inbox";
+          const startsNewGroup = index > 0 && item.group !== visibleNavItems[index - 1]?.group;
           return (
             <div key={item.id}>
+              {startsNewGroup && (
+                <hr className={`my-2 border-border-primary/60 ${collapsed ? "mx-4" : "mx-3"}`} />
+              )}
               <DroppableNavItem
                 id={item.id}
                 isActive={isInbox ? (activeLabel === "inbox" && (inboxViewMode === "unified" || activeCategory === "Primary")) : activeLabel === item.id}

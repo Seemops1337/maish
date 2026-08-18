@@ -34,6 +34,12 @@ export interface DbAccount {
   caldav_home_url: string | null;
   calendar_provider: string | null;
   accept_invalid_certs: number;
+  carddav_url: string | null;
+  carddav_username: string | null;
+  carddav_password: string | null;
+  carddav_principal_url: string | null;
+  carddav_home_url: string | null;
+  contacts_provider: string | null;
 }
 
 async function decryptAccountTokens(account: DbAccount): Promise<DbAccount> {
@@ -70,6 +76,13 @@ async function decryptAccountTokens(account: DbAccount): Promise<DbAccount> {
       account.caldav_password = await decryptValue(account.caldav_password);
     } catch (err) {
       console.warn("Failed to decrypt CalDAV password, using raw value:", err);
+    }
+  }
+  if (account.carddav_password && isEncrypted(account.carddav_password)) {
+    try {
+      account.carddav_password = await decryptValue(account.carddav_password);
+    } catch (err) {
+      console.warn("Failed to decrypt CardDAV password, using raw value:", err);
     }
   }
   return account;
@@ -304,6 +317,97 @@ export async function updateAccountCalDav(
       fields.caldavPrincipalUrl ?? null,
       fields.caldavHomeUrl ?? null,
       fields.calendarProvider,
+      accountId,
+    ],
+  );
+}
+
+export async function insertCardDavAccount(account: {
+  id: string;
+  email: string;
+  displayName: string | null;
+  carddavUrl: string;
+  carddavUsername: string;
+  carddavPassword: string;
+  carddavPrincipalUrl?: string | null;
+  carddavHomeUrl?: string | null;
+}): Promise<void> {
+  const db = await getDb();
+  const encPassword = await encryptValue(account.carddavPassword);
+  await db.execute(
+    `INSERT INTO accounts (id, email, display_name, avatar_url, access_token, refresh_token, provider, contacts_provider, carddav_url, carddav_username, carddav_password, carddav_principal_url, carddav_home_url)
+     VALUES ($1, $2, $3, NULL, NULL, NULL, 'carddav', 'carddav', $4, $5, $6, $7, $8)`,
+    [
+      account.id,
+      account.email,
+      account.displayName,
+      account.carddavUrl,
+      account.carddavUsername,
+      encPassword,
+      account.carddavPrincipalUrl ?? null,
+      account.carddavHomeUrl ?? null,
+    ],
+  );
+}
+
+/**
+ * Store CardDAV settings for an address, creating the account only if needed.
+ *
+ * The same reasoning as for `saveCalDavAccount`: `accounts.email` is UNIQUE,
+ * and an address book almost always belongs to an address that already has a
+ * mail account — often the very account whose CalDAV calendar is configured
+ * already. Inserting a second row for it fails with "UNIQUE constraint failed:
+ * accounts.email". Reports which account now carries the settings so callers
+ * can tell the two cases apart.
+ */
+export async function saveCardDavAccount(account: {
+  id: string;
+  email: string;
+  displayName: string | null;
+  carddavUrl: string;
+  carddavUsername: string;
+  carddavPassword: string;
+}): Promise<{ accountId: string; attachedToExisting: boolean }> {
+  const existing = await getAccountByEmail(account.email);
+
+  if (existing) {
+    await updateAccountCardDav(existing.id, {
+      carddavUrl: account.carddavUrl,
+      carddavUsername: account.carddavUsername,
+      carddavPassword: account.carddavPassword,
+      contactsProvider: "carddav",
+    });
+    return { accountId: existing.id, attachedToExisting: true };
+  }
+
+  await insertCardDavAccount(account);
+  return { accountId: account.id, attachedToExisting: false };
+}
+
+export async function updateAccountCardDav(
+  accountId: string,
+  fields: {
+    carddavUrl: string;
+    carddavUsername: string;
+    carddavPassword: string;
+    carddavPrincipalUrl?: string | null;
+    carddavHomeUrl?: string | null;
+    contactsProvider: string;
+  },
+): Promise<void> {
+  const db = await getDb();
+  const encPassword = await encryptValue(fields.carddavPassword);
+  await db.execute(
+    `UPDATE accounts SET carddav_url = $1, carddav_username = $2, carddav_password = $3,
+       carddav_principal_url = $4, carddav_home_url = $5, contacts_provider = $6,
+       updated_at = unixepoch() WHERE id = $7`,
+    [
+      fields.carddavUrl,
+      fields.carddavUsername,
+      encPassword,
+      fields.carddavPrincipalUrl ?? null,
+      fields.carddavHomeUrl ?? null,
+      fields.contactsProvider,
       accountId,
     ],
   );

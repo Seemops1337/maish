@@ -8,6 +8,15 @@ interface AddressInputProps {
   placeholder?: string;
 }
 
+/**
+ * A contact that can actually be written to. A synced vCard may hold only a
+ * name and a phone number, and offering it as a recipient would insert an
+ * empty address.
+ */
+type Suggestion = DbContact & { email: string };
+
+const addressable = (contact: DbContact): contact is Suggestion => !!contact.email;
+
 export function AddressInput({
   label,
   addresses,
@@ -15,7 +24,7 @@ export function AddressInput({
   placeholder = "Add recipients...",
 }: AddressInputProps) {
   const [inputValue, setInputValue] = useState("");
-  const [suggestions, setSuggestions] = useState<DbContact[]>([]);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedIdx, setSelectedIdx] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -35,7 +44,7 @@ export function AddressInput({
       if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
       if (value.length >= 2) {
         searchTimerRef.current = setTimeout(async () => {
-          const results = await searchContacts(value, 5);
+          const results = (await searchContacts(value, 5)).filter(addressable);
           setSuggestions(results);
           setShowSuggestions(results.length > 0);
           setSelectedIdx(-1);

@@ -8,6 +8,15 @@ import type { DbAttachment } from "@/services/db/attachments";
 import { MailMinus } from "lucide-react";
 import { AuthBadge } from "./AuthBadge";
 import { AuthWarningBanner } from "./AuthWarningBanner";
+import { PhishingBanner } from "./PhishingBanner";
+import { scanMessageLinks } from "@/services/phishing/phishingScanner";
+import { addToPhishingAllowlist } from "@/services/db/phishingAllowlist";
+import type { MessagePhishingScan } from "@/services/phishing/phishingScanner";
+import type { LinkAnalysis } from "@/utils/phishingDetector";
+
+// Stable identity — EmailRenderer re-registers its message listener when the
+// risky-link list changes.
+const EMPTY_LINKS: LinkAnalysis[] = [];
 
 interface MessageItemProps {
   message: DbMessage;
@@ -25,6 +34,7 @@ export const MessageItem = memo(forwardRef<HTMLDivElement, MessageItemProps>(fun
   const [expanded, setExpanded] = useState(isLast);
   const [attachments, setAttachments] = useState<DbAttachment[]>([]);
   const [authBannerDismissed, setAuthBannerDismissed] = useState(false);
+  const [phishingScan, setPhishingScan] = useState<MessagePhishingScan | null>(null);
   const attachmentsLoadedRef = useRef(false);
 
   const loadAttachments = async () => {
@@ -52,6 +62,39 @@ export const MessageItem = memo(forwardRef<HTMLDivElement, MessageItemProps>(fun
       loadAttachments();
     }
   }, [focused]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Scan the body for phishing links once the message is actually shown.
+  // Returns null when the feature is off or the sender is trusted.
+  useEffect(() => {
+    if (!expanded) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const scan = await scanMessageLinks(
+          message.account_id,
+          message.id,
+          message.body_html,
+          message.from_address,
+        );
+        if (!cancelled) setPhishingScan(scan);
+      } catch (err) {
+        console.error("Failed to scan message links:", err);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [expanded, message.account_id, message.id, message.body_html, message.from_address]);
+
+  const handleTrustSender = async () => {
+    setPhishingScan(null);
+    if (!message.from_address) return;
+    try {
+      await addToPhishingAllowlist(message.account_id, message.from_address);
+    } catch (err) {
+      console.error("Failed to allowlist sender:", err);
+    }
+  };
 
   const handleToggle = () => {
     const willExpand = !expanded;
@@ -123,6 +166,13 @@ export const MessageItem = memo(forwardRef<HTMLDivElement, MessageItemProps>(fun
             />
           )}
 
+          {phishingScan?.result.showBanner && (
+            <PhishingBanner
+              scanResult={phishingScan.result}
+              onTrustSender={handleTrustSender}
+            />
+          )}
+
           {message.list_unsubscribe && (
             <UnsubscribeLink
               header={message.list_unsubscribe}
@@ -144,6 +194,7 @@ export const MessageItem = memo(forwardRef<HTMLDivElement, MessageItemProps>(fun
               senderAllowlisted={senderAllowlisted}
               messageId={message.id}
               inlineAttachments={attachments.filter((a) => a.content_id)}
+              riskyLinks={phishingScan?.riskyLinks ?? EMPTY_LINKS}
             />
           ) : (
             <div className="py-8 text-center text-text-tertiary text-sm">Loading...</div>
