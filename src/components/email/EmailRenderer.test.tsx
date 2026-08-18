@@ -67,6 +67,26 @@ describe("EmailRenderer", () => {
     expect(container.querySelector("iframe")).toBeTruthy();
   });
 
+  it("turns URLs in a plain text body into anchors", () => {
+    const { container } = render(
+      <EmailRenderer html={null} text="Go to https://example.com/x now" />,
+    );
+
+    const srcDoc = container.querySelector("iframe")?.getAttribute("srcdoc") ?? "";
+    expect(srcDoc).toContain(
+      '<a href="https://example.com/x">https://example.com/x</a>',
+    );
+  });
+
+  it("leaves an html body's own markup untouched", () => {
+    const { container } = render(
+      <EmailRenderer html="<p>Go to https://example.com/x now</p>" text={null} />,
+    );
+
+    const srcDoc = container.querySelector("iframe")?.getAttribute("srcdoc") ?? "";
+    expect(srcDoc).toContain("<p>Go to https://example.com/x now</p>");
+  });
+
   it("renders html content in iframe", () => {
     const { container } = render(
       <EmailRenderer html="<p>Hello</p>" text={null} />,

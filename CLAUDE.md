@@ -306,7 +306,7 @@ Tailwind CSS v4 — uses `@import "tailwindcss"`, `@theme {}` for custom propert
 
 Vitest + jsdom. Setup file: `src/test/setup.ts` (imports `@testing-library/jest-dom/vitest`). Config: `globals: true` (no imports needed for `describe`, `it`, `expect`). Tests are colocated with source files (e.g., `uiStore.test.ts` next to `uiStore.ts`). Zustand test pattern: `useStore.setState()` in beforeEach, assert via `.getState()`.
 
-155 test files across stores (8), services (88), utils (14), components (38), constants (3), router (1), hooks (2), and config (1).
+156 test files across stores (8), services (88), utils (15), components (38), constants (3), router (1), hooks (2), and config (1).
 
 ## Database
 
@@ -384,6 +384,7 @@ Stalwart server.
 - **TypeScript strict mode**: `noUnusedLocals`, `noUnusedParameters`, `noUncheckedIndexedAccess` are all enabled. Target ES2021, bundler module resolution, `moduleDetection: "force"`
 - **Path alias**: `@/*` maps to `src/*`
 - **Email HTML rendering**: DOMPurify sanitization, rendered in sandboxed iframe (`allow-same-origin` only). Strips remote images by default (uses `data-blocked-src` attributes), allowlist per sender
+- **Plain-text bodies are linkified**: a message with no HTML part goes through `linkifyPlainText()` (`src/utils/linkify.ts`), which escapes the body and inserts anchors for http(s), `mailto:`, bare `www.` hosts and bare addresses. Escaping and matching happen in one pass on the raw text — escaping afterwards would show the anchors as text, matching afterwards would let a body containing `&`, `<` or `"` steer the match. The anchors are clicked like any other: the frame reports them over postMessage and `EmailRenderer` re-checks the scheme before handing the URL to the opener
 - **Thread deletion**: Two-stage — first trash, then permanent delete from DB if already in trash
 - **Snooze**: Removes INBOX label and adds SNOOZED label (not just a flag)
 - **Draft auto-save**: 3-second debounce, not configurable
