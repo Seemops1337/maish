@@ -125,6 +125,12 @@ export function createMockGmailAccount(
     caldav_home_url: null,
     calendar_provider: null,
     accept_invalid_certs: 0,
+    carddav_url: null,
+    carddav_username: null,
+    carddav_password: null,
+    carddav_principal_url: null,
+    carddav_home_url: null,
+    contacts_provider: null,
     ...overrides,
   };
 }
@@ -165,6 +171,12 @@ export function createMockImapAccount(
     caldav_home_url: null,
     calendar_provider: null,
     accept_invalid_certs: 0,
+    carddav_url: null,
+    carddav_username: null,
+    carddav_password: null,
+    carddav_principal_url: null,
+    carddav_home_url: null,
+    contacts_provider: null,
     ...overrides,
   };
 }
@@ -205,6 +217,12 @@ export function createMockDbAccount(
     caldav_home_url: null,
     calendar_provider: null,
     accept_invalid_certs: 0,
+    carddav_url: null,
+    carddav_username: null,
+    carddav_password: null,
+    carddav_principal_url: null,
+    carddav_home_url: null,
+    contacts_provider: null,
     ...overrides,
   };
 }

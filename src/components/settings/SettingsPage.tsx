@@ -847,13 +847,13 @@ export function SettingsPage() {
               {activeTab === "accounts" && (
                 <>
                   <Section title="Mail Accounts">
-                    {accounts.filter((a) => a.provider !== "caldav").length === 0 ? (
+                    {accounts.filter((a) => !isDavOnly(a.provider)).length === 0 ? (
                       <p className="text-sm text-text-tertiary">
                         No mail accounts connected
                       </p>
                     ) : (
                       <div className="space-y-2">
-                        {accounts.filter((a) => a.provider !== "caldav").map((account) => {
+                        {accounts.filter((a) => !isDavOnly(a.provider)).map((account) => {
                           const providerLabel = account.provider === "imap" ? "IMAP" : "Gmail";
                           return (
                             <div
@@ -906,10 +906,10 @@ export function SettingsPage() {
                     )}
                   </Section>
 
-                  {accounts.some((a) => a.provider === "caldav") && (
-                    <Section title="Calendar Accounts">
+                  {accounts.some((a) => isDavOnly(a.provider)) && (
+                    <Section title="Calendar and Contact Accounts">
                       <div className="space-y-2">
-                        {accounts.filter((a) => a.provider === "caldav").map((account) => (
+                        {accounts.filter((a) => isDavOnly(a.provider)).map((account) => (
                           <div
                             key={account.id}
                             className="flex items-center justify-between py-2.5 px-4 bg-bg-secondary rounded-lg"
@@ -918,7 +918,7 @@ export function SettingsPage() {
                               <div className="text-sm font-medium text-text-primary flex items-center gap-2">
                                 {account.displayName ?? account.email}
                                 <span className="text-[0.6rem] font-medium px-1.5 py-0.5 rounded-full bg-accent/10 text-accent">
-                                  CalDAV
+                                  {account.provider === "carddav" ? "CardDAV" : "CalDAV"}
                                 </span>
                               </div>
                               <div className="text-xs text-text-tertiary">
@@ -939,7 +939,7 @@ export function SettingsPage() {
 
                   <SendAsAliasesSection />
 
-                  <ImapCalDavSection />
+                  <ImapDavSection />
 
                   <Section title="Google API">
                     <div className="space-y-3">
@@ -1987,7 +1987,7 @@ function ShortcutsTab() {
   );
 }
 
-function ImapCalDavSection() {
+function ImapDavSection() {
   const accounts = useAccountStore((s) => s.accounts);
   const activeAccountId = useAccountStore((s) => s.activeAccountId);
   const [account, setAccount] = useState<import("@/services/db/accounts").DbAccount | null>(null);
@@ -2004,15 +2004,21 @@ function ImapCalDavSection() {
 
   if (!isImap || !account) return null;
 
+  const reload = () => {
+    import("@/services/db/accounts").then(({ getAccount }) => {
+      getAccount(account.id).then(setAccount);
+    });
+  };
+
   return (
-    <Section title="Calendar (CalDAV)">
-      <CalDavSettingsInline account={account} onSaved={() => {
-        // Reload account
-        import("@/services/db/accounts").then(({ getAccount }) => {
-          getAccount(account.id).then(setAccount);
-        });
-      }} />
-    </Section>
+    <>
+      <Section title="Calendar (CalDAV)">
+        <CalDavSettingsInline account={account} onSaved={reload} />
+      </Section>
+      <Section title="Contacts (CardDAV)">
+        <CardDavSettingsInline account={account} onSaved={reload} />
+      </Section>
+    </>
   );
 }
 
@@ -2320,4 +2326,25 @@ function ToggleRow({
       </button>
     </div>
   );
+}
+
+function CardDavSettingsInline({ account, onSaved }: { account: import("@/services/db/accounts").DbAccount; onSaved: () => void }) {
+  const [CardDav, setCardDav] = useState<typeof import("@/components/settings/CardDavSettings").CardDavSettings | null>(null);
+
+  useEffect(() => {
+    import("@/components/settings/CardDavSettings").then((m) => setCardDav(() => m.CardDavSettings));
+  }, []);
+
+  if (!CardDav) return <div className="text-xs text-text-tertiary">Loading...</div>;
+
+  return <CardDav account={account} onSaved={onSaved} />;
+}
+
+/**
+ * An account that exists only for a DAV service and has no mailbox behind it,
+ * so it belongs in neither the mail list nor its re-authorize and resync
+ * controls.
+ */
+function isDavOnly(provider: string | undefined): boolean {
+  return provider === "caldav" || provider === "carddav";
 }

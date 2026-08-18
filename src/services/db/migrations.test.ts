@@ -1,44 +1,5 @@
 import { describe, it, expect } from "vitest";
-
-// Mirror of splitStatements from migrations.ts for testing
-function splitStatements(sql: string): string[] {
-  const statements: string[] = [];
-  let current = "";
-  let depth = 0;
-  const upper = sql.toUpperCase();
-
-  for (let i = 0; i < sql.length; i++) {
-    if (
-      upper.startsWith("BEGIN", i) &&
-      (i === 0 || /\W/.test(sql[i - 1]!)) &&
-      (i + 5 >= sql.length || /\W/.test(sql[i + 5]!))
-    ) {
-      depth++;
-    }
-
-    if (
-      upper.startsWith("END", i) &&
-      (i === 0 || /\W/.test(sql[i - 1]!)) &&
-      (i + 3 >= sql.length || /\W/.test(sql[i + 3]!)) &&
-      depth > 0
-    ) {
-      depth--;
-    }
-
-    if (sql[i] === ";" && depth === 0) {
-      const trimmed = current.trim();
-      if (trimmed.length > 0) statements.push(trimmed);
-      current = "";
-    } else {
-      current += sql[i];
-    }
-  }
-
-  const trimmed = current.trim();
-  if (trimmed.length > 0) statements.push(trimmed);
-
-  return statements;
-}
+import { MIGRATIONS, splitStatements } from "./migrations";
 
 describe("splitStatements", () => {
   it("splits simple statements", () => {
@@ -102,5 +63,60 @@ describe("splitStatements", () => {
     const sql = "CREATE TABLE backend (id INT); CREATE TABLE foo (id INT);";
     const result = splitStatements(sql);
     expect(result).toHaveLength(2);
+  });
+
+  it("ignores a semicolon inside a line comment", () => {
+    // Splitting here tears the statement apart mid-sentence and leaves prose
+    // where SQL is expected, which fails the whole migration.
+    const sql = `
+      -- one column; and another
+      ALTER TABLE events ADD COLUMN rrule TEXT;
+    `;
+    const result = splitStatements(sql);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toContain("ALTER TABLE events ADD COLUMN rrule TEXT");
+  });
+
+  it("ignores a semicolon inside a string literal", () => {
+    const sql = "INSERT INTO settings VALUES ('a;b'); SELECT 1;";
+    const result = splitStatements(sql);
+
+    expect(result).toHaveLength(2);
+    expect(result[0]).toBe("INSERT INTO settings VALUES ('a;b')");
+  });
+});
+
+/**
+ * A migration that fails takes the whole startup with it: runMigrations()
+ * rethrows, so App.tsx never reaches the point where accounts are loaded and
+ * the app comes up empty. The statements therefore have to be checked here
+ * rather than on a user's database.
+ */
+describe("the migrations themselves", () => {
+  const SQL_KEYWORDS = /^(ALTER|CREATE|DROP|INSERT|UPDATE|DELETE|PRAGMA|REPLACE|WITH|SELECT)\b/i;
+
+  it("splits every migration into executable statements", () => {
+    for (const migration of MIGRATIONS) {
+      for (const statement of splitStatements(migration.sql)) {
+        const code = statement
+          .split("\n")
+          .filter((line) => !line.trim().startsWith("--"))
+          .join("\n")
+          .trim();
+        if (code.length === 0) continue;
+
+        expect(
+          code,
+          `v${migration.version} (${migration.description}) produced a statement that is not SQL`,
+        ).toMatch(SQL_KEYWORDS);
+      }
+    }
+  });
+
+  it("numbers migrations consecutively", () => {
+    expect(MIGRATIONS.map((m) => m.version)).toEqual(
+      MIGRATIONS.map((_, index) => index + 1),
+    );
   });
 });

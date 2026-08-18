@@ -39,6 +39,7 @@ import {
   MailOpen,
   Paperclip,
   FolderSearch,
+  BookUser,
   Loader2,
   type LucideIcon,
 } from "lucide-react";
@@ -67,6 +68,7 @@ export const ALL_NAV_ITEMS: { id: string; label: string; icon: LucideIcon; group
   { id: "all", label: "All Mail", icon: Mail, group: "mail" },
   { id: "tasks", label: "Tasks", icon: CheckSquare, group: "modules" },
   { id: "calendar", label: "Calendar", icon: Calendar, group: "modules" },
+  { id: "contacts", label: "Contacts", icon: BookUser, group: "modules" },
   { id: "attachments", label: "Attachments", icon: Paperclip, group: "modules" },
   { id: "smart-folders", label: "Smart Folders", icon: FolderSearch, group: "mail" },
   { id: "labels", label: "Labels", icon: Tag, group: "mail" },
