@@ -98,7 +98,7 @@ cd src-tauri && cargo build
 - **Setup:** `src/test/setup.ts` (imports `@testing-library/jest-dom/vitest`)
 - **Config:** `globals: true` -- no imports needed for `describe`, `it`, `expect`
 - **Location:** Tests are colocated with source files (e.g., `uiStore.test.ts` next to `uiStore.ts`)
-- **Count:** 154 test files across stores (8), services (87), utils (14), components (38), constants (3), router (1), hooks (2), and config (1)
+- **Count:** reported by `npm run test`. Deliberately not written down here: a number in a document is either stale or a merge conflict, and usually both
 
 ### Zustand test pattern
 
