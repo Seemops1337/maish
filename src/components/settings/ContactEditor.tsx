@@ -28,8 +28,9 @@ export function ContactEditor() {
     const q = search.toLowerCase();
     return contacts.filter(
       (c) =>
-        c.email.toLowerCase().includes(q) ||
-        (c.display_name?.toLowerCase().includes(q) ?? false),
+        (c.email?.toLowerCase().includes(q) ?? false) ||
+        (c.display_name?.toLowerCase().includes(q) ?? false) ||
+        (c.organization?.toLowerCase().includes(q) ?? false),
     );
   }, [contacts, search]);
 

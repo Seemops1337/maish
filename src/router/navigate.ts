@@ -28,6 +28,11 @@ export function navigateToLabel(
     return;
   }
 
+  if (label === "contacts") {
+    router.navigate({ to: "/contacts" });
+    return;
+  }
+
   if (label === "calendar") {
     router.navigate({ to: "/calendar" });
     return;
@@ -214,6 +219,9 @@ export function getActiveLabel(): string {
     }
     if (match.routeId === "/tasks") {
       return "tasks";
+    }
+    if (match.routeId === "/contacts") {
+      return "contacts";
     }
     if (match.routeId === "/calendar") {
       return "calendar";

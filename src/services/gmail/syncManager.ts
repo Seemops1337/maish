@@ -10,6 +10,7 @@ import { ensureFreshToken } from "../oauth/oauthTokenManager";
 import { hasCalendarSupport, getCalendarProvider } from "../calendar/providerFactory";
 import { getVisibleCalendars, upsertCalendar, updateCalendarSyncToken } from "../db/calendars";
 import { upsertCalendarEvent, deleteEventByRemoteId } from "../db/calendarEvents";
+import { syncContactsForAccount } from "../contacts/contactSync";
 
 const SYNC_INTERVAL_MS = 60_000; // 60 seconds — delta syncs are lightweight (single API call when idle)
 
@@ -221,9 +222,10 @@ async function syncAccountInternal(accountId: string): Promise<void> {
 
     console.log(`[syncManager] Syncing account ${accountId} (provider=${account.provider}, history_id=${account.history_id ?? "null"})`);
 
-    if (account.provider === "caldav") {
-      // CalDAV-only accounts — skip email sync, only sync calendar
+    if (account.provider === "caldav" || account.provider === "carddav") {
+      // DAV-only accounts carry no mailbox — sync what they do have.
       await syncCalendarForAccount(accountId);
+      await syncContactsForAccount(accountId);
       statusCallback?.(accountId, "done");
       return;
     }
@@ -242,6 +244,12 @@ async function syncAccountInternal(accountId: string): Promise<void> {
     // Sync calendar alongside email (non-blocking — calendar errors don't affect email sync)
     syncCalendarForAccount(accountId).catch((err) => {
       console.warn(`[syncManager] Calendar sync error for ${accountId}:`, err);
+    });
+
+    // Contacts likewise: an address book that cannot be reached must not make
+    // the mail sync look like it failed.
+    syncContactsForAccount(accountId).catch((err) => {
+      console.warn(`[syncManager] Contact sync error for ${accountId}:`, err);
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err ?? "Unknown error");

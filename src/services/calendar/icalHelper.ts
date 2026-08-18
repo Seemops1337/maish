@@ -1,5 +1,12 @@
 import type { CalendarEventData, CreateEventInput, UpdateEventInput } from "./types";
 import { wallClockToEpoch, type WallClock } from "./timezone";
+// iCalendar and vCard share a line format, so they share its parser.
+import {
+  escapeText,
+  parseContentLine,
+  unescapeText,
+  unfoldLines,
+} from "@/services/dav/contentLine";
 import { buildRRule, type RuleDateStyle } from "./recurrenceForm";
 
 /**
@@ -19,7 +26,7 @@ export function generateVEvent(event: CreateEventInput | UpdateEventInput, uid?:
   ];
 
   if (event.summary) {
-    lines.push(`SUMMARY:${escapeICalText(event.summary)}`);
+    lines.push(`SUMMARY:${escapeText(event.summary)}`);
   }
 
   if (event.startTime && event.endTime) {
@@ -37,11 +44,11 @@ export function generateVEvent(event: CreateEventInput | UpdateEventInput, uid?:
   }
 
   if (event.description) {
-    lines.push(`DESCRIPTION:${escapeICalText(event.description)}`);
+    lines.push(`DESCRIPTION:${escapeText(event.description)}`);
   }
 
   if (event.location) {
-    lines.push(`LOCATION:${escapeICalText(event.location)}`);
+    lines.push(`LOCATION:${escapeText(event.location)}`);
   }
 
   if ("attendees" in event && event.attendees) {
@@ -98,7 +105,7 @@ export function parseIcalComponents(icalData: string): IcalComponent[] {
   const stack: IcalComponent[] = [];
 
   for (const line of unfoldLines(icalData)) {
-    const parsed = parsePropertyLine(line);
+    const parsed = parseContentLine(line);
     if (!parsed) continue;
 
     if (parsed.name === "BEGIN") {
@@ -204,13 +211,13 @@ export function readVEventFields(component: IcalComponent): VEventFields {
         fields.uid = prop.value;
         break;
       case "SUMMARY":
-        fields.summary = unescapeICalText(prop.value);
+        fields.summary = unescapeText(prop.value);
         break;
       case "DESCRIPTION":
-        fields.description = unescapeICalText(prop.value);
+        fields.description = unescapeText(prop.value);
         break;
       case "LOCATION":
-        fields.location = unescapeICalText(prop.value);
+        fields.location = unescapeText(prop.value);
         break;
       case "DTSTART":
         fields.start = readDateTime(prop);
@@ -332,80 +339,6 @@ function resolveEnd(fields: VEventFields, startTime: number): number {
   return startTime + 3600;
 }
 
-// ---------------------------------------------------------------------------
-// Line-level parsing
-// ---------------------------------------------------------------------------
-
-/** Unfold continuation lines (RFC 5545 §3.1) */
-function unfoldLines(icalData: string): string[] {
-  const raw = icalData
-    .replace(/\r\n[ \t]/g, "")
-    .replace(/\r\n/g, "\n")
-    .replace(/\r/g, "\n")
-    .replace(/\n[ \t]/g, "");
-  return raw.split("\n").filter((l) => l.length > 0);
-}
-
-/**
- * Split "DTSTART;TZID=Europe/Vienna:20260930T180000" into name, parameters and
- * value. Quoted parameter values may contain both colons and semicolons —
- * ATTENDEE;CN="Doe, John";X-URL="http://x/":mailto:… is legal — so the split
- * has to track quoting rather than take the first separator it finds.
- */
-function parsePropertyLine(line: string): IcalProperty | null {
-  let inQuotes = false;
-  let colon = -1;
-
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (ch === '"') inQuotes = !inQuotes;
-    else if (ch === ":" && !inQuotes) {
-      colon = i;
-      break;
-    }
-  }
-
-  if (colon === -1) return null;
-
-  const head = line.slice(0, colon);
-  const value = line.slice(colon + 1);
-  const segments = splitUnquoted(head, ";");
-  const name = segments[0]?.trim().toUpperCase();
-  if (!name) return null;
-
-  const params: Record<string, string> = {};
-  for (const segment of segments.slice(1)) {
-    const eq = segment.indexOf("=");
-    if (eq === -1) continue;
-    const key = segment.slice(0, eq).trim().toUpperCase();
-    params[key] = stripQuotes(segment.slice(eq + 1).trim());
-  }
-
-  return { name, params, value };
-}
-
-function splitUnquoted(text: string, separator: string): string[] {
-  const out: string[] = [];
-  let inQuotes = false;
-  let start = 0;
-
-  for (let i = 0; i < text.length; i++) {
-    const ch = text[i];
-    if (ch === '"') inQuotes = !inQuotes;
-    else if (ch === separator && !inQuotes) {
-      out.push(text.slice(start, i));
-      start = i + 1;
-    }
-  }
-
-  out.push(text.slice(start));
-  return out;
-}
-
-function stripQuotes(text: string): string {
-  return text.replace(/^"(.*)"$/, "$1");
-}
-
 function readDateTime(prop: IcalProperty): IcalDateTime {
   const isDate = prop.params.VALUE === "DATE" || /^\d{8}$/.test(prop.value);
   const tzid = prop.params.TZID ?? null;
@@ -478,20 +411,4 @@ function formatDateOnly(date: Date): string {
   const m = String(date.getMonth() + 1).padStart(2, "0");
   const d = String(date.getDate()).padStart(2, "0");
   return `${y}${m}${d}`;
-}
-
-function escapeICalText(text: string): string {
-  return text
-    .replace(/\\/g, "\\\\")
-    .replace(/;/g, "\\;")
-    .replace(/,/g, "\\,")
-    .replace(/\n/g, "\\n");
-}
-
-function unescapeICalText(text: string): string {
-  return text
-    .replace(/\\n/gi, "\n")
-    .replace(/\\,/g, ",")
-    .replace(/\\;/g, ";")
-    .replace(/\\\\/g, "\\");
 }

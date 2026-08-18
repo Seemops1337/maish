@@ -13,6 +13,7 @@ const SettingsPage = lazy(() => import("@/components/settings/SettingsPage").the
 const HelpPage = lazy(() => import("@/components/help/HelpPage").then((m) => ({ default: m.HelpPage })));
 const CalendarPage = lazy(() => import("@/components/calendar/CalendarPage").then((m) => ({ default: m.CalendarPage })));
 const TasksPage = lazy(() => import("@/components/tasks/TasksPage").then((m) => ({ default: m.TasksPage })));
+const ContactsPage = lazy(() => import("@/components/contacts/ContactsPage").then((m) => ({ default: m.ContactsPage })));
 const AttachmentLibrary = lazy(() => import("@/components/attachments/AttachmentLibrary").then((m) => ({ default: m.AttachmentLibrary })));
 
 // ---------- Search param validation ----------
@@ -180,6 +181,23 @@ export const tasksRoute = createRoute({
   component: TasksPageWrapper,
 });
 
+// ---------- /contacts ----------
+function ContactsPageWrapper() {
+  return (
+    <ErrorBoundary name="ContactsPage">
+      <Suspense fallback={<div className="flex-1 flex items-center justify-center text-text-tertiary text-sm">Loading contacts...</div>}>
+        <ContactsPage />
+      </Suspense>
+    </ErrorBoundary>
+  );
+}
+
+export const contactsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "contacts",
+  component: ContactsPageWrapper,
+});
+
 // ---------- /calendar ----------
 export const calendarRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -213,6 +231,7 @@ export const routeTree = rootRoute.addChildren([
   settingsTabRoute,
   attachmentsRoute,
   tasksRoute,
+  contactsRoute,
   calendarRoute,
   helpIndexRoute,
   helpTopicRoute,
