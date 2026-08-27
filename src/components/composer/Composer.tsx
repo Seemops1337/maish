@@ -313,13 +313,41 @@ export function Composer() {
       } catch (err) {
         console.error("Failed to send email:", err);
       } finally {
-        useComposerStore.getState().setUndoSendVisible(false);
-        sendingRef.current = false;
+        const store = useComposerStore.getState();
+        store.setUndoSendVisible(false);
+        store.setUndoSendTimer(null);
+        // The mail is gone; there is nothing left to hand back.
+        store.setPendingSend(null);
       }
     }, delay);
 
     state.setUndoSendTimer(timer);
+
+    // Keep a copy of what was written. closeComposer empties the store on the
+    // next line, and the toast's Undo has nothing else to put back.
+    state.setPendingSend({
+      mode: state.mode,
+      to: state.to,
+      cc: state.cc,
+      bcc: state.bcc,
+      subject: state.subject,
+      bodyHtml: html,
+      threadId: state.threadId,
+      inReplyToMessageId: state.inReplyToMessageId,
+      draftId: currentDraftId,
+      fromEmail: state.fromEmail,
+      attachments: state.attachments,
+    });
+
     closeComposer();
+
+    // The guard covers building and scheduling the send, not the undo window
+    // that follows it. It used to be cleared only by the timer's callback, so
+    // cancelling the send left it set for the rest of the session and every
+    // later send returned here silently; a second mail written during the
+    // window was swallowed the same way. Once the composer is closed there is
+    // nothing left to double-submit.
+    sendingRef.current = false;
   }, [activeAccountId, activeAccount, closeComposer, getFullHtml]);
 
   const handleSchedule = useCallback(async (scheduledAt: number) => {

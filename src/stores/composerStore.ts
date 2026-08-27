@@ -12,6 +12,27 @@ export interface ComposerAttachment {
   content: string; // base64
 }
 
+/**
+ * A copy of everything the user composed, kept for the length of the undo
+ * window. handleSend closes the composer as soon as the send is scheduled, so
+ * the store has already been emptied by the time the toast is on screen — this
+ * is the only remaining copy, and without it "Undo" threw the mail away
+ * instead of handing it back.
+ */
+export interface PendingSend {
+  mode: ComposerMode;
+  to: string[];
+  cc: string[];
+  bcc: string[];
+  subject: string;
+  bodyHtml: string;
+  threadId: string | null;
+  inReplyToMessageId: string | null;
+  draftId: string | null;
+  fromEmail: string | null;
+  attachments: ComposerAttachment[];
+}
+
 export interface ComposerState {
   isOpen: boolean;
   /**
@@ -35,6 +56,7 @@ export interface ComposerState {
   draftId: string | null;
   undoSendTimer: ReturnType<typeof setTimeout> | null;
   undoSendVisible: boolean;
+  pendingSend: PendingSend | null;
   attachments: ComposerAttachment[];
   lastSavedAt: number | null;
   isSaving: boolean;
@@ -53,8 +75,11 @@ export interface ComposerState {
     threadId?: string | null;
     inReplyToMessageId?: string | null;
     draftId?: string | null;
+    fromEmail?: string | null;
+    attachments?: ComposerAttachment[];
   }) => void;
   closeComposer: () => void;
+  setPendingSend: (pending: PendingSend | null) => void;
   setTo: (to: string[]) => void;
   setCc: (cc: string[]) => void;
   setBcc: (bcc: string[]) => void;
@@ -90,6 +115,7 @@ export const useComposerStore = create<ComposerState>((set) => ({
   draftId: null,
   undoSendTimer: null,
   undoSendVisible: false,
+  pendingSend: null,
   attachments: [],
   viewMode: "modal",
   fromEmail: null,
@@ -113,8 +139,8 @@ export const useComposerStore = create<ComposerState>((set) => ({
       showCcBcc: (opts?.cc?.length ?? 0) > 0 || (opts?.bcc?.length ?? 0) > 0,
       draftId: opts?.draftId ?? null,
       viewMode: "modal",
-      fromEmail: null,
-      attachments: [],
+      fromEmail: opts?.fromEmail ?? null,
+      attachments: opts?.attachments ?? [],
       lastSavedAt: null,
       isSaving: false,
       signatureHtml: "",
@@ -141,6 +167,7 @@ export const useComposerStore = create<ComposerState>((set) => ({
       signatureHtml: "",
       signatureId: null,
     }),
+  setPendingSend: (pendingSend) => set({ pendingSend }),
   setTo: (to) => set({ to }),
   setCc: (cc) => set({ cc }),
   setBcc: (bcc) => set({ bcc }),
