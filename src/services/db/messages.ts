@@ -172,3 +172,30 @@ export async function getRecentSentMessages(
     [accountId, accountEmail, limit],
   );
 }
+
+/**
+ * Remove every stored message of one IMAP folder and report which threads
+ * they belonged to.
+ *
+ * A message's local id is `imap-{accountId}-{folder}-{uid}`, so it is only
+ * stable while the folder's UIDVALIDITY is. When the server changes it the
+ * same mail comes back under a new UID and therefore a new id, and the rows
+ * written before the change are unreachable: they are not updated by the
+ * resync and no id the server now reports will ever match them. They have to
+ * go before the folder is fetched again.
+ */
+export async function deleteMessagesInFolder(
+  accountId: string,
+  folder: string,
+): Promise<string[]> {
+  const db = await getDb();
+  const rows = await db.select<{ thread_id: string }[]>(
+    "SELECT DISTINCT thread_id FROM messages WHERE account_id = $1 AND imap_folder = $2",
+    [accountId, folder],
+  );
+  await db.execute(
+    "DELETE FROM messages WHERE account_id = $1 AND imap_folder = $2",
+    [accountId, folder],
+  );
+  return rows.map((r) => r.thread_id);
+}

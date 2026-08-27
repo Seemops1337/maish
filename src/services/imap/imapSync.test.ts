@@ -41,6 +41,7 @@ vi.mock("../db/messages", () => ({
   upsertMessage: vi.fn(),
   updateMessageThreadIds: vi.fn(),
   getMessagesForThread: vi.fn(() => []),
+  deleteMessagesInFolder: vi.fn(() => []),
 }));
 vi.mock("../db/threads", () => ({
   upsertThread: vi.fn(),
@@ -48,6 +49,7 @@ vi.mock("../db/threads", () => ({
   deleteThread: vi.fn(),
   getThreadLabelIds: vi.fn(() => []),
   getThreadById: vi.fn(() => undefined),
+  deleteEmptyThreads: vi.fn(),
 }));
 vi.mock("../db/attachments", () => ({
   upsertAttachment: vi.fn(),
@@ -78,8 +80,8 @@ import {
 import { imapListFolders, imapSearchFolder, imapFetchMessages, imapDeltaCheck } from "./tauriCommands";
 import { getAccount } from "../db/accounts";
 import { withTransaction } from "../db/connection";
-import { upsertMessage, updateMessageThreadIds, getMessagesForThread } from "../db/messages";
-import { upsertThread, deleteThread, setThreadLabels, getThreadLabelIds } from "../db/threads";
+import { upsertMessage, updateMessageThreadIds, getMessagesForThread, deleteMessagesInFolder } from "../db/messages";
+import { upsertThread, deleteThread, setThreadLabels, getThreadLabelIds, deleteEmptyThreads } from "../db/threads";
 import { upsertAttachment } from "../db/attachments";
 import { getPendingOpsForResource } from "../db/pendingOperations";
 import { getAllFolderSyncStates, upsertFolderSyncState } from "../db/folderSyncState";
@@ -986,5 +988,95 @@ describe("imapInitialSync — last_uid after a chunk is given up on", () => {
 
     const state = mockUpsertFolderSyncState.mock.calls.at(-1)![0];
     expect(state.last_uid).toBe(400);
+  });
+});
+
+/**
+ * A message's local id is `imap-{accountId}-{folder}-{uid}`. UIDVALIDITY is
+ * the server's promise that those UIDs keep meaning the same messages; when
+ * it changes, the promise is withdrawn and the same mail comes back under a
+ * new UID. The resync then writes it under a new id, and the rows from before
+ * the change are left behind — nothing updates them and no id the server now
+ * reports will ever match them, so the folder appears twice.
+ */
+describe("imapDeltaSync — UIDVALIDITY change", () => {
+  const mockGetAccount = vi.mocked(getAccount);
+  const mockImapListFolders = vi.mocked(imapListFolders);
+  const mockImapSearchFolder = vi.mocked(imapSearchFolder);
+  const mockImapFetchMessages = vi.mocked(imapFetchMessages);
+  const mockImapDeltaCheck = vi.mocked(imapDeltaCheck);
+  const mockGetAllFolderSyncStates = vi.mocked(getAllFolderSyncStates);
+  const mockDeleteMessagesInFolder = vi.mocked(deleteMessagesInFolder);
+  const mockDeleteEmptyThreads = vi.mocked(deleteEmptyThreads);
+  const mockUpsertMessage = vi.mocked(upsertMessage);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetAccount.mockResolvedValue(createMockImapAccount({ id: "acc-1" }));
+    mockImapListFolders.mockResolvedValue([
+      createMockImapFolder({ path: "INBOX", raw_path: "INBOX" }),
+    ]);
+    mockGetAllFolderSyncStates.mockResolvedValue([
+      {
+        account_id: "acc-1",
+        folder_path: "INBOX",
+        uidvalidity: 1,
+        last_uid: 10,
+        modseq: null,
+        last_sync_at: 0,
+      },
+    ] as never);
+    // The server has renumbered the folder.
+    mockImapDeltaCheck.mockResolvedValue([
+      { folder: "INBOX", uidvalidity: 2, new_uids: [], uidvalidity_changed: true },
+    ] as never);
+    mockImapSearchFolder.mockResolvedValue({
+      uids: [1, 2],
+      folder_status: createMockImapFolderStatus({ uidvalidity: 2 }),
+    });
+    mockImapFetchMessages.mockResolvedValue(
+      createMockImapFetchResult([
+        createMockImapMessage({ uid: 1, message_id: "<a@test>", date: Math.floor(Date.now() / 1000) }),
+        createMockImapMessage({ uid: 2, message_id: "<b@test>", date: Math.floor(Date.now() / 1000) }),
+      ]),
+    );
+    mockDeleteMessagesInFolder.mockResolvedValue(["imap-thread-old"]);
+  });
+
+  afterEach(() => {
+    mockImapSearchFolder.mockReset();
+    mockImapFetchMessages.mockReset();
+    mockImapListFolders.mockReset();
+  });
+
+  it("clears the folder's stored messages before refetching it", async () => {
+    await imapDeltaSync("acc-1");
+
+    expect(mockDeleteMessagesInFolder).toHaveBeenCalledWith("acc-1", "INBOX");
+  });
+
+  it("removes the messages before the new ones are written", async () => {
+    await imapDeltaSync("acc-1");
+
+    expect(mockUpsertMessage).toHaveBeenCalled();
+    expect(mockDeleteMessagesInFolder.mock.invocationCallOrder[0]!).toBeLessThan(
+      mockUpsertMessage.mock.invocationCallOrder[0]!,
+    );
+  });
+
+  it("takes the threads that are left empty with them", async () => {
+    await imapDeltaSync("acc-1");
+
+    expect(mockDeleteEmptyThreads).toHaveBeenCalledWith("acc-1", ["imap-thread-old"]);
+  });
+
+  it("leaves the folder alone on an ordinary delta", async () => {
+    mockImapDeltaCheck.mockResolvedValue([
+      { folder: "INBOX", uidvalidity: 1, new_uids: [11], uidvalidity_changed: false },
+    ] as never);
+
+    await imapDeltaSync("acc-1");
+
+    expect(mockDeleteMessagesInFolder).not.toHaveBeenCalled();
   });
 });
