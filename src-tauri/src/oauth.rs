@@ -1,8 +1,10 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::Mutex;
 use std::time::Duration;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::TcpListener;
+use tokio::sync::oneshot;
 
 #[derive(Serialize)]
 pub struct OAuthResult {
@@ -10,38 +12,73 @@ pub struct OAuthResult {
     pub state: String,
 }
 
-/// Binds to a localhost port for OAuth callback. Tries the given port first,
-/// falls back to nearby ports if taken.
+/// Cancels the callback server of a login that was started earlier.
+///
+/// A login the user walked away from sits in accept() for five minutes holding
+/// the port. Since the redirect URI names one fixed port, that blocks every
+/// retry in the meantime, so starting a new login ends the old one first.
+static CANCEL_PREVIOUS: Mutex<Option<oneshot::Sender<()>>> = Mutex::new(None);
+
+/// How long to keep trying the port after cancelling a previous login, so the
+/// listener it was holding has a moment to come down.
+const BIND_RETRY_TOTAL: Duration = Duration::from_millis(1_000);
+const BIND_RETRY_STEP: Duration = Duration::from_millis(50);
+
+/// Bind the OAuth callback port — that port and no other.
+///
+/// The redirect URI handed to the provider is built from a fixed port
+/// (OAUTH_CALLBACK_PORT on the TypeScript side), so a server listening
+/// anywhere else is never called: the browser sends the code to the port in
+/// the URI and this end waits out its timeout on a port nobody visits. Falling
+/// back to a neighbouring port turned a busy port into a login that hangs for
+/// five minutes and then fails without saying why.
+async fn bind_callback_port(port: u16) -> Result<TcpListener, String> {
+    let deadline = std::time::Instant::now() + BIND_RETRY_TOTAL;
+    let mut last_err = String::new();
+
+    loop {
+        match TcpListener::bind(format!("127.0.0.1:{}", port)).await {
+            Ok(listener) => return Ok(listener),
+            Err(e) => last_err = e.to_string(),
+        }
+        if std::time::Instant::now() >= deadline {
+            return Err(format!(
+                "Could not listen on port {port} for the sign-in redirect ({last_err}). \
+                 Another program is using it — close it and try again."
+            ));
+        }
+        tokio::time::sleep(BIND_RETRY_STEP).await;
+    }
+}
+
+/// Binds the localhost port the OAuth redirect names and waits for the
+/// callback.
 #[tauri::command]
 pub async fn start_oauth_server(port: u16, state: String) -> Result<OAuthResult, String> {
-    // Try the requested port, then a few alternatives
-    let mut listener = None;
-    for p in [port, port + 1, port + 2, port + 3] {
-        match TcpListener::bind(format!("127.0.0.1:{}", p)).await {
-            Ok(l) => {
-                listener = Some(l);
-                break;
-            }
-            Err(_) => continue,
-        }
+    // End a login that is still holding the port, then take it over.
+    let (cancel_tx, cancel_rx) = oneshot::channel();
+    if let Some(previous) = CANCEL_PREVIOUS
+        .lock()
+        .map_err(|_| "OAuth server lock poisoned".to_string())?
+        .replace(cancel_tx)
+    {
+        let _ = previous.send(());
     }
 
-    let listener = listener.ok_or("Failed to bind to any port")?;
-    let actual_port = listener
-        .local_addr()
-        .map_err(|e| format!("Failed to get addr: {}", e))?
-        .port();
+    let listener = bind_callback_port(port).await?;
 
-    log::info!("OAuth callback server listening on port {}", actual_port);
+    log::info!("OAuth callback server listening on port {}", port);
 
-    // Wait for exactly one connection (the redirect from Google) with 5-minute timeout
-    let (mut stream, _) = tokio::time::timeout(
-        Duration::from_secs(300),
-        listener.accept(),
-    )
-    .await
-    .map_err(|_| "OAuth timed out — please try again".to_string())?
-    .map_err(|e| format!("Failed to accept: {}", e))?;
+    // Wait for exactly one connection (the redirect from the provider) with a
+    // 5-minute timeout, or until a newer login takes over.
+    let accepted = tokio::select! {
+        result = tokio::time::timeout(Duration::from_secs(300), listener.accept()) => result,
+        _ = cancel_rx => return Err("Sign-in was restarted".to_string()),
+    };
+
+    let (mut stream, _) = accepted
+        .map_err(|_| "OAuth timed out — please try again".to_string())?
+        .map_err(|e| format!("Failed to accept: {}", e))?;
 
     // Read the HTTP request
     let mut buf = vec![0u8; 4096];
@@ -253,4 +290,56 @@ pub async fn oauth_refresh_token(
         .json::<TokenExchangeResult>()
         .await
         .map_err(|e| format!("Failed to parse token response: {}", e))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// The redirect URI the provider is given names one fixed port. A server
+    /// on any other port is never called: the browser delivers the code where
+    /// the URI says, and this end waits out its five-minute timeout on a port
+    /// nobody visits, then fails with a timeout that says nothing about the
+    /// real cause. Binding a neighbouring port therefore has to fail instead.
+    #[tokio::test]
+    async fn binds_the_port_it_was_asked_for() {
+        let probe = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let free_port = probe.local_addr().unwrap().port();
+        drop(probe);
+
+        let listener = bind_callback_port(free_port).await.unwrap();
+        assert_eq!(listener.local_addr().unwrap().port(), free_port);
+    }
+
+    #[tokio::test]
+    async fn refuses_a_port_that_is_taken_rather_than_moving_to_another() {
+        let occupied = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = occupied.local_addr().unwrap().port();
+
+        let result = bind_callback_port(port).await;
+
+        assert!(result.is_err(), "a neighbouring port would never be called");
+        let message = result.err().unwrap();
+        assert!(
+            message.contains(&port.to_string()),
+            "the error should name the port so the cause is visible: {message}"
+        );
+    }
+
+    #[tokio::test]
+    async fn takes_the_port_once_the_previous_listener_lets_go() {
+        // A login that is cancelled drops its listener; the retry window is
+        // what lets the next attempt pick the port straight up rather than
+        // reporting it busy.
+        let occupied = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = occupied.local_addr().unwrap().port();
+
+        tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(100)).await;
+            drop(occupied);
+        });
+
+        let listener = bind_callback_port(port).await.unwrap();
+        assert_eq!(listener.local_addr().unwrap().port(), port);
+    }
 }
