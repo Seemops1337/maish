@@ -82,7 +82,7 @@ import { upsertMessage, updateMessageThreadIds, getMessagesForThread } from "../
 import { upsertThread, deleteThread, setThreadLabels, getThreadLabelIds } from "../db/threads";
 import { upsertAttachment } from "../db/attachments";
 import { getPendingOpsForResource } from "../db/pendingOperations";
-import { getAllFolderSyncStates } from "../db/folderSyncState";
+import { getAllFolderSyncStates, upsertFolderSyncState } from "../db/folderSyncState";
 
 describe("imapMessageToParsedMessage", () => {
   it("converts basic IMAP message to ParsedMessage format", () => {
@@ -900,5 +900,91 @@ describe("imapDeltaSync — thread state of messages it did not fetch", () => {
     const [, , labels] = mockSetThreadLabels.mock.calls.at(-1)!;
     expect(labels).toContain("Label_work");
     expect(labels).toContain("INBOX");
+  });
+});
+
+/**
+ * The initial sync fetches a folder in chunks and gives a chunk up after one
+ * retry, carrying on with the next. last_uid is then written from the highest
+ * UID that came back — which, since the chunks run in ascending order, is
+ * from a chunk *after* the one that failed. Delta sync only ever asks for
+ * UIDs above last_uid, so the messages in the abandoned chunk were never
+ * fetched again: a silent hole in the mailbox that no later sync closes.
+ */
+describe("imapInitialSync — last_uid after a chunk is given up on", () => {
+  const mockGetAccount = vi.mocked(getAccount);
+  const mockImapListFolders = vi.mocked(imapListFolders);
+  const mockImapSearchFolder = vi.mocked(imapSearchFolder);
+  const mockImapFetchMessages = vi.mocked(imapFetchMessages);
+  const mockUpsertFolderSyncState = vi.mocked(upsertFolderSyncState);
+
+  // CHUNK_SIZE is 200, so this is exactly two chunks: 1..200 and 201..400.
+  const ALL_UIDS = Array.from({ length: 400 }, (_, i) => i + 1);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetAccount.mockResolvedValue(createMockImapAccount({ id: "acc-1" }));
+    mockImapListFolders.mockResolvedValue([
+      createMockImapFolder({ path: "INBOX", raw_path: "INBOX", exists: ALL_UIDS.length }),
+    ]);
+    mockImapSearchFolder.mockResolvedValue({
+      uids: ALL_UIDS,
+      folder_status: createMockImapFolderStatus({ exists: ALL_UIDS.length, uidvalidity: 7 }),
+    });
+  });
+
+  afterEach(() => {
+    mockImapSearchFolder.mockReset();
+    mockImapFetchMessages.mockReset();
+    mockImapListFolders.mockReset();
+  });
+
+  /** Serve every requested UID except those in a chunk that is made to fail. */
+  function serveExcept(failFrom: number) {
+    mockImapFetchMessages.mockImplementation(async (_c, _f, uids) => {
+      const requested = uids as number[];
+      if (requested[0] === failFrom) {
+        // Not a connection error, so it is abandoned without a retry.
+        throw new Error("Server refused the fetch");
+      }
+      return createMockImapFetchResult(
+        requested.map((uid) =>
+          createMockImapMessage({
+            uid,
+            message_id: `<m${uid}@test>`,
+            date: Math.floor(Date.now() / 1000),
+          }),
+        ),
+      );
+    });
+  }
+
+  it("does not record UIDs above an abandoned chunk as synced", async () => {
+    serveExcept(1); // the first chunk fails, the second succeeds
+
+    await imapInitialSync("acc-1");
+
+    const state = mockUpsertFolderSyncState.mock.calls.at(-1)![0];
+    // The second chunk reached UID 400, but 1..200 were never stored. Claiming
+    // 400 tells the next delta sync to start at 401 and lose them for good.
+    expect(state.last_uid).toBeLessThan(1);
+  });
+
+  it("stops at the last UID before the abandoned chunk", async () => {
+    serveExcept(201); // the first chunk succeeds, the second fails
+
+    await imapInitialSync("acc-1");
+
+    const state = mockUpsertFolderSyncState.mock.calls.at(-1)![0];
+    expect(state.last_uid).toBe(200);
+  });
+
+  it("records the highest UID when every chunk succeeds", async () => {
+    serveExcept(-1); // nothing fails
+
+    await imapInitialSync("acc-1");
+
+    const state = mockUpsertFolderSyncState.mock.calls.at(-1)![0];
+    expect(state.last_uid).toBe(400);
   });
 });

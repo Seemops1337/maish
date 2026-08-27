@@ -544,6 +544,11 @@ export async function imapInitialSync(
       let folderFetchedCount = 0;
       let folderStoredCount = 0;
       let lastUid = 0;
+      // The lowest UID belonging to a chunk that was given up on. last_uid is
+      // a watermark — delta sync asks only for UIDs above it — so it may not
+      // be allowed to pass a message this run failed to fetch, even though
+      // later chunks carry higher UIDs and did succeed.
+      let lowestUnfetchedUid = Number.POSITIVE_INFINITY;
       const uidvalidity = searchResult.folder_status.uidvalidity;
 
       // Phase 2b: Fetch messages in small IPC-friendly chunks
@@ -561,10 +566,12 @@ export async function imapInitialSync(
               chunkResult = await imapFetchMessages(config, folder.raw_path, chunkUids);
             } catch (retryErr) {
               console.error(`[imapSync] Chunk retry failed in ${folder.path}:`, retryErr);
+              lowestUnfetchedUid = Math.min(lowestUnfetchedUid, ...chunkUids);
               continue;
             }
           } else {
             console.error(`[imapSync] Failed to fetch chunk ${chunkStart}-${chunkStart + chunkUids.length} in ${folder.path}:`, chunkErr);
+            lowestUnfetchedUid = Math.min(lowestUnfetchedUid, ...chunkUids);
             continue;
           }
         }
@@ -709,12 +716,25 @@ export async function imapInitialSync(
         `[imapSync] Folder ${folder.path}: ${uidsToFetch.length} UIDs, ${folderFetchedCount} fetched, ${folderStoredCount} after date filter`,
       );
 
-      // Update folder sync state
+      // Update folder sync state. Anything at or above a chunk that was
+      // abandoned is not synced, whatever later chunks managed to fetch:
+      // moving the watermark past it would leave those messages behind with
+      // no sync that ever asks for them again.
+      const syncedUpTo = Number.isFinite(lowestUnfetchedUid)
+        ? Math.min(lastUid, lowestUnfetchedUid - 1)
+        : lastUid;
+
+      if (syncedUpTo < lastUid) {
+        console.warn(
+          `[imapSync] Folder ${folder.path}: a chunk was not fetched, holding last_uid at ${syncedUpTo} instead of ${lastUid} so the gap is retried`,
+        );
+      }
+
       await upsertFolderSyncState({
         account_id: accountId,
         folder_path: folder.raw_path,
         uidvalidity,
-        last_uid: lastUid,
+        last_uid: syncedUpTo,
         modseq: null,
         last_sync_at: Math.floor(Date.now() / 1000),
       });

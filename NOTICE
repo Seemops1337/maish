@@ -206,6 +206,12 @@ Modifications made in this fork, as required by section 4(b) of the License:
   label the user had applied. The aggregate is now read back from the stored
   messages and the labels are merged instead of replaced. The initial sync
   path is unchanged, since there the batch is the whole thread.
+- src/services/imap/imapSync.ts — the initial sync no longer records a folder
+  as synced past a chunk it failed to fetch. A chunk is abandoned after one
+  retry and the run carries on, but last_uid was written from the highest UID
+  that came back, which comes from a later chunk. Since delta sync asks only
+  for UIDs above that watermark, the abandoned messages were never fetched
+  again by any sync.
 - Application identity renamed from Velo (com.velomail.app) to Maish
   (xyz.hochreiner.maish), including packaging metadata, the encryption key file
   name and the update endpoint.
