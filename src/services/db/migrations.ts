@@ -884,6 +884,26 @@ export const MIGRATIONS = [
       CREATE INDEX IF NOT EXISTS idx_contacts_book ON contacts(address_book_id);
     `,
   },
+  {
+    version: 26,
+    description: "Unique follow-up reminder per thread",
+    sql: `
+      -- insertFollowUpReminder upserts with ON CONFLICT(account_id, thread_id),
+      -- but v6 only ever indexed that pair non-uniquely. SQLite matches a
+      -- conflict target against the declared unique constraints and rejects
+      -- the statement at prepare time when none fits, so saving a follow-up
+      -- reminder always failed. Collapse any duplicate pair first: without the
+      -- constraint the table could hold several rows for one thread, and the
+      -- newest is the one the upsert would have kept.
+      DELETE FROM follow_up_reminders
+        WHERE rowid NOT IN (
+          SELECT MAX(rowid) FROM follow_up_reminders GROUP BY account_id, thread_id
+        );
+      DROP INDEX IF EXISTS idx_followup_thread;
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_followup_thread
+        ON follow_up_reminders(account_id, thread_id);
+    `,
+  },
 ];
 
 /**
