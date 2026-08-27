@@ -5,10 +5,11 @@ import {
 } from "lucide-react";
 import {
   getContactByEmail, getContactStats, getRecentThreadsWithContact,
-  upsertContact, updateContact, updateContactNotes,
+  upsertContact, updateContact,
   getAttachmentsFromContact, getContactsFromSameDomain, getLatestAuthResult,
   type ContactStats, type DbContact, type ContactAttachment, type SameDomainContact,
 } from "@/services/db/contacts";
+import { saveContact } from "@/services/contacts/contactActions";
 import { isVipSender, addVipSender, removeVipSender } from "@/services/db/notificationVips";
 import { fetchAndCacheGravatarUrl } from "@/services/contacts/gravatar";
 import { useThreadStore } from "@/stores/threadStore";
@@ -138,21 +139,46 @@ export function ContactSidebar({ email, name, accountId, onClose }: ContactSideb
     }
   }, [accountId, email, name, isVip]);
 
+  /**
+   * Save a note the way this contact can be saved.
+   *
+   * A contact synced from an address book belongs to the server: its note
+   * lives in the vCard, and the next contactSync writes what the server holds
+   * over the local row. Storing the note locally, as this used to, therefore
+   * kept it only until the next sync. saveContact knows which of the two a
+   * contact is and puts the note where it survives.
+   */
+  const persistNotes = useCallback(async (value: string) => {
+    if (!contact) return;
+    try {
+      await saveContact(contact, { note: value });
+    } catch (err) {
+      console.error("Failed to save contact note:", err);
+    }
+  }, [contact]);
+
   const handleNotesChange = useCallback((value: string) => {
     setNotes(value);
+
+    // A synced card is saved on blur only. Each save is a PUT carrying the
+    // card's etag, and a debounced write racing the one on blur would send
+    // the second with an etag the first had already superseded — which the
+    // server refuses with 412.
+    if (contact?.address_book_id) return;
+
     if (notesTimerRef.current) clearTimeout(notesTimerRef.current);
     notesTimerRef.current = setTimeout(() => {
-      updateContactNotes(email, value);
+      void persistNotes(value);
     }, 1000);
-  }, [email]);
+  }, [contact, persistNotes]);
 
   const handleNotesBlur = useCallback(() => {
     if (notesTimerRef.current) {
       clearTimeout(notesTimerRef.current);
       notesTimerRef.current = null;
     }
-    updateContactNotes(email, notes);
-  }, [email, notes]);
+    void persistNotes(notes);
+  }, [notes, persistNotes]);
 
   const handleAddContact = useCallback(async () => {
     await upsertContact(email, name);

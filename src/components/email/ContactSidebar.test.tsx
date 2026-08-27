@@ -27,6 +27,10 @@ vi.mock("@/services/db/contacts", () => ({
   getLatestAuthResult: vi.fn(() => Promise.resolve(null)),
 }));
 
+vi.mock("@/services/contacts/contactActions", () => ({
+  saveContact: vi.fn(() => Promise.resolve()),
+}));
+
 vi.mock("@/services/db/notificationVips", () => ({
   isVipSender: vi.fn(() => Promise.resolve(false)),
   addVipSender: vi.fn(() => Promise.resolve()),
@@ -57,8 +61,10 @@ import {
   getAttachmentsFromContact,
   getContactsFromSameDomain,
   getLatestAuthResult,
+  updateContactNotes,
 } from "@/services/db/contacts";
 import { isVipSender } from "@/services/db/notificationVips";
+import { saveContact } from "@/services/contacts/contactActions";
 
 const defaultProps = {
   email: "alice@company.com",
@@ -185,5 +191,74 @@ describe("ContactSidebar", () => {
     });
 
     expect(screen.queryByText("Notes")).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * A contact synced from an address book belongs to the server: its name,
+ * organisation and note live in the vCard, and contactSync writes what the
+ * server holds over the local row. A note stored only in that row therefore
+ * survives until the next sync and is then gone — which is the opposite of
+ * what "Contacts have two origins" in CLAUDE.md describes, where a note the
+ * user wrote is carried onto the server.
+ */
+describe("ContactSidebar — a note on a synced contact", () => {
+  const syncedContact: DbContact = {
+    ...mockContact,
+    id: "c-dav",
+    address_book_id: "book-1",
+    dav_uid: "uid-1",
+    dav_href: "/books/1/uid-1.vcf",
+    notes: "",
+  } as DbContact;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  async function openNotes(contact: DbContact) {
+    vi.mocked(getContactByEmail).mockResolvedValueOnce(contact);
+    render(<ContactSidebar {...defaultProps} />);
+    await waitFor(() => expect(screen.getByText("Notes")).toBeInTheDocument());
+    fireEvent.click(screen.getByText("Notes"));
+    return screen.getByPlaceholderText("Add a note...");
+  }
+
+  it("saves through the path that reaches the address book", async () => {
+    const textarea = await openNotes(syncedContact);
+
+    fireEvent.change(textarea, { target: { value: "Met at the conference" } });
+    fireEvent.blur(textarea);
+
+    await waitFor(() => {
+      expect(saveContact).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "c-dav" }),
+        { note: "Met at the conference" },
+      );
+    });
+  });
+
+  it("does not write the note only to the local row", async () => {
+    const textarea = await openNotes(syncedContact);
+
+    fireEvent.change(textarea, { target: { value: "Met at the conference" } });
+    fireEvent.blur(textarea);
+
+    await waitFor(() => expect(saveContact).toHaveBeenCalled());
+    expect(updateContactNotes).not.toHaveBeenCalled();
+  });
+
+  it("still saves a mail-derived contact, which has no server to reach", async () => {
+    const textarea = await openNotes(mockContact);
+
+    fireEvent.change(textarea, { target: { value: "Local note" } });
+    fireEvent.blur(textarea);
+
+    await waitFor(() => {
+      expect(saveContact).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "c-1" }),
+        { note: "Local note" },
+      );
+    });
   });
 });
