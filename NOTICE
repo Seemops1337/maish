@@ -248,6 +248,13 @@ Modifications made in this fork, as required by section 4(b) of the License:
   checking that the date exists, and the conversion rolled it forward. RFC 5545
   §3.3.10 requires an invalid date to be ignored, which the monthly expansion
   already did.
+- src/services/calendar/recurrenceForm.ts — a series bounded by an end date
+  runs to the end of that day in the zone the day belongs to. A DTSTART
+  written as a UTC stamp, which is what this app generates for every event it
+  creates, was taken literally and put UNTIL at 23:59:59 UTC, so for anyone
+  west of UTC an evening instance on the chosen last day fell after the bound
+  and disappeared from the series. A series carrying a TZID is bounded in that
+  zone as before.
 - Application identity renamed from Velo (com.velomail.app) to Maish
   (xyz.hochreiner.maish), including packaging metadata, the encryption key file
   name and the update endpoint.

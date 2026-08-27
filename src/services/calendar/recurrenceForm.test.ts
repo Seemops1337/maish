@@ -2,6 +2,8 @@ import {
   buildRRule,
   formatUntil,
   parseRecurrenceForm,
+  untilEpoch,
+  untilZone,
   weekdayOfDate,
   type RecurrenceForm,
   type RuleDateStyle,
@@ -169,5 +171,57 @@ describe("weekdayOfDate", () => {
 
   it("returns null for something that is not a date", () => {
     expect(weekdayOfDate("not a date")).toBeNull();
+  });
+});
+
+describe("untilZone", () => {
+  /**
+   * UNTIL is inclusive and compares against instance start times, so the
+   * instant it names has to cover the whole of the day the user picked. Which
+   * day that is depends on the zone: a series carrying a TZID ends on its own
+   * last day, but a DTSTART written as a UTC stamp has no zone of its own, and
+   * the day the user picked is the day they were shown — in their own zone.
+   */
+  it("uses the series' own zone when it has one", () => {
+    expect(untilZone({ zone: "America/New_York", isDate: false }, "Europe/Vienna"))
+      .toBe("America/New_York");
+  });
+
+  it("reads a UTC stamp as the viewer's day, not a UTC one", () => {
+    // Every event this app generates writes DTSTART as a UTC stamp, so this
+    // is the ordinary case rather than an exotic one.
+    expect(untilZone({ zone: "UTC", isDate: false }, "America/New_York"))
+      .toBe("America/New_York");
+  });
+
+  it("reads a floating series as the viewer's day", () => {
+    expect(untilZone({ zone: null, isDate: false }, "America/New_York"))
+      .toBe("America/New_York");
+  });
+
+  it("leaves an all-day series floating", () => {
+    expect(untilZone({ zone: "UTC", isDate: true }, "America/New_York")).toBeNull();
+  });
+});
+
+describe("untilEpoch", () => {
+  const at = (iso: string) => Math.floor(Date.parse(iso) / 1000);
+
+  it("covers the whole of the chosen day where the viewer is", () => {
+    // 2026-12-31 23:59:59 in New York is 2027-01-01 04:59:59 UTC. Bounding
+    // the series at 23:59:59 UTC instead drops an instance that evening.
+    expect(untilEpoch("2026-12-31", { zone: "UTC", isDate: false }, "America/New_York"))
+      .toBe(at("2027-01-01T04:59:59Z"));
+  });
+
+  it("keeps an evening instance on the last day inside the series", () => {
+    const until = untilEpoch("2026-12-31", { zone: "UTC", isDate: false }, "America/New_York")!;
+    // 20:00 in New York on the chosen day.
+    expect(at("2027-01-01T01:00:00Z")).toBeLessThanOrEqual(until);
+  });
+
+  it("bounds a series with a TZID in that zone", () => {
+    expect(untilEpoch("2026-12-31", { zone: "Europe/Vienna", isDate: false }, "America/New_York"))
+      .toBe(at("2026-12-31T22:59:59Z"));
   });
 });
