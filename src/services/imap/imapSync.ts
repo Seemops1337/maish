@@ -16,8 +16,14 @@ import {
 } from "./folderMapper";
 import type { ParsedMessage, ParsedAttachment } from "../gmail/messageParser";
 import type { SyncResult } from "../email/types";
-import { upsertMessage, updateMessageThreadIds } from "../db/messages";
-import { upsertThread, setThreadLabels, deleteThread } from "../db/threads";
+import { upsertMessage, updateMessageThreadIds, getMessagesForThread } from "../db/messages";
+import {
+  upsertThread,
+  setThreadLabels,
+  deleteThread,
+  getThreadLabelIds,
+  getThreadById,
+} from "../db/threads";
 import { upsertAttachment } from "../db/attachments";
 import { getAccount, updateAccountSyncState } from "../db/accounts";
 import { withTransaction } from "../db/connection";
@@ -273,10 +279,12 @@ async function storeThreadsAndMessages(
           }
         }
 
-        const isRead = messages.every((m) => m.isRead);
-        const isStarred = messages.some((m) => m.isStarred);
-        const hasAttachments = messages.some((m) => m.hasAttachments);
-
+        // The thread row has to exist before its messages, because
+        // messages.thread_id is a foreign key onto it. This first write only
+        // satisfies that: it describes the batch, which on a delta sync is
+        // one reply out of a conversation that may already hold a dozen
+        // messages. The real aggregate is computed further down, once the
+        // messages are in and the whole thread can be read back.
         await upsertThread({
           id: group.threadId,
           accountId,
@@ -284,14 +292,11 @@ async function storeThreadsAndMessages(
           snippet: lastMessage.snippet,
           lastMessageAt: lastMessage.date,
           messageCount: messages.length,
-          isRead,
-          isStarred,
+          isRead: messages.every((m) => m.isRead),
+          isStarred: messages.some((m) => m.isStarred),
           isImportant: false,
-          hasAttachments,
+          hasAttachments: messages.some((m) => m.hasAttachments),
         });
-
-        const labelArray = [...allLabelIds];
-        await setThreadLabels(accountId, group.threadId, labelArray);
 
         // Store messages sequentially to avoid concurrent DB writes
         for (const parsed of messages) {
@@ -342,6 +347,47 @@ async function storeThreadsAndMessages(
 
           storedMessages.push(parsed);
         }
+
+        // Now that this batch is stored, describe the thread from every
+        // message it actually has. Delta sync fetches only what is new and
+        // threads only what it fetched, so deriving the row from the batch
+        // left a five-message conversation counted as one, unstarred because
+        // the star sits on a message that was not re-fetched, and re-titled
+        // after the reply's "Re:" subject.
+        const stored = await getMessagesForThread(accountId, group.threadId);
+        if (stored.length > 0) {
+          const oldest = stored[0]!;
+          const newest = stored[stored.length - 1]!;
+          const storedThread = await getThreadById(accountId, group.threadId);
+
+          await upsertThread({
+            id: group.threadId,
+            accountId,
+            subject: oldest.subject,
+            snippet: newest.snippet,
+            lastMessageAt: newest.date,
+            messageCount: stored.length,
+            isRead: stored.every((m) => m.is_read === 1),
+            isStarred: stored.some((m) => m.is_starred === 1),
+            isImportant: false,
+            // An attachment never leaves a message that is already stored,
+            // and the messages table does not carry the flag, so this is the
+            // batch's answer OR whatever the thread already said.
+            hasAttachments:
+              messages.some((m) => m.hasAttachments) ||
+              storedThread?.has_attachments === 1,
+          });
+        }
+
+        // Union rather than replace. The labels derived here come from the
+        // folders the batch was fetched from; a label the user applied, or
+        // one carried by a message that was not re-fetched, is in neither and
+        // was being deleted on every sync.
+        const existingLabels = await getThreadLabelIds(accountId, group.threadId);
+        for (const lid of existingLabels) {
+          allLabelIds.add(lid);
+        }
+        await setThreadLabels(accountId, group.threadId, [...allLabelIds]);
       }
     });
   }
