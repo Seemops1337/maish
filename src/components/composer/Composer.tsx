@@ -35,6 +35,7 @@ import { sanitizeHtml } from "@/utils/sanitize";
 export function Composer() {
   // Individual selectors — only re-render when each specific value changes
   const isOpen = useComposerStore((s) => s.isOpen);
+  const session = useComposerStore((s) => s.session);
   const mode = useComposerStore((s) => s.mode);
   const to = useComposerStore((s) => s.to);
   const cc = useComposerStore((s) => s.cc);
@@ -46,8 +47,10 @@ export function Composer() {
   const signatureHtml = useComposerStore((s) => s.signatureHtml);
   const isSaving = useComposerStore((s) => s.isSaving);
   const lastSavedAt = useComposerStore((s) => s.lastSavedAt);
-  // Note: bodyHtml intentionally NOT subscribed — TipTap manages its own editor state.
-  // Subscribing would cause full re-renders on every keystroke.
+  // Note: bodyHtml intentionally NOT subscribed — TipTap manages its own editor
+  // state while the composer is up, and subscribing would re-render on every
+  // keystroke. The body still has to reach the editor once per compose
+  // session, which is what the session effect below does.
   const closeComposer = useComposerStore((s) => s.closeComposer);
   const setTo = useComposerStore((s) => s.setTo);
   const setCc = useComposerStore((s) => s.setCc);
@@ -139,6 +142,26 @@ export function Composer() {
       },
     },
   });
+
+  // Push the body into the editor whenever a compose session begins.
+  //
+  // useEditor runs once, when App mounts the composer and the store is still
+  // empty, so its `content` option is never the body of the mail being
+  // written: a reply's quote, a forwarded message and a draft loaded from the
+  // database all arrive in the store afterwards. The CSSTransition's
+  // unmountOnExit is on the overlay inside this component, not on the
+  // component, so the editor is not rebuilt on the next open either — without
+  // this the previous mail's text was still sitting in it.
+  //
+  // emitUpdate is off: onUpdate would write TipTap's normalised HTML straight
+  // back over the body the store was opened with, and mark a draft that
+  // nobody has touched as dirty.
+  useEffect(() => {
+    if (!editor || !isOpen) return;
+    editor.commands.setContent(useComposerStore.getState().bodyHtml, {
+      emitUpdate: false,
+    });
+  }, [editor, isOpen, session]);
 
   // Load signature, aliases, and templates in parallel when composer opens
   useEffect(() => {

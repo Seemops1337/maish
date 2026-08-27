@@ -14,6 +14,15 @@ export interface ComposerAttachment {
 
 export interface ComposerState {
   isOpen: boolean;
+  /**
+   * Incremented by openComposer. The editor is created once, when the app
+   * starts and the composer is still closed, so it cannot take its content
+   * from the initial state; it has to be filled when a compose session
+   * begins. isOpen alone does not mark that, because opening a composer that
+   * is already open — a reply while a draft is up, a mailto: deep link —
+   * leaves it true throughout.
+   */
+  session: number;
   mode: ComposerMode;
   to: string[];
   cc: string[];
@@ -68,6 +77,7 @@ export interface ComposerState {
 
 export const useComposerStore = create<ComposerState>((set) => ({
   isOpen: false,
+  session: 0,
   mode: "new",
   to: [],
   cc: [],
@@ -89,8 +99,9 @@ export const useComposerStore = create<ComposerState>((set) => ({
   signatureId: null,
 
   openComposer: (opts) =>
-    set({
+    set((state) => ({
       isOpen: true,
+      session: state.session + 1,
       mode: opts?.mode ?? "new",
       to: opts?.to ?? [],
       cc: opts?.cc ?? [],
@@ -108,7 +119,7 @@ export const useComposerStore = create<ComposerState>((set) => ({
       isSaving: false,
       signatureHtml: "",
       signatureId: null,
-    }),
+    })),
   closeComposer: () =>
     set({
       isOpen: false,

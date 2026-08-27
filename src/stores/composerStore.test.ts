@@ -42,6 +42,20 @@ describe("composerStore", () => {
     expect(state.subject).toBe("");
   });
 
+  it("counts every open as a new session, including one on top of another", () => {
+    // The composer's editor is built once and filled per session, so an open
+    // that does not move isOpen still has to be distinguishable.
+    const before = useComposerStore.getState().session;
+
+    useComposerStore.getState().openComposer({ bodyHtml: "<p>first</p>" });
+    const first = useComposerStore.getState().session;
+    expect(first).toBe(before + 1);
+
+    useComposerStore.getState().openComposer({ bodyHtml: "<p>second</p>" });
+    expect(useComposerStore.getState().session).toBe(first + 1);
+    expect(useComposerStore.getState().isOpen).toBe(true);
+  });
+
   it("opens with custom values for reply", () => {
     useComposerStore.getState().openComposer({
       mode: "reply",
