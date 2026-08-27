@@ -442,6 +442,11 @@ function yearlyDays(cursor: WallClock, spec: RRuleSpec, start: WallClock): WallC
     || spec.byYearDay.length > 0;
 
   if (!expands) {
+    // A series starting on 29 February has no instance in a common year.
+    // RFC 5545 §3.3.10 requires such a date to be ignored rather than moved,
+    // and Date.UTC would otherwise roll it forward to 1 March. monthlyDays
+    // makes the same check for a 31st in a short month.
+    if (start.day > daysInMonth(cursor.year, start.month)) return [];
     return [{ ...cursor, month: start.month, day: start.day }];
   }
 
