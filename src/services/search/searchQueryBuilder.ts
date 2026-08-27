@@ -1,4 +1,5 @@
 import type { ParsedSearchQuery } from "./searchParser";
+import { toFtsMatchExpression } from "./ftsQuery";
 
 interface BuiltQuery {
   sql: string;
@@ -23,12 +24,15 @@ export function buildSearchQuery(
   // Base query - we'll add FTS join conditionally
   let fromClause = "FROM messages m";
 
-  // Free text search via FTS5
-  if (parsed.freeText) {
+  // Free text search via FTS5. The text is quoted into phrases first, because
+  // MATCH parses its argument as a query expression rather than a search
+  // string and an address or a hyphen in it is a syntax error.
+  const freeTextMatch = parsed.freeText ? toFtsMatchExpression(parsed.freeText) : "";
+  if (freeTextMatch) {
     needsFts = true;
     fromClause = "FROM messages_fts JOIN messages m ON m.rowid = messages_fts.rowid";
     whereClauses.push(`messages_fts MATCH $${paramIdx}`);
-    params.push(parsed.freeText);
+    params.push(freeTextMatch);
     paramIdx++;
   }
 

@@ -1,6 +1,7 @@
 import { getDb } from "./connection";
 import { parseSearchQuery, hasSearchOperators } from "../search/searchParser";
 import { buildSearchQuery } from "../search/searchQueryBuilder";
+import { toFtsMatchExpression } from "../search/ftsQuery";
 
 export interface SearchResult {
   message_id: string;
@@ -41,7 +42,11 @@ export async function searchMessages(
     }
   }
 
-  // Fall through to standard FTS5 search
+  // Fall through to standard FTS5 search. What the user typed is free text,
+  // so it has to be quoted before MATCH reads it as a query expression.
+  const matchExpression = toFtsMatchExpression(ftsQuery);
+  if (!matchExpression) return [];
+
   if (accountId) {
     return db.select<SearchResult[]>(
       `SELECT
@@ -59,7 +64,7 @@ export async function searchMessages(
       WHERE messages_fts MATCH $1 AND m.account_id = $2
       ORDER BY rank
       LIMIT $3`,
-      [ftsQuery, accountId, limit],
+      [matchExpression, accountId, limit],
     );
   }
 
@@ -79,6 +84,6 @@ export async function searchMessages(
     WHERE messages_fts MATCH $1
     ORDER BY rank
     LIMIT $2`,
-    [ftsQuery, limit],
+    [matchExpression, limit],
   );
 }
