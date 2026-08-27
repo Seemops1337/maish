@@ -153,12 +153,42 @@ export function escapeText(text: string): string {
     .replace(/\n/g, "\\n");
 }
 
+/**
+ * Read the escapes of a TEXT value (RFC 5545 §3.3.11, RFC 6350 §3.4).
+ *
+ * One pass, not a chain of replacements. Applying the rule for "\\n" before the
+ * one for "\\\\" lets it consume the second backslash of an escaped pair, so an
+ * escaped backslash that happens to be followed by an "n" is read as a line
+ * break: a NOTE containing a Windows path came back cut in half, and the next
+ * save wrote that back to the server. Reversing the order only moves the
+ * problem, because whichever rule runs second sees text the first one wrote.
+ *
+ * A backslash before anything else is not a defined escape. The backslash is
+ * dropped and the character kept, which is what a writer that escaped a colon
+ * or a quote meant, and never shows a stray backslash to the reader. A
+ * backslash at the very end has nothing to escape and stands for itself.
+ */
 export function unescapeText(text: string): string {
-  return text
-    .replace(/\\n/gi, "\n")
-    .replace(/\\,/g, ",")
-    .replace(/\\;/g, ";")
-    .replace(/\\\\/g, "\\");
+  let out = "";
+
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] !== "\\") {
+      out += text[i];
+      continue;
+    }
+
+    const next = text[i + 1];
+    if (next === undefined) {
+      out += "\\";
+      break;
+    }
+
+    // Both cases are defined as a newline.
+    out += next === "n" || next === "N" ? "\n" : next;
+    i++;
+  }
+
+  return out;
 }
 
 /**

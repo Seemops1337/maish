@@ -122,6 +122,37 @@ describe("escapeText and unescapeText", () => {
   it("reads a lower-case \\n as a newline, which vCard writers emit", () => {
     expect(unescapeText("one\\ntwo")).toBe("one\ntwo");
   });
+
+  /**
+   * The escapes have to be read in one pass. Replacing "\\n" before "\\\\"
+   * lets the rule for a newline consume the second backslash of an escaped
+   * pair, so an escaped backslash that happens to be followed by an "n" is
+   * read as a line break — a Windows path in a NOTE or DESCRIPTION comes back
+   * broken and is written to the server in that state on the next save.
+   */
+  it("keeps an escaped backslash that is followed by an n", () => {
+    expect(unescapeText("C:\\\\new")).toBe("C:\\new");
+  });
+
+  it("round-trips a Windows path", () => {
+    const text = "C:\\new\\docs";
+    expect(unescapeText(escapeText(text))).toBe(text);
+  });
+
+  it("round-trips a backslash before every other escaped character", () => {
+    for (const text of ["a\\nb", "a\\;b", "a\\,b", "a\\\\b", "trailing\\"]) {
+      expect(unescapeText(escapeText(text))).toBe(text);
+    }
+  });
+
+  it("reads an escaped backslash followed by a comma as two literals", () => {
+    // A TYPE list of one value literally containing a backslash, not two values.
+    expect(unescapeText("a\\\\,b")).toBe("a\\,b");
+  });
+
+  it("reads an upper-case \\N as a newline too", () => {
+    expect(unescapeText("one\\Ntwo")).toBe("one\ntwo");
+  });
 });
 
 describe("foldLine", () => {
