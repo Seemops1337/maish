@@ -481,6 +481,39 @@ pub async fn move_messages(
     Ok(())
 }
 
+/// Format a value as an IMAP quoted string (RFC 3501 section 4.3).
+///
+/// The quoted-specials are the double quote and the backslash, and both have
+/// to be escaped with a backslash. Interpolated raw, a password containing a
+/// quote closes the string early and the remainder is parsed as further
+/// arguments, so the command fails — or, worse, is understood as something
+/// other than what was meant.
+///
+/// CR and LF cannot appear in a quoted string at all: they end the command
+/// line, and everything after them would be read as a new command. There is
+/// no escape for them, only a literal, so a value containing one is refused
+/// here rather than sent.
+///
+/// Escaping happens in one pass. Replacing the quotes and then the
+/// backslashes, or the other way round, would escape the backslashes the
+/// first pass had just inserted.
+fn imap_quote(value: &str) -> Result<String, String> {
+    if value.contains('\r') || value.contains('\n') {
+        return Err("IMAP arguments cannot contain a line break".to_string());
+    }
+
+    let mut quoted = String::with_capacity(value.len() + 2);
+    quoted.push('"');
+    for ch in value.chars() {
+        if ch == '"' || ch == '\\' {
+            quoted.push('\\');
+        }
+        quoted.push(ch);
+    }
+    quoted.push('"');
+    Ok(quoted)
+}
+
 /// What may be expunged after messages have been flagged \Deleted.
 ///
 /// A bare `EXPUNGE` (RFC 3501 section 6.4.3) removes *every* \Deleted message
@@ -1018,12 +1051,16 @@ pub async fn raw_fetch_messages(
         let b64 = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, xoauth2.as_bytes());
         format!("a1 AUTHENTICATE XOAUTH2 {b64}\r\n")
     } else {
-        format!("a1 LOGIN \"{}\" \"{}\"\r\n", config.username, config.password)
+        format!(
+            "a1 LOGIN {} {}\r\n",
+            imap_quote(&config.username)?,
+            imap_quote(&config.password)?
+        )
     };
     raw_send_and_wait(&mut reader, login_cmd.as_bytes(), "a1").await?;
 
     // SELECT
-    let select_cmd = format!("a2 SELECT \"{folder}\"\r\n");
+    let select_cmd = format!("a2 SELECT {}\r\n", imap_quote(folder)?);
     let select_response = raw_send_and_wait(&mut reader, select_cmd.as_bytes(), "a2").await?;
 
     // Parse SELECT response for UIDVALIDITY, EXISTS, UNSEEN
@@ -1116,13 +1153,17 @@ pub async fn raw_fetch_diagnostic(
     }
 
     // LOGIN
-    let login_cmd = format!("a1 LOGIN \"{}\" \"{}\"\r\n", config.username, config.password);
+    let login_cmd = format!(
+        "a1 LOGIN {} {}\r\n",
+        imap_quote(&config.username)?,
+        imap_quote(&config.password)?
+    );
     stream.write_all(login_cmd.as_bytes()).await.map_err(|e| format!("LOGIN: {e}"))?;
     let n = stream.read(&mut buf).await.map_err(|e| format!("LOGIN read: {e}"))?;
     output.push_str(&format!("S: {}", String::from_utf8_lossy(&buf[..n])));
 
     // SELECT
-    let select_cmd = format!("a2 SELECT \"{folder}\"\r\n");
+    let select_cmd = format!("a2 SELECT {}\r\n", imap_quote(folder)?);
     stream.write_all(select_cmd.as_bytes()).await.map_err(|e| format!("SELECT: {e}"))?;
     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
     let n = stream.read(&mut buf).await.map_err(|e| format!("SELECT read: {e}"))?;
@@ -1907,6 +1948,42 @@ mod tests {
     #[test]
     fn expunges_nothing_without_uidplus() {
         assert_eq!(expunge_mode(false), ExpungeMode::Nothing);
+    }
+
+    // RFC 3501 section 4.3: a quoted string is delimited by double quotes,
+    // and the quoted-specials — the double quote and the backslash — are
+    // escaped with a backslash. Neither CR nor LF is a valid character in one.
+
+    #[test]
+    fn quotes_an_ordinary_value() {
+        assert_eq!(imap_quote("simon@hochreiner.xyz").unwrap(), "\"simon@hochreiner.xyz\"");
+    }
+
+    #[test]
+    fn escapes_a_double_quote_in_a_password() {
+        // Unescaped this closes the string, and the rest of the password is
+        // read as further arguments to LOGIN.
+        assert_eq!(imap_quote("pa\"ss").unwrap(), "\"pa\\\"ss\"");
+    }
+
+    #[test]
+    fn escapes_a_backslash_in_a_password() {
+        assert_eq!(imap_quote("pa\\ss").unwrap(), "\"pa\\\\ss\"");
+    }
+
+    #[test]
+    fn escapes_a_backslash_and_a_quote_together() {
+        // Escaping the two in separate passes would escape the backslashes
+        // the other pass had just inserted.
+        assert_eq!(imap_quote("a\\\"b").unwrap(), "\"a\\\\\\\"b\"");
+    }
+
+    #[test]
+    fn refuses_a_value_containing_a_line_break() {
+        // A quoted string cannot hold one, and interpolating it would end the
+        // command line and turn the remainder into a command of its own.
+        assert!(imap_quote("pass\r\na2 DELETE INBOX").is_err());
+        assert!(imap_quote("pass\nmore").is_err());
     }
 
     /// Both delete_messages and the COPY fallback in move_messages used to
