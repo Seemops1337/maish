@@ -73,11 +73,17 @@ describe("scanMessageLinks", () => {
     const [accountId, messageId, json] = mockCache.mock.calls[0]!;
     expect(accountId).toBe("a1");
     expect(messageId).toBe("m1");
-    expect(JSON.parse(json).links).toHaveLength(1);
+    // The entry carries the scanner version alongside the result, so a cache
+    // written before a scanning change is not trusted by a later build.
+    const entry = JSON.parse(json);
+    expect(entry.v).toBeGreaterThanOrEqual(2);
+    expect(entry.result.links).toHaveLength(1);
   });
 
   it("reuses a cached result instead of rescanning", async () => {
-    mockGetCached.mockResolvedValue(JSON.stringify(scanMessage("m1", HTML_55, "default")));
+    mockGetCached.mockResolvedValue(
+      JSON.stringify({ v: 2, result: scanMessage("m1", HTML_55, "default") }),
+    );
 
     const scan = await scanMessageLinks("a1", "m1", HTML_55, "bob@example.com");
 
@@ -104,12 +110,17 @@ describe("scanMessageLinks", () => {
 
   it("applies the current sensitivity to a cached result", async () => {
     // Cached while sensitivity was "low", where this message shows no banner
-    mockGetCached.mockResolvedValue(JSON.stringify(scanMessage("m1", HTML_30, "low")));
+    mockGetCached.mockResolvedValue(
+      JSON.stringify({ v: 2, result: scanMessage("m1", HTML_30, "low") }),
+    );
     settings({ phishing_sensitivity: "high" });
 
     const scan = await scanMessageLinks("a1", "m1", HTML_30, "bob@example.com");
 
     expect(scan?.result.showBanner).toBe(true);
+    // Taken from the cache, not rescanned — otherwise this would be passing
+    // for the wrong reason.
+    expect(mockCache).not.toHaveBeenCalled();
   });
 
   it("falls back to the default sensitivity for an unknown setting value", async () => {
@@ -160,5 +171,111 @@ describe("scanMessageLinks", () => {
 
     expect(scan?.result.showBanner).toBe(true);
     errorSpy.mockRestore();
+  });
+});
+
+/**
+ * A message with no HTML part is still rendered with clickable links:
+ * EmailRenderer runs the body through linkifyPlainText and shows the anchors
+ * it produces. The scan was handed body_html alone, which is null for such a
+ * message, so it returned nothing — no banner, and no link for
+ * LinkConfirmDialog to hold back. A plain-text phishing mail went straight
+ * through.
+ */
+describe("scanMessageLinks — a message with no HTML part", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    settings();
+    mockIsAllowlisted.mockResolvedValue(false);
+    mockGetCached.mockResolvedValue(null);
+  });
+
+  it("scans the links in a plain-text body", async () => {
+    const scan = await scanMessageLinks(
+      "acct-1",
+      "msg-1",
+      null,
+      "sender@example.com",
+      "Please confirm at http://192.168.1.1/login right away",
+    );
+
+    expect(scan).not.toBeNull();
+    expect(scan!.result.links.length).toBeGreaterThan(0);
+    expect(scan!.result.links[0]!.url).toContain("192.168.1.1");
+  });
+
+  it("raises the banner for a plain-text body", async () => {
+    const scan = await scanMessageLinks(
+      "acct-1",
+      "msg-1",
+      null,
+      "sender@example.com",
+      "Please confirm at http://192.168.1.1/login right away",
+    );
+
+    expect(scan!.result.showBanner).toBe(true);
+  });
+
+  it("reports the link so it can be confirmed before it opens", async () => {
+    const scan = await scanMessageLinks(
+      "acct-1",
+      "msg-1",
+      null,
+      "sender@example.com",
+      "Please confirm at http://192.168.1.1/login right away",
+    );
+
+    expect(scan!.riskyLinks.length).toBeGreaterThan(0);
+  });
+
+  it("prefers the HTML part when there is one", async () => {
+    const scan = await scanMessageLinks(
+      "acct-1",
+      "msg-1",
+      HTML_55,
+      "sender@example.com",
+      "a plain-text alternative with no links",
+    );
+
+    expect(scan!.result.links[0]!.url).toContain("192.168.1.1");
+  });
+
+  it("still returns nothing for a body with no links at all", async () => {
+    const scan = await scanMessageLinks(
+      "acct-1",
+      "msg-1",
+      null,
+      "sender@example.com",
+      "just some words",
+    );
+
+    expect(scan!.result.links).toEqual([]);
+    expect(scan!.result.showBanner).toBe(false);
+  });
+
+  it("ignores a cached result from before plain text was scanned", async () => {
+    // Those entries recorded no links for a body that has them, and the cache
+    // is keyed only by message, so without this they would keep the banner
+    // down for good on every message already opened.
+    mockGetCached.mockResolvedValue(
+      JSON.stringify({
+        messageId: "msg-1",
+        links: [],
+        maxRiskScore: 0,
+        suspiciousLinkCount: 0,
+        showBanner: false,
+        scannedAt: 1,
+      }),
+    );
+
+    const scan = await scanMessageLinks(
+      "acct-1",
+      "msg-1",
+      null,
+      "sender@example.com",
+      "Please confirm at http://192.168.1.1/login right away",
+    );
+
+    expect(scan!.result.links.length).toBeGreaterThan(0);
   });
 });

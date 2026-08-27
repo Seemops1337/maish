@@ -76,6 +76,9 @@ export const MessageItem = memo(forwardRef<HTMLDivElement, MessageItemProps>(fun
           message.id,
           message.body_html,
           message.from_address,
+          // A message with no HTML part still has clickable links, because
+          // EmailRenderer linkifies the plain-text body it falls back to.
+          message.body_text,
         );
         if (!cancelled) setPhishingScan(scan);
       } catch (err) {
@@ -84,7 +87,7 @@ export const MessageItem = memo(forwardRef<HTMLDivElement, MessageItemProps>(fun
     })();
 
     return () => { cancelled = true; };
-  }, [expanded, message.account_id, message.id, message.body_html, message.from_address]);
+  }, [expanded, message.account_id, message.id, message.body_html, message.body_text, message.from_address]);
 
   const handleTrustSender = async () => {
     setPhishingScan(null);
