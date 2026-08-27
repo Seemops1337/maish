@@ -214,6 +214,25 @@ describe("executeQuickStep", () => {
     vi.useRealTimers();
   });
 
+  it("snoozes to a Unix timestamp in seconds, not milliseconds", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2024-01-01T00:00:00Z"));
+
+    // The editor stores the duration in milliseconds (its options are 3600000
+    // for an hour, 86400000 for a day). threads.snooze_until is a seconds
+    // column, compared against getCurrentUnixTimestamp() by the snooze checker.
+    const step = createMockQuickStep({
+      actions: [{ type: "snooze", params: { snoozeDuration: 3600000 } }],
+    });
+
+    await executeQuickStep(step, ["t1"], "acct-1");
+
+    // 2024-01-01T00:00:00Z is 1704067200s; one hour later is 1704070800s.
+    expect(snoozeThread).toHaveBeenCalledWith("acct-1", "t1", 1704070800);
+
+    vi.useRealTimers();
+  });
+
   it("executes moveToCategory action", async () => {
     const dispatchSpy = vi.spyOn(window, "dispatchEvent");
 
