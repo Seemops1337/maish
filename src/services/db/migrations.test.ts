@@ -120,3 +120,76 @@ describe("the migrations themselves", () => {
     );
   });
 });
+
+/**
+ * SQLite resolves an upsert's conflict target against the declared unique
+ * constraints and rejects the statement at prepare time when none matches:
+ * "ON CONFLICT clause does not match any PRIMARY KEY or UNIQUE constraint".
+ * That is a hard error on the write path, not a slow query, and nothing in the
+ * type system connects a query in a db module to the schema in this file — so
+ * the two are compared here.
+ */
+describe("upsert conflict targets", () => {
+  const DB_DIR = "src/services/db";
+
+  /** Column tuples the migrations declare unique, per table. */
+  function declaredUniques(sql: string): Map<string, Set<string>> {
+    const uniques = new Map<string, Set<string>>();
+    const add = (table: string, columns: string) => {
+      const key = columns
+        .split(",")
+        .map((c) => c.trim().replace(/["`[\]]/g, ""))
+        .filter(Boolean)
+        .join(",");
+      if (!uniques.has(table)) uniques.set(table, new Set());
+      uniques.get(table)!.add(key);
+    };
+
+    const createTable = /CREATE TABLE (?:IF NOT EXISTS )?(\w+)\s*\(([\s\S]*?)\n\s*\);/g;
+    for (const [, table, body] of sql.matchAll(createTable)) {
+      for (const [, cols] of body.matchAll(/\bUNIQUE\s*\(([^)]*)\)/gi)) add(table, cols);
+      for (const [, cols] of body.matchAll(/\bPRIMARY KEY\s*\(([^)]*)\)/gi)) add(table, cols);
+      for (const line of body.split("\n")) {
+        // A constraint written on the column itself rather than as a table clause.
+        const inline = line.match(/^\s*(\w+)\s+[\w()]+.*\b(?:PRIMARY KEY|UNIQUE)\b/i);
+        if (inline) add(table, inline[1]!);
+      }
+    }
+
+    const uniqueIndex =
+      /CREATE UNIQUE INDEX (?:IF NOT EXISTS )?\w+\s+ON\s+(\w+)\s*\(([^)]*)\)/gi;
+    for (const [, table, cols] of sql.matchAll(uniqueIndex)) add(table!, cols!);
+
+    return uniques;
+  }
+
+  it("backs every ON CONFLICT target with a unique constraint", async () => {
+    const { readdirSync, readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+
+    const uniques = declaredUniques(
+      MIGRATIONS.map((migration) => migration.sql).join("\n"),
+    );
+
+    const upsert = /INSERT (?:OR \w+ )?INTO\s+(\w+)[\s\S]{0,600}?ON CONFLICT\s*\(([^)]*)\)/gi;
+    const unbacked: string[] = [];
+
+    for (const file of readdirSync(DB_DIR)) {
+      if (!file.endsWith(".ts") || file.includes(".test.") || file === "migrations.ts") {
+        continue;
+      }
+      const source = readFileSync(join(DB_DIR, file), "utf8");
+      for (const [, table, columns] of source.matchAll(upsert)) {
+        const target = columns!
+          .split(",")
+          .map((c) => c.trim())
+          .join(",");
+        if (!uniques.get(table!)?.has(target)) {
+          unbacked.push(`${file}: ON CONFLICT(${target}) on ${table}`);
+        }
+      }
+    }
+
+    expect(unbacked).toEqual([]);
+  });
+});

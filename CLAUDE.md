@@ -310,7 +310,7 @@ Tests sit next to the file they cover, across stores, services, utils, component
 
 ## Database
 
-SQLite via Tauri SQL plugin. 25 migrations (version-tracked in `_migrations` table, transactional). Custom `splitStatements()` handles BEGIN...END blocks in triggers.
+SQLite via Tauri SQL plugin. Migrations are version-tracked in the `_migrations` table and run transactionally; `MIGRATIONS` in `src/services/db/migrations.ts` is the list, and writing its length down here would be a merge conflict on every branch that adds one. Custom `splitStatements()` handles BEGIN...END blocks in triggers.
 
 Data lives in `~/.config/xyz.hochreiner.maish/maish.db` (WAL), logs in `~/.local/share/xyz.hochreiner.maish/logs/Maish.log`. On macOS both the database and the key file sit in `~/Library/Application Support/xyz.hochreiner.maish/` and the log in `~/Library/Logs/xyz.hochreiner.maish/Maish.log` — see `docs/development.md` for the full table. The frontend has no log forwarding, so `console.log` never reaches that file — to trace frontend behaviour, add a temporary `#[tauri::command]` that calls `log::warn!` (app-level commands need no capability entry) rather than guessing.
 
