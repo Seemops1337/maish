@@ -16,13 +16,19 @@ import {
 } from "./folderMapper";
 import type { ParsedMessage, ParsedAttachment } from "../gmail/messageParser";
 import type { SyncResult } from "../email/types";
-import { upsertMessage, updateMessageThreadIds, getMessagesForThread } from "../db/messages";
+import {
+  upsertMessage,
+  updateMessageThreadIds,
+  getMessagesForThread,
+  deleteMessagesInFolder,
+} from "../db/messages";
 import {
   upsertThread,
   setThreadLabels,
   deleteThread,
   getThreadLabelIds,
   getThreadById,
+  deleteEmptyThreads,
 } from "../db/threads";
 import { upsertAttachment } from "../db/attachments";
 import { getAccount, updateAccountSyncState } from "../db/accounts";
@@ -1044,6 +1050,15 @@ export async function imapDeltaSync(accountId: string, daysBack = 365): Promise<
               `(was ${savedState.uidvalidity}, now ${deltaResult.uidvalidity}). ` +
               `Doing full resync of this folder.`,
           );
+          // Everything stored for this folder is now unreachable. A local id
+          // is `imap-{accountId}-{folder}-{uid}`, and the UIDs it was built
+          // from no longer name the messages they did: the resync writes the
+          // same mail under new ids and would leave the old rows sitting
+          // beside them as a second copy of the folder that no later sync can
+          // reach. They have to go before the new ones are written.
+          const orphanedThreadIds = await deleteMessagesInFolder(accountId, folder.raw_path);
+          await deleteEmptyThreads(accountId, orphanedThreadIds);
+
           const sinceDate = computeSinceDate(daysBack);
           const searchResult = await imapSearchFolder(config, folder.raw_path, sinceDate);
           if (searchResult.uids.length === 0) continue;

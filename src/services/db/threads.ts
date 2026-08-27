@@ -261,3 +261,33 @@ export async function getMutedThreadIds(
   );
   return new Set(rows.map((r) => r.id));
 }
+
+/**
+ * Drop the given threads if nothing is left in them.
+ *
+ * Deleting messages does not take their thread with it — the foreign key runs
+ * the other way — so a folder cleared out by a UIDVALIDITY resync would leave
+ * empty conversations behind in every list.
+ */
+export async function deleteEmptyThreads(
+  accountId: string,
+  threadIds: string[],
+): Promise<void> {
+  if (threadIds.length === 0) return;
+  const db = await getDb();
+  // SQLite's variable limit is 999.
+  for (let i = 0; i < threadIds.length; i += 500) {
+    const chunk = threadIds.slice(i, i + 500);
+    const placeholders = chunk.map((_, idx) => `$${idx + 2}`).join(", ");
+    await db.execute(
+      `DELETE FROM threads
+        WHERE account_id = $1
+          AND id IN (${placeholders})
+          AND NOT EXISTS (
+            SELECT 1 FROM messages m
+             WHERE m.account_id = threads.account_id AND m.thread_id = threads.id
+          )`,
+      [accountId, ...chunk],
+    );
+  }
+}
