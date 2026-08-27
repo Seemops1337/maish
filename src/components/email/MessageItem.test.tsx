@@ -181,11 +181,14 @@ describe("MessageItem", () => {
       render(<MessageItem message={makeMessage()} isLast={true} blockImages={false} />);
 
       await waitFor(() => {
+        // The plain-text body goes with it: a message with no HTML part still
+        // gets clickable links from the renderer, so it has to be scanned.
         expect(mockScanMessageLinks).toHaveBeenCalledWith(
           "a1",
           "m1",
           "<p>Hello</p>",
           "bob@example.com",
+          expect.anything(),
         );
       });
     });
