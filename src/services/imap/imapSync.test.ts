@@ -40,11 +40,14 @@ vi.mock("./folderMapper", () => ({
 vi.mock("../db/messages", () => ({
   upsertMessage: vi.fn(),
   updateMessageThreadIds: vi.fn(),
+  getMessagesForThread: vi.fn(() => []),
 }));
 vi.mock("../db/threads", () => ({
   upsertThread: vi.fn(),
   setThreadLabels: vi.fn(),
   deleteThread: vi.fn(),
+  getThreadLabelIds: vi.fn(() => []),
+  getThreadById: vi.fn(() => undefined),
 }));
 vi.mock("../db/attachments", () => ({
   upsertAttachment: vi.fn(),
@@ -58,13 +61,13 @@ vi.mock("../db/connection", () => ({
 }));
 vi.mock("../db/folderSyncState", () => ({
   upsertFolderSyncState: vi.fn(),
-  getAllFolderSyncStates: vi.fn(),
+  getAllFolderSyncStates: vi.fn(() => []),
 }));
 vi.mock("../db/pendingOperations", () => ({
   getPendingOpsForResource: vi.fn(() => []),
 }));
 
-import { imapMessageToParsedMessage, imapInitialSync, formatImapDate, computeSinceDate, isConnectionError } from "./imapSync";
+import { imapMessageToParsedMessage, imapInitialSync, imapDeltaSync, formatImapDate, computeSinceDate, isConnectionError } from "./imapSync";
 import {
   createMockImapMessage,
   createMockImapAccount,
@@ -72,13 +75,14 @@ import {
   createMockImapFolderStatus,
   createMockImapFetchResult,
 } from "@/test/mocks";
-import { imapListFolders, imapSearchFolder, imapFetchMessages } from "./tauriCommands";
+import { imapListFolders, imapSearchFolder, imapFetchMessages, imapDeltaCheck } from "./tauriCommands";
 import { getAccount } from "../db/accounts";
 import { withTransaction } from "../db/connection";
-import { upsertMessage, updateMessageThreadIds } from "../db/messages";
-import { upsertThread, deleteThread } from "../db/threads";
+import { upsertMessage, updateMessageThreadIds, getMessagesForThread } from "../db/messages";
+import { upsertThread, deleteThread, setThreadLabels, getThreadLabelIds } from "../db/threads";
 import { upsertAttachment } from "../db/attachments";
 import { getPendingOpsForResource } from "../db/pendingOperations";
+import { getAllFolderSyncStates } from "../db/folderSyncState";
 
 describe("imapMessageToParsedMessage", () => {
   it("converts basic IMAP message to ParsedMessage format", () => {
@@ -744,5 +748,157 @@ describe("imapInitialSync — placeholder cleanup", () => {
     // Threading should merge the two messages into one thread,
     // so at least one placeholder thread (the one not chosen as thread ID) should be deleted
     expect(mockDeleteThread).toHaveBeenCalled();
+  });
+});
+
+/**
+ * Delta sync fetches only what is new and threads only what it fetched. The
+ * thread those messages belong to is usually already in the database with
+ * more messages in it, a star the user set and labels the user applied — none
+ * of which is in the batch. Recomputing the thread row and its labels from
+ * the batch alone therefore overwrote all of it.
+ */
+describe("imapDeltaSync — thread state of messages it did not fetch", () => {
+  const mockGetAccount = vi.mocked(getAccount);
+  const mockImapListFolders = vi.mocked(imapListFolders);
+  const mockImapFetchMessages = vi.mocked(imapFetchMessages);
+  const mockImapDeltaCheck = vi.mocked(imapDeltaCheck);
+  const mockGetAllFolderSyncStates = vi.mocked(getAllFolderSyncStates);
+  const mockGetMessagesForThread = vi.mocked(getMessagesForThread);
+  const mockGetThreadLabelIds = vi.mocked(getThreadLabelIds);
+  const mockUpsertThread = vi.mocked(upsertThread);
+  const mockSetThreadLabels = vi.mocked(setThreadLabels);
+
+  /** A row as getMessagesForThread returns it. */
+  function storedMessage(over: Partial<Record<string, unknown>> = {}) {
+    return {
+      id: "imap-acc-1-INBOX-1",
+      account_id: "acc-1",
+      thread_id: "t",
+      from_address: "sender@example.com",
+      from_name: "Sender",
+      to_addresses: "me@example.com",
+      cc_addresses: null,
+      bcc_addresses: null,
+      reply_to: null,
+      subject: "The original subject",
+      snippet: "older text",
+      date: 1000,
+      is_read: 1,
+      is_starred: 0,
+      body_html: null,
+      body_text: null,
+      body_cached: 1,
+      raw_size: 10,
+      internal_date: 1000,
+      list_unsubscribe: null,
+      list_unsubscribe_post: null,
+      auth_results: null,
+      message_id_header: "<m1@test>",
+      references_header: null,
+      in_reply_to_header: null,
+      imap_uid: 1,
+      imap_folder: "INBOX",
+      ...over,
+    };
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetAccount.mockResolvedValue(createMockImapAccount({ id: "acc-1" }));
+    mockGetThreadLabelIds.mockResolvedValue([]);
+    mockGetMessagesForThread.mockResolvedValue([]);
+
+    const folder = createMockImapFolder({ path: "INBOX", raw_path: "INBOX" });
+    mockImapListFolders.mockResolvedValue([folder]);
+    mockGetAllFolderSyncStates.mockResolvedValue([
+      {
+        account_id: "acc-1",
+        folder_path: "INBOX",
+        uidvalidity: 1,
+        last_uid: 4,
+        modseq: null,
+        last_sync_at: 0,
+      },
+    ] as never);
+    mockImapDeltaCheck.mockResolvedValue([
+      { folder: "INBOX", uidvalidity: 1, new_uids: [5], uidvalidity_changed: false },
+    ] as never);
+
+    // The one new message is a reply, so JWZ roots it at the original and it
+    // lands in the thread that is already stored.
+    const reply = createMockImapMessage({
+      uid: 5,
+      message_id: "<m5@test>",
+      references: "<m1@test>",
+      in_reply_to: "<m1@test>",
+      subject: "Re: The original subject",
+      is_read: false,
+      is_starred: false,
+      date: 5000,
+    });
+    mockImapFetchMessages.mockResolvedValue(createMockImapFetchResult([reply]));
+  });
+
+  it("counts the messages already stored, not only the new one", async () => {
+    mockGetMessagesForThread.mockResolvedValue([
+      storedMessage({ id: "a", date: 1000 }),
+      storedMessage({ id: "b", date: 2000 }),
+      storedMessage({ id: "c", date: 3000 }),
+      storedMessage({ id: "d", date: 4000 }),
+      storedMessage({ id: "e", date: 5000, is_read: 0, subject: "Re: The original subject" }),
+    ] as never);
+
+    await imapDeltaSync("acc-1");
+
+    const last = mockUpsertThread.mock.calls.at(-1)![0];
+    expect(last.messageCount).toBe(5);
+  });
+
+  it("keeps a star that is on a message it did not fetch", async () => {
+    mockGetMessagesForThread.mockResolvedValue([
+      storedMessage({ id: "a", date: 1000, is_starred: 1 }),
+      storedMessage({ id: "e", date: 5000, is_read: 0 }),
+    ] as never);
+
+    await imapDeltaSync("acc-1");
+
+    const last = mockUpsertThread.mock.calls.at(-1)![0];
+    expect(last.isStarred).toBe(true);
+  });
+
+  it("keeps the subject of the thread's first message", async () => {
+    mockGetMessagesForThread.mockResolvedValue([
+      storedMessage({ id: "a", date: 1000, subject: "The original subject" }),
+      storedMessage({ id: "e", date: 5000, subject: "Re: The original subject" }),
+    ] as never);
+
+    await imapDeltaSync("acc-1");
+
+    const last = mockUpsertThread.mock.calls.at(-1)![0];
+    expect(last.subject).toBe("The original subject");
+  });
+
+  it("does not mark a thread read because the messages it fetched are", async () => {
+    mockGetMessagesForThread.mockResolvedValue([
+      storedMessage({ id: "a", date: 1000, is_read: 0 }),
+      storedMessage({ id: "e", date: 5000, is_read: 1 }),
+    ] as never);
+
+    await imapDeltaSync("acc-1");
+
+    const last = mockUpsertThread.mock.calls.at(-1)![0];
+    expect(last.isRead).toBe(false);
+  });
+
+  it("keeps labels the user applied to the thread", async () => {
+    mockGetThreadLabelIds.mockResolvedValue(["INBOX", "Label_work"]);
+    mockGetMessagesForThread.mockResolvedValue([storedMessage({ id: "e", date: 5000 })] as never);
+
+    await imapDeltaSync("acc-1");
+
+    const [, , labels] = mockSetThreadLabels.mock.calls.at(-1)!;
+    expect(labels).toContain("Label_work");
+    expect(labels).toContain("INBOX");
   });
 });
