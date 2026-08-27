@@ -474,20 +474,82 @@ pub async fn move_messages(
             .await
             .map_err(|_| format!("UID STORE +Deleted timed out after {}s — check your server settings or network connection", IMAP_CMD_TIMEOUT.as_secs()))??;
 
-            tokio::time::timeout(IMAP_CMD_TIMEOUT, async {
-                let expunge_stream = session
-                    .expunge()
-                    .await
-                    .map_err(|e| format!("EXPUNGE failed: {e}"))?;
-                let _: Vec<_> = expunge_stream.collect().await;
-                Ok::<_, String>(())
-            })
-            .await
-            .map_err(|_| format!("EXPUNGE timed out after {}s — check your server settings or network connection", IMAP_CMD_TIMEOUT.as_secs()))??;
+            expunge_uid_set(session, uid_set).await?;
         }
     }
 
     Ok(())
+}
+
+/// What may be expunged after messages have been flagged \Deleted.
+///
+/// A bare `EXPUNGE` (RFC 3501 section 6.4.3) removes *every* \Deleted message
+/// in the mailbox, not only the ones this client just marked. Another client
+/// may have flagged messages and deliberately not expunged them — that is the
+/// normal way IMAP clients implement a trash that can still be emptied later —
+/// and expunging them here destroys mail this app was never asked to touch.
+#[derive(Debug, PartialEq, Eq)]
+enum ExpungeMode {
+    /// `UID EXPUNGE` (RFC 4315 section 2.1) removes only the UIDs named, and
+    /// only those among them that carry \Deleted.
+    ByUid,
+    /// The server does not advertise UIDPLUS, so there is no way to limit the
+    /// command to this client's own messages. The flag is left set instead:
+    /// the message is marked for deletion and a client that can expunge it
+    /// safely, or the server's own housekeeping, will remove it. Losing
+    /// somebody else's mail is the worse outcome.
+    Nothing,
+}
+
+/// Decide how to expunge, given whether the server advertises UIDPLUS.
+fn expunge_mode(has_uidplus: bool) -> ExpungeMode {
+    if has_uidplus {
+        ExpungeMode::ByUid
+    } else {
+        ExpungeMode::Nothing
+    }
+}
+
+/// Remove the messages in `uid_set` that are flagged \Deleted, if that can be
+/// done without touching anything else in the mailbox.
+async fn expunge_uid_set(session: &mut ImapSession, uid_set: &str) -> Result<(), String> {
+    let capabilities = tokio::time::timeout(IMAP_CMD_TIMEOUT, session.capabilities())
+        .await
+        .map_err(|_| {
+            format!(
+                "CAPABILITY timed out after {}s — check your server settings or network connection",
+                IMAP_CMD_TIMEOUT.as_secs()
+            )
+        })?
+        .map_err(|e| format!("CAPABILITY failed: {e}"))?;
+
+    match expunge_mode(capabilities.has_str("UIDPLUS")) {
+        ExpungeMode::Nothing => {
+            log::warn!(
+                "Server does not advertise UIDPLUS; leaving {uid_set} flagged \\Deleted rather \
+                 than expunging the whole mailbox"
+            );
+            Ok(())
+        }
+        ExpungeMode::ByUid => {
+            tokio::time::timeout(IMAP_CMD_TIMEOUT, async {
+                let expunge_stream = session
+                    .uid_expunge(uid_set)
+                    .await
+                    .map_err(|e| format!("UID EXPUNGE failed: {e}"))?;
+                let _: Vec<_> = expunge_stream.collect().await;
+                Ok::<_, String>(())
+            })
+            .await
+            .map_err(|_| {
+                format!(
+                    "UID EXPUNGE timed out after {}s — check your server settings or network connection",
+                    IMAP_CMD_TIMEOUT.as_secs()
+                )
+            })??;
+            Ok(())
+        }
+    }
 }
 
 /// Flag messages as deleted and expunge them.
@@ -512,16 +574,7 @@ pub async fn delete_messages(
     .await
     .map_err(|_| format!("UID STORE +Deleted timed out after {}s — check your server settings or network connection", IMAP_CMD_TIMEOUT.as_secs()))??;
 
-    tokio::time::timeout(IMAP_CMD_TIMEOUT, async {
-        let expunge_stream = session
-            .expunge()
-            .await
-            .map_err(|e| format!("EXPUNGE failed: {e}"))?;
-        let _: Vec<_> = expunge_stream.collect().await;
-        Ok::<_, String>(())
-    })
-    .await
-    .map_err(|_| format!("EXPUNGE timed out after {}s — check your server settings or network connection", IMAP_CMD_TIMEOUT.as_secs()))??;
+    expunge_uid_set(session, uid_set).await?;
 
     Ok(())
 }
@@ -1832,5 +1885,43 @@ fn format_address_list(addr: Option<&mail_parser::Address>) -> Option<String> {
         None
     } else {
         Some(parts.join(", "))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // A bare EXPUNGE removes every \Deleted message in the mailbox (RFC 3501
+    // section 6.4.3), not only the ones this client marked. Clients routinely
+    // flag messages and leave them unexpunged, so issuing it to delete two
+    // messages of our own can destroy mail belonging to another client's
+    // trash. UID EXPUNGE (RFC 4315 section 2.1) is limited to the UIDs named,
+    // and where it is not offered the safe answer is to expunge nothing.
+
+    #[test]
+    fn uses_uid_expunge_when_the_server_offers_uidplus() {
+        assert_eq!(expunge_mode(true), ExpungeMode::ByUid);
+    }
+
+    #[test]
+    fn expunges_nothing_without_uidplus() {
+        assert_eq!(expunge_mode(false), ExpungeMode::Nothing);
+    }
+
+    /// Both delete_messages and the COPY fallback in move_messages used to
+    /// call the unqualified command directly. Nothing in the type system
+    /// stops that from coming back, so the source is checked for it. The
+    /// needle is assembled rather than written out, so this test does not
+    /// match itself.
+    #[test]
+    fn no_call_site_issues_an_unqualified_expunge() {
+        let source = include_str!("client.rs");
+        let bare_call = concat!(".", "expunge()");
+        assert!(
+            !source.contains(bare_call),
+            "a bare EXPUNGE removes every \\Deleted message in the mailbox, \
+             including ones another client marked; use expunge_uid_set instead"
+        );
     }
 }
