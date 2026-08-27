@@ -139,3 +139,101 @@ describe("Composer editor content", () => {
     );
   });
 });
+
+/**
+ * handleSend hands the mail to a timer and closes the composer straight away,
+ * so the undo window runs with no composer on screen. Two things follow from
+ * that, and both used to be wrong.
+ */
+describe("Composer send guard", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    editorHtml = "";
+    useComposerStore.setState({
+      isOpen: false,
+      session: 0,
+      bodyHtml: "",
+      undoSendTimer: null,
+      undoSendVisible: false,
+      pendingSend: null,
+    });
+    useAccountStore.setState({
+      accounts: [{ id: "acct-1", email: "simon@hochreiner.xyz" }],
+      activeAccountId: "acct-1",
+    } as never);
+  });
+
+  async function clickSend(getByText: (t: string) => HTMLElement) {
+    await act(async () => {
+      getByText("Send").click();
+    });
+  }
+
+  it("can send again once the undo window has been cancelled", async () => {
+    const { getByText } = render(<Composer />);
+
+    act(() => {
+      useComposerStore.getState().openComposer({ to: ["bob@example.com"] });
+    });
+    await clickSend(getByText);
+
+    const timer = useComposerStore.getState().undoSendTimer;
+    expect(timer).not.toBeNull();
+
+    // What UndoSendToast does: drop the timer, so the callback that used to
+    // be the only thing clearing the guard never runs.
+    act(() => {
+      clearTimeout(timer!);
+      useComposerStore.getState().setUndoSendTimer(null);
+      useComposerStore.getState().setUndoSendVisible(false);
+    });
+
+    // A second attempt must actually schedule a send rather than return
+    // silently on a guard nobody reset.
+    act(() => {
+      useComposerStore.getState().openComposer({ to: ["carol@example.com"] });
+    });
+    await clickSend(getByText);
+
+    expect(useComposerStore.getState().undoSendTimer).not.toBeNull();
+  });
+
+  it("can send a second mail while the first is still in its undo window", async () => {
+    const { getByText } = render(<Composer />);
+
+    act(() => {
+      useComposerStore.getState().openComposer({ to: ["bob@example.com"] });
+    });
+    await clickSend(getByText);
+    const first = useComposerStore.getState().undoSendTimer;
+
+    act(() => {
+      useComposerStore.getState().openComposer({ to: ["carol@example.com"] });
+    });
+    await clickSend(getByText);
+
+    expect(useComposerStore.getState().undoSendTimer).not.toBe(first);
+    expect(useComposerStore.getState().undoSendTimer).not.toBeNull();
+  });
+
+  it("keeps the composed mail so undo can put it back", async () => {
+    const { getByText } = render(<Composer />);
+
+    act(() => {
+      useComposerStore.getState().openComposer({
+        to: ["bob@example.com"],
+        subject: "Half-written",
+        bodyHtml: "<p>text that must not be lost</p>",
+      });
+    });
+    await clickSend(getByText);
+
+    // closeComposer has already emptied the store by now, so the snapshot is
+    // the only remaining copy of what the user wrote.
+    const pending = useComposerStore.getState().pendingSend;
+    expect(pending).not.toBeNull();
+    expect(pending!.to).toEqual(["bob@example.com"]);
+    expect(pending!.subject).toBe("Half-written");
+    expect(pending!.bodyHtml).toContain("text that must not be lost");
+  });
+});
