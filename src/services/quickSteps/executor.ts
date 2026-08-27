@@ -124,7 +124,9 @@ async function executeSingleAction(
 
     case "snooze":
       if (action.params?.snoozeDuration) {
-        const until = Date.now() + action.params.snoozeDuration;
+        // snoozeDuration is stored in milliseconds, threads.snooze_until in
+        // seconds — convert here rather than migrating the stored quick steps.
+        const until = Math.floor((Date.now() + action.params.snoozeDuration) / 1000);
         await Promise.all(threadIds.map((id) => snoozeThread(accountId, id, until)));
       }
       break;
