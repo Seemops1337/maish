@@ -12,8 +12,38 @@ export interface ComposerAttachment {
   content: string; // base64
 }
 
+/**
+ * A copy of everything the user composed, kept for the length of the undo
+ * window. handleSend closes the composer as soon as the send is scheduled, so
+ * the store has already been emptied by the time the toast is on screen — this
+ * is the only remaining copy, and without it "Undo" threw the mail away
+ * instead of handing it back.
+ */
+export interface PendingSend {
+  mode: ComposerMode;
+  to: string[];
+  cc: string[];
+  bcc: string[];
+  subject: string;
+  bodyHtml: string;
+  threadId: string | null;
+  inReplyToMessageId: string | null;
+  draftId: string | null;
+  fromEmail: string | null;
+  attachments: ComposerAttachment[];
+}
+
 export interface ComposerState {
   isOpen: boolean;
+  /**
+   * Incremented by openComposer. The editor is created once, when the app
+   * starts and the composer is still closed, so it cannot take its content
+   * from the initial state; it has to be filled when a compose session
+   * begins. isOpen alone does not mark that, because opening a composer that
+   * is already open — a reply while a draft is up, a mailto: deep link —
+   * leaves it true throughout.
+   */
+  session: number;
   mode: ComposerMode;
   to: string[];
   cc: string[];
@@ -26,6 +56,7 @@ export interface ComposerState {
   draftId: string | null;
   undoSendTimer: ReturnType<typeof setTimeout> | null;
   undoSendVisible: boolean;
+  pendingSend: PendingSend | null;
   attachments: ComposerAttachment[];
   lastSavedAt: number | null;
   isSaving: boolean;
@@ -44,8 +75,11 @@ export interface ComposerState {
     threadId?: string | null;
     inReplyToMessageId?: string | null;
     draftId?: string | null;
+    fromEmail?: string | null;
+    attachments?: ComposerAttachment[];
   }) => void;
   closeComposer: () => void;
+  setPendingSend: (pending: PendingSend | null) => void;
   setTo: (to: string[]) => void;
   setCc: (cc: string[]) => void;
   setBcc: (bcc: string[]) => void;
@@ -68,6 +102,7 @@ export interface ComposerState {
 
 export const useComposerStore = create<ComposerState>((set) => ({
   isOpen: false,
+  session: 0,
   mode: "new",
   to: [],
   cc: [],
@@ -80,6 +115,7 @@ export const useComposerStore = create<ComposerState>((set) => ({
   draftId: null,
   undoSendTimer: null,
   undoSendVisible: false,
+  pendingSend: null,
   attachments: [],
   viewMode: "modal",
   fromEmail: null,
@@ -89,8 +125,9 @@ export const useComposerStore = create<ComposerState>((set) => ({
   signatureId: null,
 
   openComposer: (opts) =>
-    set({
+    set((state) => ({
       isOpen: true,
+      session: state.session + 1,
       mode: opts?.mode ?? "new",
       to: opts?.to ?? [],
       cc: opts?.cc ?? [],
@@ -102,13 +139,13 @@ export const useComposerStore = create<ComposerState>((set) => ({
       showCcBcc: (opts?.cc?.length ?? 0) > 0 || (opts?.bcc?.length ?? 0) > 0,
       draftId: opts?.draftId ?? null,
       viewMode: "modal",
-      fromEmail: null,
-      attachments: [],
+      fromEmail: opts?.fromEmail ?? null,
+      attachments: opts?.attachments ?? [],
       lastSavedAt: null,
       isSaving: false,
       signatureHtml: "",
       signatureId: null,
-    }),
+    })),
   closeComposer: () =>
     set({
       isOpen: false,
@@ -130,6 +167,7 @@ export const useComposerStore = create<ComposerState>((set) => ({
       signatureHtml: "",
       signatureId: null,
     }),
+  setPendingSend: (pendingSend) => set({ pendingSend }),
   setTo: (to) => set({ to }),
   setCc: (cc) => set({ cc }),
   setBcc: (bcc) => set({ bcc }),

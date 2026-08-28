@@ -474,20 +474,115 @@ pub async fn move_messages(
             .await
             .map_err(|_| format!("UID STORE +Deleted timed out after {}s — check your server settings or network connection", IMAP_CMD_TIMEOUT.as_secs()))??;
 
-            tokio::time::timeout(IMAP_CMD_TIMEOUT, async {
-                let expunge_stream = session
-                    .expunge()
-                    .await
-                    .map_err(|e| format!("EXPUNGE failed: {e}"))?;
-                let _: Vec<_> = expunge_stream.collect().await;
-                Ok::<_, String>(())
-            })
-            .await
-            .map_err(|_| format!("EXPUNGE timed out after {}s — check your server settings or network connection", IMAP_CMD_TIMEOUT.as_secs()))??;
+            expunge_uid_set(session, uid_set).await?;
         }
     }
 
     Ok(())
+}
+
+/// Format a value as an IMAP quoted string (RFC 3501 section 4.3).
+///
+/// The quoted-specials are the double quote and the backslash, and both have
+/// to be escaped with a backslash. Interpolated raw, a password containing a
+/// quote closes the string early and the remainder is parsed as further
+/// arguments, so the command fails — or, worse, is understood as something
+/// other than what was meant.
+///
+/// CR and LF cannot appear in a quoted string at all: they end the command
+/// line, and everything after them would be read as a new command. There is
+/// no escape for them, only a literal, so a value containing one is refused
+/// here rather than sent.
+///
+/// Escaping happens in one pass. Replacing the quotes and then the
+/// backslashes, or the other way round, would escape the backslashes the
+/// first pass had just inserted.
+fn imap_quote(value: &str) -> Result<String, String> {
+    if value.contains('\r') || value.contains('\n') {
+        return Err("IMAP arguments cannot contain a line break".to_string());
+    }
+
+    let mut quoted = String::with_capacity(value.len() + 2);
+    quoted.push('"');
+    for ch in value.chars() {
+        if ch == '"' || ch == '\\' {
+            quoted.push('\\');
+        }
+        quoted.push(ch);
+    }
+    quoted.push('"');
+    Ok(quoted)
+}
+
+/// What may be expunged after messages have been flagged \Deleted.
+///
+/// A bare `EXPUNGE` (RFC 3501 section 6.4.3) removes *every* \Deleted message
+/// in the mailbox, not only the ones this client just marked. Another client
+/// may have flagged messages and deliberately not expunged them — that is the
+/// normal way IMAP clients implement a trash that can still be emptied later —
+/// and expunging them here destroys mail this app was never asked to touch.
+#[derive(Debug, PartialEq, Eq)]
+enum ExpungeMode {
+    /// `UID EXPUNGE` (RFC 4315 section 2.1) removes only the UIDs named, and
+    /// only those among them that carry \Deleted.
+    ByUid,
+    /// The server does not advertise UIDPLUS, so there is no way to limit the
+    /// command to this client's own messages. The flag is left set instead:
+    /// the message is marked for deletion and a client that can expunge it
+    /// safely, or the server's own housekeeping, will remove it. Losing
+    /// somebody else's mail is the worse outcome.
+    Nothing,
+}
+
+/// Decide how to expunge, given whether the server advertises UIDPLUS.
+fn expunge_mode(has_uidplus: bool) -> ExpungeMode {
+    if has_uidplus {
+        ExpungeMode::ByUid
+    } else {
+        ExpungeMode::Nothing
+    }
+}
+
+/// Remove the messages in `uid_set` that are flagged \Deleted, if that can be
+/// done without touching anything else in the mailbox.
+async fn expunge_uid_set(session: &mut ImapSession, uid_set: &str) -> Result<(), String> {
+    let capabilities = tokio::time::timeout(IMAP_CMD_TIMEOUT, session.capabilities())
+        .await
+        .map_err(|_| {
+            format!(
+                "CAPABILITY timed out after {}s — check your server settings or network connection",
+                IMAP_CMD_TIMEOUT.as_secs()
+            )
+        })?
+        .map_err(|e| format!("CAPABILITY failed: {e}"))?;
+
+    match expunge_mode(capabilities.has_str("UIDPLUS")) {
+        ExpungeMode::Nothing => {
+            log::warn!(
+                "Server does not advertise UIDPLUS; leaving {uid_set} flagged \\Deleted rather \
+                 than expunging the whole mailbox"
+            );
+            Ok(())
+        }
+        ExpungeMode::ByUid => {
+            tokio::time::timeout(IMAP_CMD_TIMEOUT, async {
+                let expunge_stream = session
+                    .uid_expunge(uid_set)
+                    .await
+                    .map_err(|e| format!("UID EXPUNGE failed: {e}"))?;
+                let _: Vec<_> = expunge_stream.collect().await;
+                Ok::<_, String>(())
+            })
+            .await
+            .map_err(|_| {
+                format!(
+                    "UID EXPUNGE timed out after {}s — check your server settings or network connection",
+                    IMAP_CMD_TIMEOUT.as_secs()
+                )
+            })??;
+            Ok(())
+        }
+    }
 }
 
 /// Flag messages as deleted and expunge them.
@@ -512,16 +607,7 @@ pub async fn delete_messages(
     .await
     .map_err(|_| format!("UID STORE +Deleted timed out after {}s — check your server settings or network connection", IMAP_CMD_TIMEOUT.as_secs()))??;
 
-    tokio::time::timeout(IMAP_CMD_TIMEOUT, async {
-        let expunge_stream = session
-            .expunge()
-            .await
-            .map_err(|e| format!("EXPUNGE failed: {e}"))?;
-        let _: Vec<_> = expunge_stream.collect().await;
-        Ok::<_, String>(())
-    })
-    .await
-    .map_err(|_| format!("EXPUNGE timed out after {}s — check your server settings or network connection", IMAP_CMD_TIMEOUT.as_secs()))??;
+    expunge_uid_set(session, uid_set).await?;
 
     Ok(())
 }
@@ -965,12 +1051,16 @@ pub async fn raw_fetch_messages(
         let b64 = base64::Engine::encode(&base64::engine::general_purpose::STANDARD, xoauth2.as_bytes());
         format!("a1 AUTHENTICATE XOAUTH2 {b64}\r\n")
     } else {
-        format!("a1 LOGIN \"{}\" \"{}\"\r\n", config.username, config.password)
+        format!(
+            "a1 LOGIN {} {}\r\n",
+            imap_quote(&config.username)?,
+            imap_quote(&config.password)?
+        )
     };
     raw_send_and_wait(&mut reader, login_cmd.as_bytes(), "a1").await?;
 
     // SELECT
-    let select_cmd = format!("a2 SELECT \"{folder}\"\r\n");
+    let select_cmd = format!("a2 SELECT {}\r\n", imap_quote(folder)?);
     let select_response = raw_send_and_wait(&mut reader, select_cmd.as_bytes(), "a2").await?;
 
     // Parse SELECT response for UIDVALIDITY, EXISTS, UNSEEN
@@ -1063,13 +1153,17 @@ pub async fn raw_fetch_diagnostic(
     }
 
     // LOGIN
-    let login_cmd = format!("a1 LOGIN \"{}\" \"{}\"\r\n", config.username, config.password);
+    let login_cmd = format!(
+        "a1 LOGIN {} {}\r\n",
+        imap_quote(&config.username)?,
+        imap_quote(&config.password)?
+    );
     stream.write_all(login_cmd.as_bytes()).await.map_err(|e| format!("LOGIN: {e}"))?;
     let n = stream.read(&mut buf).await.map_err(|e| format!("LOGIN read: {e}"))?;
     output.push_str(&format!("S: {}", String::from_utf8_lossy(&buf[..n])));
 
     // SELECT
-    let select_cmd = format!("a2 SELECT \"{folder}\"\r\n");
+    let select_cmd = format!("a2 SELECT {}\r\n", imap_quote(folder)?);
     stream.write_all(select_cmd.as_bytes()).await.map_err(|e| format!("SELECT: {e}"))?;
     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
     let n = stream.read(&mut buf).await.map_err(|e| format!("SELECT read: {e}"))?;
@@ -1832,5 +1926,79 @@ fn format_address_list(addr: Option<&mail_parser::Address>) -> Option<String> {
         None
     } else {
         Some(parts.join(", "))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // A bare EXPUNGE removes every \Deleted message in the mailbox (RFC 3501
+    // section 6.4.3), not only the ones this client marked. Clients routinely
+    // flag messages and leave them unexpunged, so issuing it to delete two
+    // messages of our own can destroy mail belonging to another client's
+    // trash. UID EXPUNGE (RFC 4315 section 2.1) is limited to the UIDs named,
+    // and where it is not offered the safe answer is to expunge nothing.
+
+    #[test]
+    fn uses_uid_expunge_when_the_server_offers_uidplus() {
+        assert_eq!(expunge_mode(true), ExpungeMode::ByUid);
+    }
+
+    #[test]
+    fn expunges_nothing_without_uidplus() {
+        assert_eq!(expunge_mode(false), ExpungeMode::Nothing);
+    }
+
+    // RFC 3501 section 4.3: a quoted string is delimited by double quotes,
+    // and the quoted-specials — the double quote and the backslash — are
+    // escaped with a backslash. Neither CR nor LF is a valid character in one.
+
+    #[test]
+    fn quotes_an_ordinary_value() {
+        assert_eq!(imap_quote("simon@hochreiner.xyz").unwrap(), "\"simon@hochreiner.xyz\"");
+    }
+
+    #[test]
+    fn escapes_a_double_quote_in_a_password() {
+        // Unescaped this closes the string, and the rest of the password is
+        // read as further arguments to LOGIN.
+        assert_eq!(imap_quote("pa\"ss").unwrap(), "\"pa\\\"ss\"");
+    }
+
+    #[test]
+    fn escapes_a_backslash_in_a_password() {
+        assert_eq!(imap_quote("pa\\ss").unwrap(), "\"pa\\\\ss\"");
+    }
+
+    #[test]
+    fn escapes_a_backslash_and_a_quote_together() {
+        // Escaping the two in separate passes would escape the backslashes
+        // the other pass had just inserted.
+        assert_eq!(imap_quote("a\\\"b").unwrap(), "\"a\\\\\\\"b\"");
+    }
+
+    #[test]
+    fn refuses_a_value_containing_a_line_break() {
+        // A quoted string cannot hold one, and interpolating it would end the
+        // command line and turn the remainder into a command of its own.
+        assert!(imap_quote("pass\r\na2 DELETE INBOX").is_err());
+        assert!(imap_quote("pass\nmore").is_err());
+    }
+
+    /// Both delete_messages and the COPY fallback in move_messages used to
+    /// call the unqualified command directly. Nothing in the type system
+    /// stops that from coming back, so the source is checked for it. The
+    /// needle is assembled rather than written out, so this test does not
+    /// match itself.
+    #[test]
+    fn no_call_site_issues_an_unqualified_expunge() {
+        let source = include_str!("client.rs");
+        let bare_call = concat!(".", "expunge()");
+        assert!(
+            !source.contains(bare_call),
+            "a bare EXPUNGE removes every \\Deleted message in the mailbox, \
+             including ones another client marked; use expunge_uid_set instead"
+        );
     }
 }

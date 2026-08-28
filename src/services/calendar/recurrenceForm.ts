@@ -118,11 +118,41 @@ export function formatUntil(epochSeconds: number, style: RuleDateStyle): string 
 }
 
 /**
+ * The zone the end date picked in the dialog is a day in.
+ *
+ * A series carrying a TZID is expanded in that zone, so its own last day is
+ * the one to bound. A DTSTART written as a UTC stamp has no zone of its own —
+ * every event this app generates writes one, and so do plenty of servers — and
+ * the day the user picked was the day they were shown, which is the day in
+ * their own zone. Taking those UTC stamps literally put UNTIL at 23:59:59 UTC,
+ * and for anyone west of UTC an evening instance on the chosen day falls after
+ * that instant and was dropped from the series.
+ */
+export function untilZone(style: RuleDateStyle, viewerZone: string | null): string | null {
+  if (style.isDate) return null;
+  if (style.zone !== null && style.zone !== "UTC") return style.zone;
+  return viewerZone;
+}
+
+/** The zone the machine is in, which is the zone the dialog showed. */
+function localZone(): string | null {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * The instant a chosen end date bounds the series at. UNTIL is inclusive and
  * compares against instance start times, so a series ending "on 31 December"
- * runs to the last second of that day in its own zone.
+ * runs to the last second of that day in the zone that day belongs to.
  */
-function untilEpoch(date: string, style: RuleDateStyle): number | null {
+export function untilEpoch(
+  date: string,
+  style: RuleDateStyle,
+  viewerZone: string | null = localZone(),
+): number | null {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date.trim());
   if (!match) return null;
 
@@ -138,7 +168,7 @@ function untilEpoch(date: string, style: RuleDateStyle): number | null {
     second: style.isDate ? 0 : 59,
   };
 
-  return wallClockToEpoch(wall, style.isDate ? null : style.zone);
+  return wallClockToEpoch(wall, untilZone(style, viewerZone));
 }
 
 // ---------------------------------------------------------------------------

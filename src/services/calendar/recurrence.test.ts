@@ -483,3 +483,71 @@ describe("countInstancesBefore", () => {
     expect(countInstancesBefore("BEGIN:VCALENDAR\r\nEND:VCALENDAR", 0)).toBe(0);
   });
 });
+
+/**
+ * RFC 5545 §3.3.10: "Recurrence rules may generate recurrence instances with
+ * an invalid date... Such recurrence instances MUST be ignored and MUST NOT be
+ * counted as part of the recurrence set." The monthly expansion already skips
+ * a 31st in a short month; the yearly one has the same case in the leap day.
+ */
+const LEAP_DAY_YEARLY = [
+  "BEGIN:VCALENDAR",
+  "VERSION:2.0",
+  "BEGIN:VEVENT",
+  "UID:leap-day@test",
+  "DTSTART:20240229T090000Z",
+  "DTEND:20240229T100000Z",
+  "RRULE:FREQ=YEARLY",
+  "SUMMARY:Leap day only",
+  "END:VEVENT",
+  "END:VCALENDAR",
+].join("\r\n");
+
+describe("expandOccurrences — a yearly series on 29 February", () => {
+  it("produces no instance in a common year", () => {
+    const occurrences = expandOccurrences(
+      LEAP_DAY_YEARLY,
+      ts("2025-01-01T00:00:00Z"),
+      ts("2026-01-01T00:00:00Z"),
+    );
+
+    expect(occurrences).toEqual([]);
+  });
+
+  it("does not move the instance to 1 March", () => {
+    const occurrences = expandOccurrences(
+      LEAP_DAY_YEARLY,
+      ts("2025-02-25T00:00:00Z"),
+      ts("2025-03-05T00:00:00Z"),
+    );
+
+    expect(occurrences.map((o) => o.startTime)).not.toContain(
+      ts("2025-03-01T09:00:00Z"),
+    );
+  });
+
+  it("still produces the instance in a leap year", () => {
+    const occurrences = expandOccurrences(
+      LEAP_DAY_YEARLY,
+      ts("2028-01-01T00:00:00Z"),
+      ts("2029-01-01T00:00:00Z"),
+    );
+
+    expect(occurrences.map((o) => o.startTime)).toEqual([
+      ts("2028-02-29T09:00:00Z"),
+    ]);
+  });
+
+  it("skips the common years between two leap years", () => {
+    const occurrences = expandOccurrences(
+      LEAP_DAY_YEARLY,
+      ts("2024-01-01T00:00:00Z"),
+      ts("2029-01-01T00:00:00Z"),
+    );
+
+    expect(occurrences.map((o) => o.startTime)).toEqual([
+      ts("2024-02-29T09:00:00Z"),
+      ts("2028-02-29T09:00:00Z"),
+    ]);
+  });
+});

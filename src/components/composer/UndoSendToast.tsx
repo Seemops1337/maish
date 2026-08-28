@@ -5,8 +5,15 @@ import { useComposerStore } from "@/stores/composerStore";
 const UNDO_DELAY_SECONDS = 5;
 
 export function UndoSendToast() {
-  const { undoSendVisible, undoSendTimer, setUndoSendTimer, setUndoSendVisible } =
-    useComposerStore();
+  const {
+    undoSendVisible,
+    undoSendTimer,
+    pendingSend,
+    setUndoSendTimer,
+    setUndoSendVisible,
+    setPendingSend,
+    openComposer,
+  } = useComposerStore();
   const toastRef = useRef<HTMLDivElement>(null);
 
   const handleUndo = () => {
@@ -15,6 +22,26 @@ export function UndoSendToast() {
       setUndoSendTimer(null);
     }
     setUndoSendVisible(false);
+
+    // Cancelling a send should give the mail back, not throw it away.
+    // handleSend closed the composer as soon as the timer was scheduled, so
+    // this snapshot is the only copy of what was written.
+    if (pendingSend) {
+      openComposer({
+        mode: pendingSend.mode,
+        to: pendingSend.to,
+        cc: pendingSend.cc,
+        bcc: pendingSend.bcc,
+        subject: pendingSend.subject,
+        bodyHtml: pendingSend.bodyHtml,
+        threadId: pendingSend.threadId,
+        inReplyToMessageId: pendingSend.inReplyToMessageId,
+        draftId: pendingSend.draftId,
+        fromEmail: pendingSend.fromEmail,
+        attachments: pendingSend.attachments,
+      });
+      setPendingSend(null);
+    }
   };
 
   return (

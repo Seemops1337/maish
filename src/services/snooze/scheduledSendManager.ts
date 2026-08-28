@@ -2,7 +2,7 @@ import {
   getPendingScheduledEmails,
   updateScheduledEmailStatus,
 } from "../db/scheduledEmails";
-import { getGmailClient } from "../gmail/tokenManager";
+import { getEmailProvider } from "../email/providerFactory";
 import { buildRawEmail, type EmailAttachment } from "@/utils/emailBuilder";
 import { getAccount } from "../db/accounts";
 import { createBackgroundChecker } from "../backgroundCheckers";
@@ -24,7 +24,12 @@ async function checkScheduledEmails(): Promise<void> {
       // Mark as "sending" BEFORE attempting send to prevent duplicate sends
       await updateScheduledEmailStatus(email.id, "sending");
 
-      const client = await getGmailClient(email.account_id);
+      // Whichever provider the account uses. This used to ask for a Gmail
+      // client outright, which an IMAP account has none of: the call threw,
+      // the catch below could find no 5xx or network error in the message,
+      // and the row was marked failed. The scheduled mail was dropped without
+      // ever being sent.
+      const provider = await getEmailProvider(email.account_id);
 
       // Parse attachments from JSON if present
       let attachments: EmailAttachment[] | undefined;
@@ -51,7 +56,7 @@ async function checkScheduledEmails(): Promise<void> {
         attachments,
       });
 
-      await client.sendMessage(raw, email.thread_id ?? undefined);
+      await provider.sendMessage(raw, email.thread_id ?? undefined);
       await updateScheduledEmailStatus(email.id, "sent");
     } catch (err) {
       console.error(`Failed to send scheduled email ${email.id}:`, err);
@@ -66,6 +71,9 @@ async function checkScheduledEmails(): Promise<void> {
     }
   }
 }
+
+/** Exposed for the tests; the checker itself runs on an interval. */
+export const __checkScheduledEmailsForTest = checkScheduledEmails;
 
 const scheduledSendChecker = createBackgroundChecker("ScheduledSend", checkScheduledEmails);
 export const startScheduledSendChecker = scheduledSendChecker.start;

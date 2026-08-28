@@ -120,7 +120,18 @@ describe("generateVEvent", () => {
       },
     };
 
-    expect(generateVEvent(event)).toContain("RRULE:FREQ=DAILY;UNTIL=20250731T235959Z");
+    // UNTIL covers the whole of the day that was picked, and that day is the
+    // one the dialog showed — a day in the viewer's zone, not in UTC. Its UTC
+    // rendering therefore depends on where this runs, so it is computed here
+    // rather than written out.
+    const endOfChosenDay = new Date(2025, 6, 31, 23, 59, 59);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const expected =
+      `${endOfChosenDay.getUTCFullYear()}${pad(endOfChosenDay.getUTCMonth() + 1)}` +
+      `${pad(endOfChosenDay.getUTCDate())}T${pad(endOfChosenDay.getUTCHours())}` +
+      `${pad(endOfChosenDay.getUTCMinutes())}${pad(endOfChosenDay.getUTCSeconds())}Z`;
+
+    expect(generateVEvent(event)).toContain(`RRULE:FREQ=DAILY;UNTIL=${expected}`);
   });
 
   it("includes description when provided", () => {

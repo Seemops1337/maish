@@ -36,8 +36,13 @@ export function SearchBar() {
           const hits = await searchMessages(value, activeAccountId ?? undefined, 100);
           const threadIds = new Set(hits.map((h) => h.thread_id));
           useThreadStore.getState().setSearch(value, threadIds);
-        } catch {
-          useThreadStore.getState().setSearch(value, null);
+        } catch (err) {
+          // A null filter means "no search running" to EmailList, which would
+          // draw the whole mailbox under a filled-in search box and read as a
+          // result. An empty set says the search found nothing, which is the
+          // honest answer when it could not be run.
+          console.error("[search] Query failed", err);
+          useThreadStore.getState().setSearch(value, new Set());
         }
       }, 200);
     },

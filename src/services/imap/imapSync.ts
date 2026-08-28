@@ -16,8 +16,20 @@ import {
 } from "./folderMapper";
 import type { ParsedMessage, ParsedAttachment } from "../gmail/messageParser";
 import type { SyncResult } from "../email/types";
-import { upsertMessage, updateMessageThreadIds } from "../db/messages";
-import { upsertThread, setThreadLabels, deleteThread } from "../db/threads";
+import {
+  upsertMessage,
+  updateMessageThreadIds,
+  getMessagesForThread,
+  deleteMessagesInFolder,
+} from "../db/messages";
+import {
+  upsertThread,
+  setThreadLabels,
+  deleteThread,
+  getThreadLabelIds,
+  getThreadById,
+  deleteEmptyThreads,
+} from "../db/threads";
 import { upsertAttachment } from "../db/attachments";
 import { getAccount, updateAccountSyncState } from "../db/accounts";
 import { withTransaction } from "../db/connection";
@@ -273,10 +285,12 @@ async function storeThreadsAndMessages(
           }
         }
 
-        const isRead = messages.every((m) => m.isRead);
-        const isStarred = messages.some((m) => m.isStarred);
-        const hasAttachments = messages.some((m) => m.hasAttachments);
-
+        // The thread row has to exist before its messages, because
+        // messages.thread_id is a foreign key onto it. This first write only
+        // satisfies that: it describes the batch, which on a delta sync is
+        // one reply out of a conversation that may already hold a dozen
+        // messages. The real aggregate is computed further down, once the
+        // messages are in and the whole thread can be read back.
         await upsertThread({
           id: group.threadId,
           accountId,
@@ -284,14 +298,11 @@ async function storeThreadsAndMessages(
           snippet: lastMessage.snippet,
           lastMessageAt: lastMessage.date,
           messageCount: messages.length,
-          isRead,
-          isStarred,
+          isRead: messages.every((m) => m.isRead),
+          isStarred: messages.some((m) => m.isStarred),
           isImportant: false,
-          hasAttachments,
+          hasAttachments: messages.some((m) => m.hasAttachments),
         });
-
-        const labelArray = [...allLabelIds];
-        await setThreadLabels(accountId, group.threadId, labelArray);
 
         // Store messages sequentially to avoid concurrent DB writes
         for (const parsed of messages) {
@@ -342,6 +353,47 @@ async function storeThreadsAndMessages(
 
           storedMessages.push(parsed);
         }
+
+        // Now that this batch is stored, describe the thread from every
+        // message it actually has. Delta sync fetches only what is new and
+        // threads only what it fetched, so deriving the row from the batch
+        // left a five-message conversation counted as one, unstarred because
+        // the star sits on a message that was not re-fetched, and re-titled
+        // after the reply's "Re:" subject.
+        const stored = await getMessagesForThread(accountId, group.threadId);
+        if (stored.length > 0) {
+          const oldest = stored[0]!;
+          const newest = stored[stored.length - 1]!;
+          const storedThread = await getThreadById(accountId, group.threadId);
+
+          await upsertThread({
+            id: group.threadId,
+            accountId,
+            subject: oldest.subject,
+            snippet: newest.snippet,
+            lastMessageAt: newest.date,
+            messageCount: stored.length,
+            isRead: stored.every((m) => m.is_read === 1),
+            isStarred: stored.some((m) => m.is_starred === 1),
+            isImportant: false,
+            // An attachment never leaves a message that is already stored,
+            // and the messages table does not carry the flag, so this is the
+            // batch's answer OR whatever the thread already said.
+            hasAttachments:
+              messages.some((m) => m.hasAttachments) ||
+              storedThread?.has_attachments === 1,
+          });
+        }
+
+        // Union rather than replace. The labels derived here come from the
+        // folders the batch was fetched from; a label the user applied, or
+        // one carried by a message that was not re-fetched, is in neither and
+        // was being deleted on every sync.
+        const existingLabels = await getThreadLabelIds(accountId, group.threadId);
+        for (const lid of existingLabels) {
+          allLabelIds.add(lid);
+        }
+        await setThreadLabels(accountId, group.threadId, [...allLabelIds]);
       }
     });
   }
@@ -498,6 +550,11 @@ export async function imapInitialSync(
       let folderFetchedCount = 0;
       let folderStoredCount = 0;
       let lastUid = 0;
+      // The lowest UID belonging to a chunk that was given up on. last_uid is
+      // a watermark — delta sync asks only for UIDs above it — so it may not
+      // be allowed to pass a message this run failed to fetch, even though
+      // later chunks carry higher UIDs and did succeed.
+      let lowestUnfetchedUid = Number.POSITIVE_INFINITY;
       const uidvalidity = searchResult.folder_status.uidvalidity;
 
       // Phase 2b: Fetch messages in small IPC-friendly chunks
@@ -515,10 +572,12 @@ export async function imapInitialSync(
               chunkResult = await imapFetchMessages(config, folder.raw_path, chunkUids);
             } catch (retryErr) {
               console.error(`[imapSync] Chunk retry failed in ${folder.path}:`, retryErr);
+              lowestUnfetchedUid = Math.min(lowestUnfetchedUid, ...chunkUids);
               continue;
             }
           } else {
             console.error(`[imapSync] Failed to fetch chunk ${chunkStart}-${chunkStart + chunkUids.length} in ${folder.path}:`, chunkErr);
+            lowestUnfetchedUid = Math.min(lowestUnfetchedUid, ...chunkUids);
             continue;
           }
         }
@@ -663,12 +722,25 @@ export async function imapInitialSync(
         `[imapSync] Folder ${folder.path}: ${uidsToFetch.length} UIDs, ${folderFetchedCount} fetched, ${folderStoredCount} after date filter`,
       );
 
-      // Update folder sync state
+      // Update folder sync state. Anything at or above a chunk that was
+      // abandoned is not synced, whatever later chunks managed to fetch:
+      // moving the watermark past it would leave those messages behind with
+      // no sync that ever asks for them again.
+      const syncedUpTo = Number.isFinite(lowestUnfetchedUid)
+        ? Math.min(lastUid, lowestUnfetchedUid - 1)
+        : lastUid;
+
+      if (syncedUpTo < lastUid) {
+        console.warn(
+          `[imapSync] Folder ${folder.path}: a chunk was not fetched, holding last_uid at ${syncedUpTo} instead of ${lastUid} so the gap is retried`,
+        );
+      }
+
       await upsertFolderSyncState({
         account_id: accountId,
         folder_path: folder.raw_path,
         uidvalidity,
-        last_uid: lastUid,
+        last_uid: syncedUpTo,
         modseq: null,
         last_sync_at: Math.floor(Date.now() / 1000),
       });
@@ -978,6 +1050,15 @@ export async function imapDeltaSync(accountId: string, daysBack = 365): Promise<
               `(was ${savedState.uidvalidity}, now ${deltaResult.uidvalidity}). ` +
               `Doing full resync of this folder.`,
           );
+          // Everything stored for this folder is now unreachable. A local id
+          // is `imap-{accountId}-{folder}-{uid}`, and the UIDs it was built
+          // from no longer name the messages they did: the resync writes the
+          // same mail under new ids and would leave the old rows sitting
+          // beside them as a second copy of the folder that no later sync can
+          // reach. They have to go before the new ones are written.
+          const orphanedThreadIds = await deleteMessagesInFolder(accountId, folder.raw_path);
+          await deleteEmptyThreads(accountId, orphanedThreadIds);
+
           const sinceDate = computeSinceDate(daysBack);
           const searchResult = await imapSearchFolder(config, folder.raw_path, sinceDate);
           if (searchResult.uids.length === 0) continue;

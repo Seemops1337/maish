@@ -40,11 +40,16 @@ vi.mock("./folderMapper", () => ({
 vi.mock("../db/messages", () => ({
   upsertMessage: vi.fn(),
   updateMessageThreadIds: vi.fn(),
+  getMessagesForThread: vi.fn(() => []),
+  deleteMessagesInFolder: vi.fn(() => []),
 }));
 vi.mock("../db/threads", () => ({
   upsertThread: vi.fn(),
   setThreadLabels: vi.fn(),
   deleteThread: vi.fn(),
+  getThreadLabelIds: vi.fn(() => []),
+  getThreadById: vi.fn(() => undefined),
+  deleteEmptyThreads: vi.fn(),
 }));
 vi.mock("../db/attachments", () => ({
   upsertAttachment: vi.fn(),
@@ -58,13 +63,13 @@ vi.mock("../db/connection", () => ({
 }));
 vi.mock("../db/folderSyncState", () => ({
   upsertFolderSyncState: vi.fn(),
-  getAllFolderSyncStates: vi.fn(),
+  getAllFolderSyncStates: vi.fn(() => []),
 }));
 vi.mock("../db/pendingOperations", () => ({
   getPendingOpsForResource: vi.fn(() => []),
 }));
 
-import { imapMessageToParsedMessage, imapInitialSync, formatImapDate, computeSinceDate, isConnectionError } from "./imapSync";
+import { imapMessageToParsedMessage, imapInitialSync, imapDeltaSync, formatImapDate, computeSinceDate, isConnectionError } from "./imapSync";
 import {
   createMockImapMessage,
   createMockImapAccount,
@@ -72,13 +77,14 @@ import {
   createMockImapFolderStatus,
   createMockImapFetchResult,
 } from "@/test/mocks";
-import { imapListFolders, imapSearchFolder, imapFetchMessages } from "./tauriCommands";
+import { imapListFolders, imapSearchFolder, imapFetchMessages, imapDeltaCheck } from "./tauriCommands";
 import { getAccount } from "../db/accounts";
 import { withTransaction } from "../db/connection";
-import { upsertMessage, updateMessageThreadIds } from "../db/messages";
-import { upsertThread, deleteThread } from "../db/threads";
+import { upsertMessage, updateMessageThreadIds, getMessagesForThread, deleteMessagesInFolder } from "../db/messages";
+import { upsertThread, deleteThread, setThreadLabels, getThreadLabelIds, deleteEmptyThreads } from "../db/threads";
 import { upsertAttachment } from "../db/attachments";
 import { getPendingOpsForResource } from "../db/pendingOperations";
+import { getAllFolderSyncStates, upsertFolderSyncState } from "../db/folderSyncState";
 
 describe("imapMessageToParsedMessage", () => {
   it("converts basic IMAP message to ParsedMessage format", () => {
@@ -744,5 +750,333 @@ describe("imapInitialSync — placeholder cleanup", () => {
     // Threading should merge the two messages into one thread,
     // so at least one placeholder thread (the one not chosen as thread ID) should be deleted
     expect(mockDeleteThread).toHaveBeenCalled();
+  });
+});
+
+/**
+ * Delta sync fetches only what is new and threads only what it fetched. The
+ * thread those messages belong to is usually already in the database with
+ * more messages in it, a star the user set and labels the user applied — none
+ * of which is in the batch. Recomputing the thread row and its labels from
+ * the batch alone therefore overwrote all of it.
+ */
+describe("imapDeltaSync — thread state of messages it did not fetch", () => {
+  const mockGetAccount = vi.mocked(getAccount);
+  const mockImapListFolders = vi.mocked(imapListFolders);
+  const mockImapFetchMessages = vi.mocked(imapFetchMessages);
+  const mockImapDeltaCheck = vi.mocked(imapDeltaCheck);
+  const mockGetAllFolderSyncStates = vi.mocked(getAllFolderSyncStates);
+  const mockGetMessagesForThread = vi.mocked(getMessagesForThread);
+  const mockGetThreadLabelIds = vi.mocked(getThreadLabelIds);
+  const mockUpsertThread = vi.mocked(upsertThread);
+  const mockSetThreadLabels = vi.mocked(setThreadLabels);
+
+  /** A row as getMessagesForThread returns it. */
+  function storedMessage(over: Partial<Record<string, unknown>> = {}) {
+    return {
+      id: "imap-acc-1-INBOX-1",
+      account_id: "acc-1",
+      thread_id: "t",
+      from_address: "sender@example.com",
+      from_name: "Sender",
+      to_addresses: "me@example.com",
+      cc_addresses: null,
+      bcc_addresses: null,
+      reply_to: null,
+      subject: "The original subject",
+      snippet: "older text",
+      date: 1000,
+      is_read: 1,
+      is_starred: 0,
+      body_html: null,
+      body_text: null,
+      body_cached: 1,
+      raw_size: 10,
+      internal_date: 1000,
+      list_unsubscribe: null,
+      list_unsubscribe_post: null,
+      auth_results: null,
+      message_id_header: "<m1@test>",
+      references_header: null,
+      in_reply_to_header: null,
+      imap_uid: 1,
+      imap_folder: "INBOX",
+      ...over,
+    };
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetAccount.mockResolvedValue(createMockImapAccount({ id: "acc-1" }));
+    mockGetThreadLabelIds.mockResolvedValue([]);
+    mockGetMessagesForThread.mockResolvedValue([]);
+
+    const folder = createMockImapFolder({ path: "INBOX", raw_path: "INBOX" });
+    mockImapListFolders.mockResolvedValue([folder]);
+    mockGetAllFolderSyncStates.mockResolvedValue([
+      {
+        account_id: "acc-1",
+        folder_path: "INBOX",
+        uidvalidity: 1,
+        last_uid: 4,
+        modseq: null,
+        last_sync_at: 0,
+      },
+    ] as never);
+    mockImapDeltaCheck.mockResolvedValue([
+      { folder: "INBOX", uidvalidity: 1, new_uids: [5], uidvalidity_changed: false },
+    ] as never);
+
+    // The one new message is a reply, so JWZ roots it at the original and it
+    // lands in the thread that is already stored.
+    const reply = createMockImapMessage({
+      uid: 5,
+      message_id: "<m5@test>",
+      references: "<m1@test>",
+      in_reply_to: "<m1@test>",
+      subject: "Re: The original subject",
+      is_read: false,
+      is_starred: false,
+      date: 5000,
+    });
+    mockImapFetchMessages.mockResolvedValue(createMockImapFetchResult([reply]));
+  });
+
+  it("counts the messages already stored, not only the new one", async () => {
+    mockGetMessagesForThread.mockResolvedValue([
+      storedMessage({ id: "a", date: 1000 }),
+      storedMessage({ id: "b", date: 2000 }),
+      storedMessage({ id: "c", date: 3000 }),
+      storedMessage({ id: "d", date: 4000 }),
+      storedMessage({ id: "e", date: 5000, is_read: 0, subject: "Re: The original subject" }),
+    ] as never);
+
+    await imapDeltaSync("acc-1");
+
+    const last = mockUpsertThread.mock.calls.at(-1)![0];
+    expect(last.messageCount).toBe(5);
+  });
+
+  it("keeps a star that is on a message it did not fetch", async () => {
+    mockGetMessagesForThread.mockResolvedValue([
+      storedMessage({ id: "a", date: 1000, is_starred: 1 }),
+      storedMessage({ id: "e", date: 5000, is_read: 0 }),
+    ] as never);
+
+    await imapDeltaSync("acc-1");
+
+    const last = mockUpsertThread.mock.calls.at(-1)![0];
+    expect(last.isStarred).toBe(true);
+  });
+
+  it("keeps the subject of the thread's first message", async () => {
+    mockGetMessagesForThread.mockResolvedValue([
+      storedMessage({ id: "a", date: 1000, subject: "The original subject" }),
+      storedMessage({ id: "e", date: 5000, subject: "Re: The original subject" }),
+    ] as never);
+
+    await imapDeltaSync("acc-1");
+
+    const last = mockUpsertThread.mock.calls.at(-1)![0];
+    expect(last.subject).toBe("The original subject");
+  });
+
+  it("does not mark a thread read because the messages it fetched are", async () => {
+    mockGetMessagesForThread.mockResolvedValue([
+      storedMessage({ id: "a", date: 1000, is_read: 0 }),
+      storedMessage({ id: "e", date: 5000, is_read: 1 }),
+    ] as never);
+
+    await imapDeltaSync("acc-1");
+
+    const last = mockUpsertThread.mock.calls.at(-1)![0];
+    expect(last.isRead).toBe(false);
+  });
+
+  it("keeps labels the user applied to the thread", async () => {
+    mockGetThreadLabelIds.mockResolvedValue(["INBOX", "Label_work"]);
+    mockGetMessagesForThread.mockResolvedValue([storedMessage({ id: "e", date: 5000 })] as never);
+
+    await imapDeltaSync("acc-1");
+
+    const [, , labels] = mockSetThreadLabels.mock.calls.at(-1)!;
+    expect(labels).toContain("Label_work");
+    expect(labels).toContain("INBOX");
+  });
+});
+
+/**
+ * The initial sync fetches a folder in chunks and gives a chunk up after one
+ * retry, carrying on with the next. last_uid is then written from the highest
+ * UID that came back — which, since the chunks run in ascending order, is
+ * from a chunk *after* the one that failed. Delta sync only ever asks for
+ * UIDs above last_uid, so the messages in the abandoned chunk were never
+ * fetched again: a silent hole in the mailbox that no later sync closes.
+ */
+describe("imapInitialSync — last_uid after a chunk is given up on", () => {
+  const mockGetAccount = vi.mocked(getAccount);
+  const mockImapListFolders = vi.mocked(imapListFolders);
+  const mockImapSearchFolder = vi.mocked(imapSearchFolder);
+  const mockImapFetchMessages = vi.mocked(imapFetchMessages);
+  const mockUpsertFolderSyncState = vi.mocked(upsertFolderSyncState);
+
+  // CHUNK_SIZE is 200, so this is exactly two chunks: 1..200 and 201..400.
+  const ALL_UIDS = Array.from({ length: 400 }, (_, i) => i + 1);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetAccount.mockResolvedValue(createMockImapAccount({ id: "acc-1" }));
+    mockImapListFolders.mockResolvedValue([
+      createMockImapFolder({ path: "INBOX", raw_path: "INBOX", exists: ALL_UIDS.length }),
+    ]);
+    mockImapSearchFolder.mockResolvedValue({
+      uids: ALL_UIDS,
+      folder_status: createMockImapFolderStatus({ exists: ALL_UIDS.length, uidvalidity: 7 }),
+    });
+  });
+
+  afterEach(() => {
+    mockImapSearchFolder.mockReset();
+    mockImapFetchMessages.mockReset();
+    mockImapListFolders.mockReset();
+  });
+
+  /** Serve every requested UID except those in a chunk that is made to fail. */
+  function serveExcept(failFrom: number) {
+    mockImapFetchMessages.mockImplementation(async (_c, _f, uids) => {
+      const requested = uids as number[];
+      if (requested[0] === failFrom) {
+        // Not a connection error, so it is abandoned without a retry.
+        throw new Error("Server refused the fetch");
+      }
+      return createMockImapFetchResult(
+        requested.map((uid) =>
+          createMockImapMessage({
+            uid,
+            message_id: `<m${uid}@test>`,
+            date: Math.floor(Date.now() / 1000),
+          }),
+        ),
+      );
+    });
+  }
+
+  it("does not record UIDs above an abandoned chunk as synced", async () => {
+    serveExcept(1); // the first chunk fails, the second succeeds
+
+    await imapInitialSync("acc-1");
+
+    const state = mockUpsertFolderSyncState.mock.calls.at(-1)![0];
+    // The second chunk reached UID 400, but 1..200 were never stored. Claiming
+    // 400 tells the next delta sync to start at 401 and lose them for good.
+    expect(state.last_uid).toBeLessThan(1);
+  });
+
+  it("stops at the last UID before the abandoned chunk", async () => {
+    serveExcept(201); // the first chunk succeeds, the second fails
+
+    await imapInitialSync("acc-1");
+
+    const state = mockUpsertFolderSyncState.mock.calls.at(-1)![0];
+    expect(state.last_uid).toBe(200);
+  });
+
+  it("records the highest UID when every chunk succeeds", async () => {
+    serveExcept(-1); // nothing fails
+
+    await imapInitialSync("acc-1");
+
+    const state = mockUpsertFolderSyncState.mock.calls.at(-1)![0];
+    expect(state.last_uid).toBe(400);
+  });
+});
+
+/**
+ * A message's local id is `imap-{accountId}-{folder}-{uid}`. UIDVALIDITY is
+ * the server's promise that those UIDs keep meaning the same messages; when
+ * it changes, the promise is withdrawn and the same mail comes back under a
+ * new UID. The resync then writes it under a new id, and the rows from before
+ * the change are left behind — nothing updates them and no id the server now
+ * reports will ever match them, so the folder appears twice.
+ */
+describe("imapDeltaSync — UIDVALIDITY change", () => {
+  const mockGetAccount = vi.mocked(getAccount);
+  const mockImapListFolders = vi.mocked(imapListFolders);
+  const mockImapSearchFolder = vi.mocked(imapSearchFolder);
+  const mockImapFetchMessages = vi.mocked(imapFetchMessages);
+  const mockImapDeltaCheck = vi.mocked(imapDeltaCheck);
+  const mockGetAllFolderSyncStates = vi.mocked(getAllFolderSyncStates);
+  const mockDeleteMessagesInFolder = vi.mocked(deleteMessagesInFolder);
+  const mockDeleteEmptyThreads = vi.mocked(deleteEmptyThreads);
+  const mockUpsertMessage = vi.mocked(upsertMessage);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetAccount.mockResolvedValue(createMockImapAccount({ id: "acc-1" }));
+    mockImapListFolders.mockResolvedValue([
+      createMockImapFolder({ path: "INBOX", raw_path: "INBOX" }),
+    ]);
+    mockGetAllFolderSyncStates.mockResolvedValue([
+      {
+        account_id: "acc-1",
+        folder_path: "INBOX",
+        uidvalidity: 1,
+        last_uid: 10,
+        modseq: null,
+        last_sync_at: 0,
+      },
+    ] as never);
+    // The server has renumbered the folder.
+    mockImapDeltaCheck.mockResolvedValue([
+      { folder: "INBOX", uidvalidity: 2, new_uids: [], uidvalidity_changed: true },
+    ] as never);
+    mockImapSearchFolder.mockResolvedValue({
+      uids: [1, 2],
+      folder_status: createMockImapFolderStatus({ uidvalidity: 2 }),
+    });
+    mockImapFetchMessages.mockResolvedValue(
+      createMockImapFetchResult([
+        createMockImapMessage({ uid: 1, message_id: "<a@test>", date: Math.floor(Date.now() / 1000) }),
+        createMockImapMessage({ uid: 2, message_id: "<b@test>", date: Math.floor(Date.now() / 1000) }),
+      ]),
+    );
+    mockDeleteMessagesInFolder.mockResolvedValue(["imap-thread-old"]);
+  });
+
+  afterEach(() => {
+    mockImapSearchFolder.mockReset();
+    mockImapFetchMessages.mockReset();
+    mockImapListFolders.mockReset();
+  });
+
+  it("clears the folder's stored messages before refetching it", async () => {
+    await imapDeltaSync("acc-1");
+
+    expect(mockDeleteMessagesInFolder).toHaveBeenCalledWith("acc-1", "INBOX");
+  });
+
+  it("removes the messages before the new ones are written", async () => {
+    await imapDeltaSync("acc-1");
+
+    expect(mockUpsertMessage).toHaveBeenCalled();
+    expect(mockDeleteMessagesInFolder.mock.invocationCallOrder[0]!).toBeLessThan(
+      mockUpsertMessage.mock.invocationCallOrder[0]!,
+    );
+  });
+
+  it("takes the threads that are left empty with them", async () => {
+    await imapDeltaSync("acc-1");
+
+    expect(mockDeleteEmptyThreads).toHaveBeenCalledWith("acc-1", ["imap-thread-old"]);
+  });
+
+  it("leaves the folder alone on an ordinary delta", async () => {
+    mockImapDeltaCheck.mockResolvedValue([
+      { folder: "INBOX", uidvalidity: 1, new_uids: [11], uidvalidity_changed: false },
+    ] as never);
+
+    await imapDeltaSync("acc-1");
+
+    expect(mockDeleteMessagesInFolder).not.toHaveBeenCalled();
   });
 });
