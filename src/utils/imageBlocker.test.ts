@@ -18,6 +18,17 @@ describe("stripRemoteImages", () => {
     expect(result).toContain('data-blocked-src="https://cdn.example.com/image.png"');
   });
 
+  it("blocks a protocol-relative remote image", () => {
+    // The frame's base URL decides the scheme here, so the app cannot tell
+    // from the markup alone whether the policy would let this through.
+    const html = '<img src="//tracker.example.com/pixel.gif" />';
+    const result = stripRemoteImages(html);
+    expect(result).toContain('data-blocked-src="//tracker.example.com/pixel.gif"');
+    expect(result.replace(/data-blocked-src="[^"]*"/g, "")).not.toContain(
+      "//tracker.example.com",
+    );
+  });
+
   it("preserves data: URIs", () => {
     const html = '<img src="data:image/png;base64,iVBOR..." />';
     const result = stripRemoteImages(html);
@@ -54,6 +65,17 @@ describe("stripRemoteImages", () => {
     const result = stripRemoteImages(html);
     expect(result).not.toContain("https://tracker.com/bg.png");
   });
+
+  it("strips a protocol-relative url() in inline CSS", () => {
+    const html = '<div style="background-image: url(//tracker.com/bg.png)">text</div>';
+    const result = stripRemoteImages(html);
+    expect(result).not.toContain("//tracker.com/bg.png");
+  });
+
+  it("leaves a document-relative url() alone", () => {
+    const html = '<div style="background-image: url(/local/bg.png)">text</div>';
+    expect(stripRemoteImages(html)).toBe(html);
+  });
 });
 
 describe("restoreRemoteImages", () => {
@@ -62,6 +84,13 @@ describe("restoreRemoteImages", () => {
     const blocked = stripRemoteImages(original);
     const restored = restoreRemoteImages(blocked);
     expect(restored).toContain('src="https://cdn.example.com/image.png"');
+    expect(restored).not.toContain("data-blocked-src");
+  });
+
+  it("restores a blocked protocol-relative image", () => {
+    const original = '<img src="//cdn.example.com/image.png" alt="photo" />';
+    const restored = restoreRemoteImages(stripRemoteImages(original));
+    expect(restored).toContain('src="//cdn.example.com/image.png"');
     expect(restored).not.toContain("data-blocked-src");
   });
 
@@ -75,6 +104,11 @@ describe("restoreRemoteImages", () => {
 describe("hasBlockedImages", () => {
   it("returns true when blocked images exist", () => {
     const html = '<img data-blocked-src="https://cdn.example.com/img.png" src="" />';
+    expect(hasBlockedImages(html)).toBe(true);
+  });
+
+  it("returns true for a blocked protocol-relative image", () => {
+    const html = '<img data-blocked-src="//cdn.example.com/img.png" src="" />';
     expect(hasBlockedImages(html)).toBe(true);
   });
 
