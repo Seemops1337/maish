@@ -1,5 +1,25 @@
-import { describe, it, expect } from "vitest";
-import { MIGRATIONS, splitStatements } from "./migrations";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
+// The pooled handle tauri-plugin-sql hands out, and the dedicated connection
+// behind the db_tx_* commands. Both are recorded so a test can tell which of
+// the two a statement went to.
+const { pooledExecute, pooledSelect, invoke } = vi.hoisted(() => ({
+  pooledExecute: vi.fn(),
+  pooledSelect: vi.fn(),
+  invoke: vi.fn(),
+}));
+
+vi.mock("@tauri-apps/plugin-sql", () => ({
+  default: {
+    load: vi.fn(() => Promise.resolve({ execute: pooledExecute, select: pooledSelect })),
+  },
+}));
+
+vi.mock("@tauri-apps/api/core", () => ({
+  invoke: (...args: unknown[]) => invoke(...args),
+}));
+
+import { MIGRATIONS, runMigrations, splitStatements } from "./migrations";
 
 describe("splitStatements", () => {
   it("splits simple statements", () => {
@@ -118,6 +138,131 @@ describe("the migrations themselves", () => {
     expect(MIGRATIONS.map((m) => m.version)).toEqual(
       MIGRATIONS.map((_, index) => index + 1),
     );
+  });
+});
+
+/**
+ * tauri-plugin-sql runs every execute() on whichever pooled connection is free,
+ * so a BEGIN sent through it opens a transaction on one connection while the
+ * statements and the COMMIT land on others. The one holding BEGIN keeps the
+ * write lock, and every later write fails with SQLITE_BUSY once its timeout
+ * runs out — on a fresh database that is the first account the user adds.
+ */
+describe("runMigrations", () => {
+  /** A database on which exactly these versions have been applied. */
+  function databaseWithApplied(versions: number[]) {
+    pooledSelect.mockImplementation(async (sql: string) => {
+      if (sql.includes("FROM _migrations")) return versions.map((version) => ({ version }));
+      if (sql.includes("sqlite_master")) return [{ name: "tasks" }];
+      return [];
+    });
+  }
+
+  const allButLast = () => MIGRATIONS.slice(0, -1).map((m) => m.version);
+  const commands = () => invoke.mock.calls.map(([command]) => command as string);
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    pooledExecute.mockResolvedValue({ rowsAffected: 0, lastInsertId: 0 });
+    invoke.mockResolvedValue(undefined);
+    databaseWithApplied([]);
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("never opens a transaction on the pooled connection", async () => {
+    await runMigrations();
+
+    const transactionControl = pooledExecute.mock.calls
+      .map(([sql]) => String(sql).trim())
+      .filter((sql) => /^(BEGIN|COMMIT|ROLLBACK|END|SAVEPOINT|RELEASE)\b/i.test(sql));
+
+    expect(transactionControl).toEqual([]);
+  });
+
+  it("applies a pending migration and records it in one dedicated transaction", async () => {
+    databaseWithApplied(allButLast());
+
+    await runMigrations();
+
+    const sent = commands();
+    expect(sent[0]).toBe("db_tx_begin");
+    expect(sent[sent.length - 1]).toBe("db_tx_commit");
+    expect(sent.filter((command) => command === "db_tx_begin")).toHaveLength(1);
+
+    // The migration's own statements, then the row that marks it applied. If
+    // the record were written outside the transaction, a crash between the two
+    // would leave a migration that is applied but runs again.
+    const statements = sent.slice(1, -1);
+    expect(statements.length).toBeGreaterThan(1);
+    expect(new Set(statements)).toEqual(new Set(["db_tx_execute"]));
+
+    const pending = MIGRATIONS[MIGRATIONS.length - 1]!;
+    const [, record] = invoke.mock.calls[invoke.mock.calls.length - 2]!;
+    expect(record.sql).toContain("INTO _migrations");
+    expect(record.params).toEqual([pending.version, pending.description]);
+  });
+
+  it("rolls back and rethrows when a statement fails", async () => {
+    databaseWithApplied(allButLast());
+    // invoke() rejects with the string the Rust command returned, not an Error.
+    invoke.mockImplementation(async (command: string) => {
+      if (command === "db_tx_execute") {
+        throw 'db_tx: execute failed: error returned from database: (code: 1) near "TABEL": syntax error';
+      }
+    });
+
+    await expect(runMigrations()).rejects.toMatch(/syntax error/);
+
+    expect(commands()).toEqual(["db_tx_begin", "db_tx_execute", "db_tx_rollback"]);
+  });
+
+  it("carries on past a column an earlier, interrupted run already added", async () => {
+    databaseWithApplied(allButLast());
+    let failed = false;
+    invoke.mockImplementation(async (command: string) => {
+      if (command === "db_tx_execute" && !failed) {
+        failed = true;
+        throw "db_tx: execute failed: error returned from database: (code: 1) duplicate column name: rrule";
+      }
+    });
+
+    await runMigrations();
+
+    const sent = commands();
+    expect(sent).not.toContain("db_tx_rollback");
+    expect(sent[sent.length - 1]).toBe("db_tx_commit");
+  });
+
+  it("applies a migration once when two callers start together", async () => {
+    // React's StrictMode runs the startup effect twice in a development build.
+    // Both callers read _migrations before either has written to it, so a
+    // second run repeats what the first committed and fails on the first
+    // statement that is not idempotent.
+    databaseWithApplied(allButLast());
+
+    await Promise.all([runMigrations(), runMigrations()]);
+
+    expect(commands().filter((command) => command === "db_tx_begin")).toHaveLength(1);
+  });
+
+  it("starts over on the next call after a run that failed", async () => {
+    databaseWithApplied(allButLast());
+    invoke.mockImplementation(async (command: string) => {
+      if (command === "db_tx_execute") throw "db_tx: execute failed: disk I/O error";
+    });
+    await expect(runMigrations()).rejects.toMatch(/disk I\/O error/);
+
+    invoke.mockReset();
+    invoke.mockResolvedValue(undefined);
+    await runMigrations();
+
+    const sent = commands();
+    expect(sent[sent.length - 1]).toBe("db_tx_commit");
   });
 });
 
