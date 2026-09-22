@@ -292,6 +292,19 @@ Modifications made in this fork, as required by section 4(b) of the License:
   "//host/path" as remote, which it had ignored: with the policy narrow such an
   image could not load anyway, and with it widened the frame's base URL would
   have decided.
+- src/services/db/migrations.ts — each migration runs in a transaction on the
+  dedicated SQLite connection, and callers that start together share one run.
+  runMigrations() still sent BEGIN, the statements and COMMIT through the
+  plugin's pooled handle, the one place the move to a dedicated connection had
+  left out. That holds only while a single pooled connection is in use. In a
+  development build React's StrictMode runs the startup effect twice, the two
+  runs spread over several connections, and a fresh database ended in one of
+  three states: a connection left holding the write lock, so that every later
+  write failed with SQLITE_BUSY and the first account could not be saved; one
+  run aborted by that lock; or both aborted with part of the schema missing.
+  Sharing the run is needed as well as moving it, because a second run repeats
+  the migrations the first has committed and fails on the first statement that
+  is not idempotent.
 - Application identity renamed from Velo (com.velomail.app) to Maish
   (xyz.hochreiner.maish), including packaging metadata, the encryption key file
   name and the update endpoint.

@@ -1,4 +1,4 @@
-import { getDb } from "./connection";
+import { getDb, withTransaction } from "./connection";
 
 export const MIGRATIONS = [
   {
@@ -1001,7 +1001,23 @@ function skipToEndOf(sql: string, start: number): number {
   return start;
 }
 
-export async function runMigrations(): Promise<void> {
+let running: Promise<void> | null = null;
+
+/**
+ * Bring the schema up to date. A caller that arrives while a run is under way
+ * shares it instead of starting its own: React's StrictMode runs the startup
+ * effect twice in a development build, both runs read _migrations before
+ * either has written to it, and the second then repeats what the first
+ * committed and fails on the first statement that is not idempotent.
+ */
+export function runMigrations(): Promise<void> {
+  running ??= applyMigrations().finally(() => {
+    running = null;
+  });
+  return running;
+}
+
+async function applyMigrations(): Promise<void> {
   const db = await getDb();
 
   // Ensure migrations table exists
@@ -1043,12 +1059,14 @@ export async function runMigrations(): Promise<void> {
     // Split SQL into individual statements, respecting BEGIN...END blocks
     const statements = splitStatements(migration.sql);
 
-    // Use a transaction so migrations are all-or-nothing
-    await db.execute("BEGIN");
-    try {
+    // Use a transaction so migrations are all-or-nothing. It has to be the
+    // dedicated connection: a BEGIN sent through the pooled handle opens the
+    // transaction on one connection while the statements and the COMMIT land
+    // on others, and the one left holding BEGIN blocks every later write.
+    await withTransaction(async (tx) => {
       for (const statement of statements) {
         try {
-          await db.execute(statement);
+          await tx.execute(statement);
         } catch (err) {
           // Tolerate "duplicate column" errors from ALTER TABLE ADD COLUMN
           // in case a migration was partially applied previously
@@ -1061,15 +1079,11 @@ export async function runMigrations(): Promise<void> {
         }
       }
 
-      await db.execute(
+      await tx.execute(
         "INSERT OR IGNORE INTO _migrations (version, description) VALUES ($1, $2)",
         [migration.version, migration.description],
       );
-      await db.execute("COMMIT");
-    } catch (err) {
-      await db.execute("ROLLBACK").catch(() => {});
-      throw err;
-    }
+    });
   }
 
   console.log("All migrations applied.");

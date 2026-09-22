@@ -113,6 +113,25 @@ it('does something', () => {
 });
 ```
 
+### Startup races
+
+`main.tsx` renders under `<StrictMode>`, so in a development build (`tauri dev`)
+the `init()` effect in `App.tsx` starts twice at the same moment and everything
+in it runs concurrently with itself. `runMigrations()` shares one run between
+concurrent callers for that reason. A release build starts it once, so a
+startup race does not reproduce there.
+
+To reproduce one without the dev server:
+
+```bash
+NODE_ENV=development npm run tauri build -- --no-bundle
+```
+
+This gives a development React build. To run it beside a live session without
+touching real data, add `--config '{"identifier":"xyz.hochreiner.maish.verify"}'`
+and start it with a throwaway `HOME`. The identifier matters as well as `HOME`:
+the single-instance socket is `/tmp/<identifier>_si.sock` whatever `HOME` says.
+
 ## Building
 
 ```bash

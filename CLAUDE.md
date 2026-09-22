@@ -87,6 +87,7 @@ Stalwart server.
 - **Tauri Emitter trait**: Must `use tauri::Emitter;` to call `.emit()` on windows
 - **Tauri capabilities**: Any new plugin needs explicit permissions added to `src-tauri/capabilities/default.json`. Windows allow `"main"`, `"splashscreen"`, and `"thread-*"` wildcard
 - **Single instance**: `tauri-plugin-single-instance` must be first plugin registered. Forwards args for deep linking
+- **StrictMode runs the startup effect twice in a development build**: `init()` in `App.tsx` runs concurrently with itself under `tauri dev`, never in a release build. How to reproduce startup races: `docs/development.md` → Startup races
 - **Minimize-to-tray**: Use `.on_window_event()` on the Builder, not `window.on_window_event()`
 - **IMAP message IDs**: Format is `imap-{accountId}-{folder}-{uid}` — not the RFC Message-ID header
 - **IMAP UIDVALIDITY**: If UIDVALIDITY changes on a folder, all cached UIDs are invalid — triggers full resync of that folder
