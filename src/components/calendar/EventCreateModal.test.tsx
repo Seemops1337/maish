@@ -77,8 +77,22 @@ describe("EventCreateModal", () => {
 
   it("moves the end along when the start is pushed past it", () => {
     // Without this the range would run backwards and the dialog could only
-    // refuse to save. The start alone is set, so the end has to follow.
-    expect(submit({ allDay: true, start: "2026-09-20" })).toMatchObject({
+    // refuse to save. The end is set explicitly first: the dialog's default
+    // end is derived from the clock, so relying on it makes the outcome
+    // depend on whether today lies before or after the chosen start.
+    const { onCreate } = renderModal();
+
+    fireEvent.change(screen.getByLabelText(/title/i), { target: { value: "Event" } });
+    fireEvent.click(screen.getByLabelText(/all day/i));
+    fireEvent.change(screen.getByLabelText(/^start$/i), { target: { value: "2026-09-10" } });
+    fireEvent.change(screen.getByLabelText(/^end$/i), { target: { value: "2026-09-12" } });
+    fireEvent.change(screen.getByLabelText(/^start$/i), { target: { value: "2026-09-20" } });
+    // Checked on the field itself: on submit a backwards range collapses to
+    // one day anyway, so the payload alone cannot tell whether the end moved.
+    expect(screen.getByLabelText(/^end$/i)).toHaveValue("2026-09-20");
+    fireEvent.click(screen.getByRole("button", { name: /create/i }));
+
+    expect(created(onCreate)).toMatchObject({
       startTime: "2026-09-20T00:00",
       endTime: "2026-09-21T00:00",
     });
