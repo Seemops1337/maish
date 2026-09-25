@@ -58,7 +58,7 @@ export function HelpTooltip({ contextId, size = 14 }: HelpTooltipProps) {
             ref={popoverRef}
             onMouseEnter={show}
             onMouseLeave={hide}
-            className="fixed z-[9999] w-64 p-3 rounded-lg bg-bg-primary border border-border-primary shadow-lg text-sm animate-in fade-in duration-150"
+            className="fixed z-[9999] w-64 p-3 rounded-md bg-bg-primary border border-border-primary shadow-lg text-sm animate-in fade-in duration-150"
             style={{
               top: rect.bottom + 6,
               left: Math.max(8, rect.left - 100),
@@ -68,7 +68,7 @@ export function HelpTooltip({ contextId, size = 14 }: HelpTooltipProps) {
             <p className="text-text-secondary text-xs leading-relaxed">{tip.body}</p>
             <button
               onClick={handleLearnMore}
-              className="mt-2 text-xs text-accent hover:text-accent-hover transition-colors"
+              className="mt-2 text-xs font-medium text-text-primary underline underline-offset-2 decoration-border-primary hover:decoration-text-primary transition-colors"
             >
               Learn more
             </button>

@@ -111,7 +111,7 @@ export function ContactDetail({ contact, editable, onChanged, onDeleted }: Conta
 
   if (editing) {
     return (
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
+      <div className="flex-1 overflow-y-auto bg-bg-primary p-6 space-y-4">
         <TextField
           label="Name"
           value={displayName}
@@ -148,7 +148,7 @@ export function ContactDetail({ contact, editable, onChanged, onDeleted }: Conta
         )}
 
         <div>
-          <label htmlFor="contact-note" className="text-sm text-text-secondary block mb-1.5">
+          <label htmlFor="contact-note" className="label-mono block mb-1.5">
             Note
           </label>
           <textarea
@@ -156,7 +156,7 @@ export function ContactDetail({ contact, editable, onChanged, onDeleted }: Conta
             value={note}
             onChange={(e) => setNote(e.target.value)}
             rows={4}
-            className="w-full px-3 py-1.5 text-sm bg-bg-tertiary border border-border-primary rounded text-text-primary outline-none focus:border-accent resize-y"
+            className="w-full px-3 py-2 text-sm bg-bg-primary border border-border-primary rounded-md text-text-primary placeholder:text-text-tertiary outline-none focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10 resize-y"
           />
         </div>
 
@@ -179,22 +179,22 @@ export function ContactDetail({ contact, editable, onChanged, onDeleted }: Conta
   }
 
   return (
-    <div className="flex-1 overflow-y-auto p-6">
+    <div className="flex-1 overflow-y-auto bg-bg-primary p-6">
       <div className="flex items-start gap-4">
         {contact.avatar_url ? (
           <img
             src={contact.avatar_url}
             alt=""
-            className="w-16 h-16 rounded-full object-cover"
+            className="w-14 h-14 rounded-full object-cover border border-border-primary"
           />
         ) : (
-          <div className="w-16 h-16 rounded-full bg-accent/10 text-accent flex items-center justify-center text-lg font-medium">
+          <div className="w-14 h-14 rounded-full bg-bg-tertiary text-text-secondary flex items-center justify-center font-mono text-base font-medium">
             {initials}
           </div>
         )}
 
         <div className="flex-1 min-w-0">
-          <h2 className="text-lg font-medium text-text-primary truncate">
+          <h2 className="text-lg font-medium tracking-tight text-text-primary truncate">
             {contact.display_name ?? contact.email ?? "Unnamed contact"}
           </h2>
           {(contact.job_title || contact.organization) && (
@@ -202,7 +202,7 @@ export function ContactDetail({ contact, editable, onChanged, onDeleted }: Conta
               {[contact.job_title, contact.organization].filter(Boolean).join(" · ")}
             </p>
           )}
-          <p className="text-xs text-text-tertiary mt-1">
+          <p className="font-mono text-xs text-text-tertiary mt-1">
             {isSynced ? "Synced from an address book" : "Collected from your mail"}
           </p>
         </div>
@@ -234,7 +234,7 @@ export function ContactDetail({ contact, editable, onChanged, onDeleted }: Conta
 
       {error && <p className="text-xs text-danger mt-3">{error}</p>}
 
-      <div className="mt-6 space-y-4">
+      <div className="mt-6 space-y-4 border-t border-border-primary pt-5">
         <Field icon={Mail} label="Email" values={isSynced ? readList(contact.dav_emails) : contact.email ? [contact.email] : []} mailto />
         <Field icon={Phone} label="Phone" values={readList(contact.dav_phones)} />
         <Field
@@ -245,7 +245,7 @@ export function ContactDetail({ contact, editable, onChanged, onDeleted }: Conta
 
         {contact.notes && (
           <div>
-            <h3 className="text-xs font-medium text-text-tertiary uppercase tracking-wide mb-1">
+            <h3 className="label-mono mb-1">
               Note
             </h3>
             <p className="text-sm text-text-primary whitespace-pre-wrap">{contact.notes}</p>
@@ -271,7 +271,7 @@ function Field({
 
   return (
     <div>
-      <h3 className="text-xs font-medium text-text-tertiary uppercase tracking-wide mb-1">
+      <h3 className="label-mono mb-1">
         {label}
       </h3>
       <ul className="space-y-1">
@@ -279,7 +279,7 @@ function Field({
           <li key={value} className="flex items-center gap-2 text-sm text-text-primary">
             <Icon size={14} className="text-text-tertiary shrink-0" />
             {mailto ? (
-              <a href={`mailto:${value}`} className="hover:text-accent truncate">
+              <a href={`mailto:${value}`} className="truncate hover:underline underline-offset-2">
                 {value}
               </a>
             ) : (
@@ -308,7 +308,7 @@ function ListField({
 }) {
   return (
     <div>
-      <span className="text-sm text-text-secondary block mb-1.5">{label}</span>
+      <span className="label-mono block mb-1.5">{label}</span>
       <div className="space-y-2">
         {values.map((value, index) => (
           <div key={index} className="flex items-center gap-2">
@@ -320,7 +320,7 @@ function ListField({
                 next[index] = e.target.value;
                 onChange(next);
               }}
-              className="flex-1 px-3 py-1.5 text-sm bg-bg-tertiary border border-border-primary rounded text-text-primary outline-none focus:border-accent"
+              className="flex-1 px-3 h-8 text-sm bg-bg-primary border border-border-primary rounded-md text-text-primary placeholder:text-text-tertiary outline-none focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10"
             />
             <Button
               variant="ghost"

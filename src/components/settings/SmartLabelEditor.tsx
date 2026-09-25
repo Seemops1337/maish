@@ -149,7 +149,7 @@ export function SmartLabelEditor() {
         <button
           onClick={handleBackfill}
           disabled={backfilling}
-          className="text-xs text-accent hover:text-accent-hover disabled:opacity-50 flex items-center gap-1.5"
+          className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-border-primary bg-bg-primary text-xs text-text-primary hover:bg-bg-hover transition-colors disabled:opacity-50"
         >
           {backfilling && <Loader2 size={12} className="animate-spin" />}
           {backfilling ? "Applying to existing emails..." : "Apply to existing emails"}
@@ -160,63 +160,67 @@ export function SmartLabelEditor() {
         <div className="text-xs text-text-tertiary">{backfillResult}</div>
       )}
 
-      {rules.map((rule) => (
-        <div
-          key={rule.id}
-          className="flex items-center justify-between py-2 px-3 bg-bg-secondary rounded-md"
-        >
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium text-text-primary flex items-center gap-2">
-              {getLabelName(rule.label_id)}
-              {rule.is_enabled !== 1 && (
-                <span className="text-[0.625rem] bg-bg-tertiary text-text-tertiary px-1.5 py-0.5 rounded">
-                  Disabled
-                </span>
-              )}
+      {rules.length > 0 && (
+        <div className="space-y-0.5">
+          {rules.map((rule) => (
+            <div
+              key={rule.id}
+              className="group flex items-center justify-between gap-3 -mx-2 px-2 py-1.5 rounded-md hover:bg-bg-hover"
+            >
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-text-primary flex items-center gap-2">
+                  {getLabelName(rule.label_id)}
+                  {rule.is_enabled !== 1 && (
+                    <span className="rounded-full border border-border-primary px-1.5 font-mono text-[10px] leading-4 text-text-tertiary">
+                      Disabled
+                    </span>
+                  )}
+                </div>
+                <div className="text-xs text-text-tertiary truncate">
+                  {rule.ai_description}
+                </div>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => handleToggleEnabled(rule)}
+                  className={`relative inline-flex h-4 w-7 shrink-0 items-center rounded-full border transition-colors ${
+                    rule.is_enabled === 1 ? "bg-accent border-accent" : "bg-bg-tertiary border-border-primary"
+                  }`}
+                  title={rule.is_enabled === 1 ? "Disable" : "Enable"}
+                >
+                  <span
+                    className={`h-3 w-3 rounded-full bg-bg-primary shadow-sm transition-transform ${
+                      rule.is_enabled === 1 ? "translate-x-3" : "translate-x-0.5"
+                    }`}
+                  />
+                </button>
+                <button
+                  onClick={() => handleEdit(rule)}
+                  className="p-1 rounded-md text-text-tertiary hover:text-text-primary hover:bg-bg-hover"
+                >
+                  <Pencil size={14} />
+                </button>
+                <button
+                  onClick={() => handleDelete(rule.id)}
+                  className="p-1 rounded-md text-text-tertiary hover:text-danger hover:bg-bg-hover"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
             </div>
-            <div className="text-xs text-text-tertiary truncate">
-              {rule.ai_description}
-            </div>
-          </div>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => handleToggleEnabled(rule)}
-              className={`w-8 h-4 rounded-full transition-colors relative ${
-                rule.is_enabled === 1 ? "bg-accent" : "bg-bg-tertiary"
-              }`}
-              title={rule.is_enabled === 1 ? "Disable" : "Enable"}
-            >
-              <span
-                className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform shadow ${
-                  rule.is_enabled === 1 ? "translate-x-4" : ""
-                }`}
-              />
-            </button>
-            <button
-              onClick={() => handleEdit(rule)}
-              className="p-1 text-text-tertiary hover:text-text-primary"
-            >
-              <Pencil size={13} />
-            </button>
-            <button
-              onClick={() => handleDelete(rule.id)}
-              className="p-1 text-text-tertiary hover:text-danger"
-            >
-              <Trash2 size={13} />
-            </button>
-          </div>
+          ))}
         </div>
-      ))}
+      )}
 
       {showForm ? (
-        <div className="border border-border-primary rounded-md p-3 space-y-3">
+        <div className="rounded-md border border-border-primary bg-bg-secondary p-3 space-y-3">
           {labels.length > 0 ? (
             <div>
-              <div className="text-xs font-medium text-text-secondary mb-1.5">Label</div>
+              <div className="label-mono mb-1.5">Label</div>
               <select
                 value={labelId}
                 onChange={(e) => setLabelId(e.target.value)}
-                className="w-full bg-bg-tertiary text-text-primary text-xs px-2 py-1.5 rounded border border-border-primary"
+                className="w-full h-8 bg-bg-primary text-text-primary text-sm px-2.5 rounded-md border border-border-primary outline-none focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10"
               >
                 <option value="">Select a label...</option>
                 {labels.map((l) => (
@@ -231,20 +235,20 @@ export function SmartLabelEditor() {
           )}
 
           <div>
-            <div className="text-xs font-medium text-text-secondary mb-1.5">AI Description</div>
+            <div className="label-mono mb-1.5">AI Description</div>
             <textarea
               value={aiDescription}
               onChange={(e) => setAiDescription(e.target.value)}
               placeholder="e.g., Job applications and career opportunities"
               rows={2}
-              className="w-full bg-bg-tertiary text-text-primary text-xs px-2 py-1.5 rounded border border-border-primary resize-none placeholder:text-text-tertiary"
+              className="w-full px-3 py-2 bg-bg-primary border border-border-primary rounded-md text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10 resize-none"
             />
           </div>
 
           <div>
             <button
               onClick={() => setShowCriteria(!showCriteria)}
-              className="flex items-center gap-1 text-xs text-text-secondary hover:text-text-primary"
+              className="flex items-center gap-1 text-xs text-text-secondary hover:text-text-primary transition-colors"
             >
               {showCriteria ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
               Optional filter criteria
@@ -281,7 +285,7 @@ export function SmartLabelEditor() {
                     type="checkbox"
                     checked={criteriaHasAttachment}
                     onChange={(e) => setCriteriaHasAttachment(e.target.checked)}
-                    className="rounded"
+                    className="accent-accent"
                   />
                   Has attachment
                 </label>
@@ -293,13 +297,13 @@ export function SmartLabelEditor() {
             <button
               onClick={handleSave}
               disabled={!labelId || !aiDescription.trim()}
-              className="px-3 py-1.5 text-xs font-medium text-white bg-accent hover:bg-accent-hover rounded-md transition-colors disabled:opacity-50"
+              className="h-8 px-3 rounded-md text-sm font-medium bg-accent text-on-accent hover:bg-accent-hover transition-colors disabled:opacity-50"
             >
               {editingId ? "Update" : "Save"}
             </button>
             <button
               onClick={resetForm}
-              className="px-3 py-1.5 text-xs text-text-secondary hover:text-text-primary rounded-md transition-colors"
+              className="h-8 px-3 rounded-md text-sm text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors"
             >
               Cancel
             </button>
@@ -308,7 +312,7 @@ export function SmartLabelEditor() {
       ) : (
         <button
           onClick={() => setShowForm(true)}
-          className="text-xs text-accent hover:text-accent-hover"
+          className="inline-flex items-center h-8 px-3 rounded-md border border-border-primary bg-bg-primary text-sm text-text-primary hover:bg-bg-hover transition-colors"
         >
           + Add smart label
         </button>

@@ -36,7 +36,7 @@ export function AttachmentPicker() {
   };
 
   return (
-    <div className="px-4">
+    <div className="px-4 py-1.5">
       <input
         ref={inputRef}
         type="file"
@@ -51,7 +51,7 @@ export function AttachmentPicker() {
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          className="flex items-center gap-1 text-xs text-text-tertiary hover:text-text-primary transition-colors py-1"
+          className="flex items-center gap-1.5 h-7 px-2 -ml-2 rounded-md text-xs text-text-tertiary hover:text-text-primary hover:bg-bg-hover transition-colors"
           title="Attach files"
         >
           <Paperclip size={14} />
@@ -61,17 +61,17 @@ export function AttachmentPicker() {
         {attachments.map((att) => (
           <div
             key={att.id}
-            className="flex items-center gap-1.5 bg-bg-secondary border border-border-secondary rounded-md px-2 py-1 text-xs"
+            className="flex items-center gap-1.5 h-7 pl-2 pr-1 rounded-md border border-border-primary bg-bg-secondary text-xs"
           >
             <span className="text-text-primary truncate max-w-[150px]">
               {att.filename}
             </span>
-            <span className="text-text-tertiary">
+            <span className="font-mono tabular-nums text-text-tertiary">
               {formatFileSize(att.size)}
             </span>
             <button
               onClick={() => removeAttachment(att.id)}
-              className="text-text-tertiary hover:text-text-primary"
+              className="p-0.5 rounded text-text-tertiary hover:text-text-primary hover:bg-bg-hover transition-colors"
             >
               <X size={12} />
             </button>
@@ -79,7 +79,7 @@ export function AttachmentPicker() {
         ))}
 
         {attachments.length > 0 && (
-          <span className="text-xs text-text-tertiary">
+          <span className="font-mono text-xs tabular-nums text-text-tertiary">
             {formatFileSize(totalSize)} total
           </span>
         )}

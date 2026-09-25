@@ -42,8 +42,8 @@ describe("Modal", () => {
         <p>Content</p>
       </Modal>,
     );
-    // The backdrop has the glass-backdrop class
-    const backdrop = document.querySelector(".glass-backdrop");
+    // The backdrop has the overlay-backdrop class
+    const backdrop = document.querySelector(".overlay-backdrop");
     expect(backdrop).not.toBeNull();
     fireEvent.click(backdrop!);
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -77,7 +77,7 @@ describe("Modal", () => {
         <p>Content</p>
       </Modal>,
     );
-    const panel = document.querySelector(".glass-modal");
+    const panel = document.querySelector(".surface-overlay");
     expect(panel?.className).toContain("max-w-md");
   });
 
@@ -97,7 +97,7 @@ describe("Modal", () => {
         <p>Content</p>
       </Modal>,
     );
-    const panel = document.querySelector(".glass-modal");
+    const panel = document.querySelector(".surface-overlay");
     expect(panel?.className).toContain("shadow-xl");
   });
 

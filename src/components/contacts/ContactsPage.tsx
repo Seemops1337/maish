@@ -126,12 +126,12 @@ export function ContactsPage() {
 
   return (
     <div className="flex-1 flex min-h-0">
-      <div className="w-80 shrink-0 border-r border-border-primary flex flex-col min-h-0">
-        <div className="p-3 space-y-2 border-b border-border-primary">
+      <div className="w-80 shrink-0 border-r border-border-primary bg-bg-primary flex flex-col min-h-0">
+        <div className="px-3 pt-3 pb-3 space-y-2 border-b border-border-primary">
           <div className="flex items-center justify-between">
-            <h1 className="text-sm font-medium text-text-primary flex items-center gap-2">
-              <Users size={16} />
+            <h1 className="text-lg font-medium tracking-tight text-text-primary flex items-center gap-2">
               Contacts
+              <span className="font-mono text-xs font-normal tracking-normal tabular-nums text-text-tertiary">{visible.length}</span>
             </h1>
             <div className="flex items-center gap-1">
               <Button
@@ -170,7 +170,7 @@ export function ContactsPage() {
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search contacts"
               aria-label="Search contacts"
-              className="w-full pl-8 pr-3 py-1.5 text-sm bg-bg-tertiary border border-border-primary rounded text-text-primary outline-none focus:border-accent"
+              className="w-full pl-8 pr-3 h-8 text-sm bg-bg-primary border border-border-primary rounded-md text-text-primary placeholder:text-text-tertiary outline-none focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10"
             />
           </div>
 
@@ -201,7 +201,7 @@ export function ContactsPage() {
         <div className="flex-1 overflow-y-auto">
           {visible.length === 0 ? (
             <div className="p-6">
-              <p className="text-sm text-text-tertiary text-center">
+              <p className="text-xs text-text-tertiary text-center">
                 {search ? "No contacts match your search" : "No contacts yet"}
               </p>
             </div>
@@ -210,16 +210,24 @@ export function ContactsPage() {
               <button
                 key={contact.id}
                 onClick={() => setSelectedId(contact.id)}
-                className={`w-full text-left px-3 py-2 border-b border-border-secondary transition-colors ${
-                  contact.id === selectedId ? "bg-accent/10" : "hover:bg-bg-hover"
+                className={`w-full h-12 flex items-center gap-3 text-left px-3 border-b border-border-secondary transition-colors ${
+                  contact.id === selectedId ? "bg-bg-selected" : "hover:bg-bg-hover"
                 }`}
               >
-                <div className="text-sm text-text-primary truncate">
-                  {contact.display_name ?? contact.email ?? "Unnamed contact"}
-                </div>
-                <div className="text-xs text-text-tertiary truncate">
-                  {contactSubtitle(contact)}
-                </div>
+                <span
+                  aria-hidden="true"
+                  className="w-7 h-7 shrink-0 rounded-full bg-bg-tertiary text-text-secondary flex items-center justify-center font-mono text-[10px] font-medium"
+                >
+                  {listInitials(contact)}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm text-text-primary truncate">
+                    {contact.display_name ?? contact.email ?? "Unnamed contact"}
+                  </span>
+                  <span className="block text-xs text-text-tertiary truncate">
+                    {contactSubtitle(contact)}
+                  </span>
+                </span>
               </button>
             ))
           )}
@@ -246,6 +254,16 @@ export function ContactsPage() {
   );
 }
 
+/** Up to two initials for the list avatar. */
+function listInitials(contact: DbContact): string {
+  return (contact.display_name ?? contact.email ?? "?")
+    .split(/\s+/)
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
+
 function FilterChip({
   label,
   active,
@@ -258,10 +276,10 @@ function FilterChip({
   return (
     <button
       onClick={onClick}
-      className={`px-2 py-0.5 text-xs rounded-full border transition-colors ${
+      className={`h-6 px-2 text-xs rounded-full border transition-colors ${
         active
-          ? "bg-accent/10 border-accent text-accent"
-          : "border-border-primary text-text-tertiary hover:text-text-primary"
+          ? "bg-bg-selected border-border-primary text-text-primary"
+          : "border-border-primary text-text-secondary hover:text-text-primary hover:bg-bg-hover"
       }`}
     >
       {label}

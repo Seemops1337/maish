@@ -52,24 +52,24 @@ export function TemplatePicker({ editor }: TemplatePickerProps) {
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-1 text-xs text-text-tertiary hover:text-text-secondary transition-colors"
+        className="flex items-center gap-1.5 h-7 px-2 rounded-md text-xs text-text-tertiary hover:text-text-primary hover:bg-bg-hover transition-colors"
       >
-        <FileText size={12} />
+        <FileText size={14} />
         Templates
-        <ChevronDown size={10} />
+        <ChevronDown size={12} />
       </button>
 
       {isOpen && (
-        <div className="absolute bottom-full mb-1 left-0 bg-bg-primary border border-border-primary rounded-md shadow-lg glass-modal w-56 max-h-48 overflow-y-auto z-10">
+        <div className="absolute bottom-full mb-1 left-0 bg-bg-primary border border-border-primary rounded-md shadow-lg w-56 max-h-48 overflow-y-auto z-10 p-1">
           {templates.map((tmpl) => (
             <button
               key={tmpl.id}
               onClick={() => handleSelect(tmpl)}
-              className="w-full text-left px-3 py-2 hover:bg-bg-hover text-sm transition-colors"
+              className="w-full text-left px-2 py-1.5 rounded-md hover:bg-bg-hover transition-colors"
             >
-              <div className="text-text-primary text-xs font-medium">{tmpl.name}</div>
+              <div className="text-text-primary text-[13px]">{tmpl.name}</div>
               {tmpl.subject && (
-                <div className="text-text-tertiary text-[0.625rem] truncate">{tmpl.subject}</div>
+                <div className="text-text-tertiary text-xs truncate">{tmpl.subject}</div>
               )}
             </button>
           ))}

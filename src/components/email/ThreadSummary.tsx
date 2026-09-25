@@ -65,20 +65,20 @@ export function ThreadSummary({ threadId, accountId, messages }: ThreadSummaryPr
   if (!available || messages.length < 2) return null;
 
   return (
-    <div className="mx-4 my-2 p-3 rounded-lg bg-accent/5 border border-accent/20">
+    <div className="mx-4 my-2 px-3 py-2.5 rounded-md bg-bg-secondary border border-border-primary">
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="flex items-center gap-2 w-full text-left"
+        className="flex items-center gap-1.5 w-full text-left"
       >
-        <Sparkles size={14} className="text-accent shrink-0" />
-        <span className="text-xs font-medium text-accent flex-1">AI Summary</span>
+        <Sparkles size={12} className="text-text-tertiary shrink-0" />
+        <span className="label-mono flex-1">AI Summary</span>
         {summary && (
           <span
             role="button"
             tabIndex={0}
             onClick={(e) => { e.stopPropagation(); handleRefresh(); }}
             onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); e.preventDefault(); handleRefresh(); } }}
-            className="p-0.5 text-text-tertiary hover:text-accent transition-colors cursor-pointer"
+            className="p-1 rounded-md text-text-tertiary hover:text-text-primary hover:bg-bg-hover transition-colors cursor-pointer"
             title="Refresh summary"
           >
             <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
@@ -90,11 +90,11 @@ export function ThreadSummary({ threadId, accountId, messages }: ThreadSummaryPr
         <div className="mt-2 text-sm text-text-secondary">
           {loading && !summary && (
             <div className="flex items-center gap-2 text-text-tertiary">
-              <div className="w-3 h-3 border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
-              <span className="text-xs">Generating summary...</span>
+              <div className="w-3 h-3 border-2 border-border-primary border-t-text-secondary rounded-full animate-spin" />
+              <span className="font-mono text-xs">Generating summary...</span>
             </div>
           )}
-          {summary && <p className="text-xs leading-relaxed">{summary}</p>}
+          {summary && <p className="text-[13px] leading-relaxed text-text-primary">{summary}</p>}
         </div>
       )}
     </div>

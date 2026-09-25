@@ -92,15 +92,13 @@ Key table: `docs/keyboard-shortcuts.md`.
 
 ## Styling
 
-Tailwind CSS v4 — uses `@import "tailwindcss"`, `@theme {}` for custom properties, and `@custom-variant dark` in `src/styles/globals.css`. Dark mode toggles via `<html class="dark">` which swaps CSS custom properties. Font scaling via `font-scale-{small|default|large|xlarge}` classes on `<html>`.
+Tailwind CSS v4 — uses `@import "tailwindcss"`, `@theme {}` for custom properties, and `@custom-variant dark` in `src/styles/globals.css`. Dark mode toggles via `<html class="dark">` which swaps CSS custom properties. Font scaling via `font-scale-{small|default|large|xlarge}` classes on `<html>`; `reduce-motion` on `<html>` switches off every animation and transition.
 
-**Semantic color tokens**: `bg-bg-primary/secondary/tertiary/hover/selected`, `text-text-primary/secondary/tertiary`, `border-border-primary/secondary`, `bg-accent/accent-hover/accent-light`, `bg-danger/warning/success`, `bg-sidebar-bg`, `text-sidebar-text`.
+The look is a monochrome design after Vercel's Geist system: Geist Sans for reading, Geist Mono for metadata (bundled via `@fontsource-variable/geist` and `geist-mono`), hairline borders instead of shadows, 6px radii (`--radius-lg` is overridden to 6px too). Surfaces separate by tonal value — `bg-bg-secondary` for canvas, sidebar and toolbars, `bg-bg-primary` for content — never by blur or gradients.
 
-**Glass effects**: `.glass-panel`, `.glass-modal`, `.glass-backdrop` utility classes with blur and shadow properties.
+**Semantic color tokens**: `bg-bg-primary/secondary/tertiary/hover/selected`, `text-text-primary/secondary/tertiary`, `border-border-primary/secondary`, `bg-accent/accent-hover/accent-light`, `text-on-accent`, `bg-danger/warning/success`, `bg-sidebar-bg`, `text-sidebar-text`. The accent is monochrome — near-black in light mode, near-white in dark mode — so text on `bg-accent` must use `text-on-accent`, never `text-white`. Status colors are for state only. Tailwind palette colors (`red-500`, …) are not used in components.
 
-**Color themes**: 8 accent color presets (Indigo, Rose, Emerald, Amber, Sky, Violet, Orange, Slate) defined in `src/constants/themes.ts`. Each has light & dark variants. Applied via CSS custom properties, independent of light/dark mode.
-
-**Background**: Animated gradient blobs (5 blobs with radial gradients, keyframe animations). Light mode uses blue→purple→pink→orange→cyan gradient; dark mode uses darker blues/purples.
+**Utilities**: `label-mono` (11px uppercase Geist Mono stamp for section headers and eyebrows), `tracking-display`, `.surface-overlay` + `.overlay-backdrop` for modals and floating panels. Inline metadata (dates, counts, sizes) uses `font-mono text-xs tabular-nums text-text-tertiary`.
 
 **Icons**: `lucide-react` icon library.
 

@@ -21,14 +21,21 @@ describe("Button", () => {
     render(<Button variant="primary">Primary</Button>);
     const btn = screen.getByRole("button");
     expect(btn.className).toContain("bg-accent");
-    expect(btn.className).toContain("text-white");
+    expect(btn.className).toContain("text-on-accent");
   });
 
   it("applies secondary variant classes by default", () => {
     render(<Button>Default</Button>);
     const btn = screen.getByRole("button");
-    expect(btn.className).toContain("text-text-secondary");
+    expect(btn.className).toContain("border-border-primary");
     expect(btn.className).toContain("hover:bg-bg-hover");
+  });
+
+  it("keeps icon-only secondary buttons borderless", () => {
+    render(<Button iconOnly icon={<span>X</span>} />);
+    const btn = screen.getByRole("button");
+    expect(btn.className).toContain("text-text-secondary");
+    expect(btn.className).not.toContain("border-border-primary");
   });
 
   it("applies ghost variant classes", () => {
@@ -48,13 +55,13 @@ describe("Button", () => {
     const btn = screen.getByRole("button");
     expect(btn.className).toContain("p-2");
     // Should NOT contain px- classes for non-iconOnly
-    expect(btn.className).not.toContain("px-4");
+    expect(btn.className).not.toContain("px-3.5");
   });
 
   it("applies standard sizing for non-iconOnly", () => {
     render(<Button size="md">Medium</Button>);
     const btn = screen.getByRole("button");
-    expect(btn.className).toContain("px-4");
+    expect(btn.className).toContain("px-3.5");
     expect(btn.className).toContain("text-sm");
   });
 
@@ -62,7 +69,7 @@ describe("Button", () => {
     render(<Button size="xs">Tiny</Button>);
     const btn = screen.getByRole("button");
     expect(btn.className).toContain("px-2");
-    expect(btn.className).toContain("py-1");
+    expect(btn.className).toContain("h-6");
   });
 
   it("handles disabled state", () => {

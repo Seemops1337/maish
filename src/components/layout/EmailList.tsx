@@ -485,7 +485,7 @@ export function EmailList({ width, listRef }: { width?: number; listRef?: React.
   return (
     <div
       ref={listRef}
-      className={`flex flex-col bg-bg-secondary/50 glass-panel ${
+      className={`flex flex-col bg-bg-primary ${
         readingPanePosition === "right"
           ? "min-w-[240px] shrink-0"
           : readingPanePosition === "bottom"
@@ -495,15 +495,15 @@ export function EmailList({ width, listRef }: { width?: number; listRef?: React.
       style={readingPanePosition === "right" && width ? { width } : undefined}
     >
       {/* Search */}
-      <div className="px-3 py-2 border-b border-border-secondary">
+      <div className="px-3 py-2.5 border-b border-border-primary">
         <SearchBar />
       </div>
 
       {/* Header */}
-      <div className="px-4 py-2 border-b border-border-primary flex items-center justify-between">
-        <div>
-          <h2 className="text-sm font-semibold text-text-primary capitalize flex items-center gap-1.5">
-            {isSmartFolder && <FolderSearch size={14} className="text-accent shrink-0" />}
+      <div className="px-4 py-3 border-b border-border-primary flex items-center justify-between">
+        <div className="min-w-0">
+          <h2 className="text-[15px] font-medium tracking-tight text-text-primary capitalize flex items-center gap-1.5 leading-5">
+            {isSmartFolder && <FolderSearch size={14} className="text-text-tertiary shrink-0" />}
             {isSmartFolder
               ? activeSmartFolder?.name ?? "Smart Folder"
               : activeLabel === "inbox" && inboxViewMode === "split" && activeCategory !== "All"
@@ -512,14 +512,14 @@ export function EmailList({ width, listRef }: { width?: number; listRef?: React.
                   ? activeLabel
                   : userLabels.find((l) => l.id === activeLabel)?.name ?? activeLabel}
           </h2>
-          <span className="text-xs text-text-tertiary">
+          <span className="font-mono text-[11px] tabular-nums text-text-tertiary">
             {filteredThreads.length} conversation{filteredThreads.length !== 1 ? "s" : ""}
           </span>
         </div>
         <select
           value={readFilter}
           onChange={(e) => setReadFilter(e.target.value as "all" | "read" | "unread")}
-          className="text-xs bg-bg-tertiary text-text-secondary px-2 py-1 rounded border border-border-primary"
+          className="h-7 text-xs bg-bg-primary text-text-secondary pl-2 pr-1 rounded-md border border-border-primary outline-none hover:text-text-primary focus:border-text-tertiary"
         >
           <option value="all">All</option>
           <option value="unread">Unread</option>
@@ -538,15 +538,15 @@ export function EmailList({ width, listRef }: { width?: number; listRef?: React.
 
       {/* Multi-select action bar */}
       <CSSTransition nodeRef={multiSelectBarRef} in={multiSelectCount > 0} timeout={150} classNames="slide-down" unmountOnExit>
-        <div ref={multiSelectBarRef} className="px-3 py-2 border-b border-border-primary bg-accent/5 flex items-center justify-between">
+        <div ref={multiSelectBarRef} className="px-3 py-2 border-b border-border-primary bg-bg-secondary flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-text-primary">
+            <span className="font-mono text-[11px] tabular-nums text-text-primary">
               {multiSelectCount} selected
             </span>
             {multiSelectCount < filteredThreads.length && (
               <button
                 onClick={selectAll}
-                className="text-xs text-accent hover:text-accent-hover transition-colors"
+                className="text-xs text-text-secondary underline underline-offset-2 decoration-border-primary hover:text-text-primary hover:decoration-text-tertiary transition-colors"
               >
                 Select all
               </button>
@@ -563,7 +563,7 @@ export function EmailList({ width, listRef }: { width?: number; listRef?: React.
             <button
               onClick={handleBulkDelete}
               title="Delete selected"
-              className="p-1.5 text-text-secondary hover:text-error hover:bg-bg-hover rounded transition-colors"
+              className="p-1.5 text-text-secondary hover:text-danger hover:bg-bg-hover rounded transition-colors"
             >
               <Trash2 size={14} />
             </button>
@@ -618,17 +618,17 @@ export function EmailList({ width, listRef }: { width?: number; listRef?: React.
                         return next;
                       });
                     }}
-                    className="w-full text-left px-4 py-3 border-b border-border-secondary hover:bg-bg-hover transition-colors flex items-center gap-3"
+                    className="w-full text-left px-4 py-3 border-b border-border-primary hover:bg-bg-hover transition-colors flex items-center gap-3"
                   >
-                    <div className="w-9 h-9 rounded-full bg-accent/15 flex items-center justify-center shrink-0">
-                      <Package size={16} className="text-accent" />
+                    <div className="w-8 h-8 rounded-md border border-border-primary bg-bg-secondary flex items-center justify-center shrink-0">
+                      <Package size={15} className="text-text-secondary" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-semibold text-text-primary">
+                        <span className="text-sm font-medium text-text-primary">
                           {rule.category}
                         </span>
-                        <span className="text-xs bg-accent/15 text-accent px-1.5 rounded-full">
+                        <span className="font-mono text-[10px] leading-4 tabular-nums text-text-secondary px-1.5 rounded-full border border-border-primary">
                           {summary.count}
                         </span>
                       </div>
@@ -667,7 +667,7 @@ export function EmailList({ width, listRef }: { width?: number; listRef?: React.
                   style={idx < 15 ? { animationDelay: `${idx * 30}ms` } : undefined}
                 >
                   {showDivider && (
-                    <div className="px-4 py-1.5 text-xs font-medium text-text-tertiary uppercase tracking-wider bg-bg-tertiary/50 border-b border-border-secondary">
+                    <div className="px-4 py-1.5 label-mono bg-bg-secondary border-b border-border-primary">
                       Other emails
                     </div>
                   )}
@@ -684,12 +684,12 @@ export function EmailList({ width, listRef }: { width?: number; listRef?: React.
               );
             })}
             {loadingMore && (
-              <div className="px-4 py-3 text-center text-xs text-text-tertiary">
+              <div className="px-4 py-3 text-center font-mono text-[11px] text-text-tertiary">
                 Loading more...
               </div>
             )}
             {!hasMore && threads.length > PAGE_SIZE && (
-              <div className="px-4 py-3 text-center text-xs text-text-tertiary">
+              <div className="px-4 py-3 text-center font-mono text-[11px] text-text-tertiary">
                 All conversations loaded
               </div>
             )}

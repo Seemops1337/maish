@@ -12,13 +12,13 @@ export function HelpCard({ card, isExpanded, onToggle }: HelpCardProps) {
   const Icon = card.icon;
 
   return (
-    <div className="rounded-lg border border-border-secondary bg-bg-primary/60 overflow-hidden transition-colors hover:border-border-primary">
+    <div className="rounded-md border border-border-primary bg-bg-primary overflow-hidden">
       {/* Collapsed header: icon + title + summary + chevron */}
       <button
         onClick={onToggle}
-        className="flex items-center gap-3 w-full px-4 py-3 text-left cursor-pointer"
+        className="flex items-center gap-3 w-full p-4 text-left cursor-pointer transition-colors hover:bg-bg-hover"
       >
-        <div className="w-8 h-8 rounded-md bg-accent/10 text-accent flex items-center justify-center shrink-0">
+        <div className="w-8 h-8 rounded-md border border-border-primary bg-bg-secondary text-text-secondary flex items-center justify-center shrink-0">
           <Icon size={16} />
         </div>
         <div className="flex-1 min-w-0">
@@ -40,8 +40,8 @@ export function HelpCard({ card, isExpanded, onToggle }: HelpCardProps) {
         }`}
       >
         <div className="overflow-hidden">
-          <div className="px-4 pb-4 ml-11 border-t border-border-secondary/50 pt-3 space-y-3">
-            <p className="text-xs text-text-secondary leading-relaxed">
+          <div className="px-4 pb-4 pl-15 border-t border-border-secondary pt-3 space-y-3">
+            <p className="text-[13px] text-text-secondary leading-relaxed">
               {card.description}
             </p>
 
@@ -49,10 +49,10 @@ export function HelpCard({ card, isExpanded, onToggle }: HelpCardProps) {
               <ul className="space-y-1.5">
                 {card.tips.map((tip, i) => (
                   <li key={i} className="flex items-start gap-2 text-xs text-text-secondary">
-                    <span className="text-text-tertiary mt-0.5 shrink-0">•</span>
+                    <span aria-hidden="true" className="w-1 h-1 mt-1.5 rounded-full bg-text-tertiary shrink-0" />
                     <span className="flex-1">{tip.text}</span>
                     {tip.shortcut && (
-                      <kbd className="shrink-0 px-1.5 py-0.5 text-[0.625rem] bg-bg-secondary border border-border-secondary rounded text-text-tertiary font-mono">
+                      <kbd className="shrink-0 font-mono text-[11px] leading-none px-1.5 py-1 rounded border border-border-primary bg-bg-secondary text-text-tertiary">
                         {tip.shortcut}
                       </kbd>
                     )}
@@ -67,7 +67,7 @@ export function HelpCard({ card, isExpanded, onToggle }: HelpCardProps) {
                   e.stopPropagation();
                   navigateToSettings(card.relatedSettingsTab!);
                 }}
-                className="text-xs text-accent hover:text-accent-hover transition-colors"
+                className="text-xs font-medium text-text-primary underline underline-offset-2 decoration-border-primary hover:decoration-text-primary transition-colors"
               >
                 Open in Settings &rarr;
               </button>

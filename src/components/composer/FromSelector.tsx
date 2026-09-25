@@ -14,8 +14,8 @@ export function FromSelector({ aliases, selectedEmail, onChange }: FromSelectorP
   if (aliases.length <= 1) return null;
 
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-xs text-text-tertiary w-8 shrink-0">
+    <div className="flex items-center gap-2 px-4 h-9">
+      <span className="label-mono w-16 shrink-0">
         From
       </span>
       <select
@@ -24,7 +24,7 @@ export function FromSelector({ aliases, selectedEmail, onChange }: FromSelectorP
           const alias = aliases.find((a) => a.email === e.target.value);
           if (alias) onChange(alias);
         }}
-        className="flex-1 bg-transparent text-sm text-text-primary outline-none cursor-pointer hover:bg-bg-hover rounded px-1 py-0.5 -ml-1 border-none"
+        className="flex-1 h-7 bg-transparent text-sm text-text-primary outline-none cursor-pointer hover:bg-bg-hover rounded-md px-1.5 -ml-1.5 border-none transition-colors"
       >
         {aliases.map((alias) => (
           <option key={alias.id} value={alias.email}>

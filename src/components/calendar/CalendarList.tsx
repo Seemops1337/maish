@@ -7,15 +7,15 @@ interface CalendarListProps {
 
 export function CalendarList({ calendars, onVisibilityChange }: CalendarListProps) {
   return (
-    <div className="w-52 border-r border-border-primary p-3 overflow-y-auto shrink-0">
-      <h3 className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-2">
+    <div className="w-52 border-r border-border-primary bg-bg-secondary p-3 overflow-y-auto shrink-0">
+      <h3 className="label-mono px-2 mb-2">
         Calendars
       </h3>
-      <div className="space-y-1">
+      <div className="space-y-px">
         {calendars.map((cal) => (
           <label
             key={cal.id}
-            className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-bg-hover cursor-pointer transition-colors"
+            className="flex items-center gap-2 h-8 px-2 rounded-md hover:bg-bg-hover cursor-pointer transition-colors"
           >
             <input
               type="checkbox"
@@ -41,7 +41,7 @@ export function CalendarList({ calendars, onVisibilityChange }: CalendarListProp
               {cal.display_name ?? "Calendar"}
             </span>
             {!!cal.is_primary && (
-              <span className="text-[0.6rem] text-text-tertiary ml-auto shrink-0">Primary</span>
+              <span className="font-mono text-[10px] text-text-tertiary ml-auto shrink-0">Primary</span>
             )}
           </label>
         ))}

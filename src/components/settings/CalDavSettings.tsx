@@ -85,7 +85,7 @@ export function CalDavSettings({ account, onSaved }: CalDavSettingsProps) {
       <div className="flex items-center justify-between">
         <h4 className="text-sm font-medium text-text-primary">Calendar (CalDAV)</h4>
         {isConfigured && (
-          <span className="text-xs text-success font-medium">Connected</span>
+          <span className="rounded-full border px-1.5 font-mono text-[10px] leading-4 border-success/30 text-success">Connected</span>
         )}
       </div>
       <p className="text-xs text-text-tertiary">

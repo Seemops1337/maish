@@ -232,21 +232,21 @@ export function EmailRenderer({
   return (
     <div>
       {blocked && (
-        <div className="flex items-center gap-2 px-3 py-2 mb-2 text-xs bg-bg-tertiary rounded-md border border-border-secondary">
+        <div className="flex items-center gap-2 px-3 py-2 mb-2 text-xs bg-bg-secondary rounded-md border border-border-primary">
           <ImageOff size={14} className="text-text-tertiary shrink-0" />
-          <span className="text-text-secondary">
+          <span className="text-text-secondary flex-1 min-w-0">
             Images hidden to protect your privacy.
           </span>
           <button
             onClick={handleLoadImages}
-            className="text-accent hover:text-accent-hover font-medium"
+            className="h-6 px-2 rounded-md font-medium text-text-primary border border-border-primary bg-bg-primary hover:bg-bg-hover transition-colors shrink-0"
           >
             Load images
           </button>
           {senderAddress && accountId && (
             <button
               onClick={handleAlwaysLoad}
-              className="text-accent hover:text-accent-hover font-medium"
+              className="h-6 px-2 rounded-md font-medium text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors shrink-0"
             >
               Always load from sender
             </button>

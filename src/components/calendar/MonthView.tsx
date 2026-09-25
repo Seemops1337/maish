@@ -43,7 +43,7 @@ export function MonthView({ currentDate, events, onEventClick }: MonthViewProps)
       {/* Day headers */}
       <div className="grid grid-cols-7 border-b border-border-primary">
         {DAY_NAMES.map((name) => (
-          <div key={name} className="px-2 py-2 text-xs font-medium text-text-tertiary text-center">
+          <div key={name} className="label-mono px-2 py-2 text-center">
             {name}
           </div>
         ))}
@@ -53,7 +53,7 @@ export function MonthView({ currentDate, events, onEventClick }: MonthViewProps)
       <div className="grid grid-cols-7 flex-1 auto-rows-fr overflow-y-auto">
         {cells.map((day, idx) => {
           if (day === null) {
-            return <div key={`empty-${idx}`} className="border-b border-r border-border-secondary bg-bg-tertiary/30" />;
+            return <div key={`empty-${idx}`} className="border-b border-r border-border-primary bg-bg-secondary" />;
           }
           const isToday = `${year}-${month}-${day}` === todayStr;
           const dayEvents = eventsByDay.get(day) ?? [];
@@ -61,10 +61,10 @@ export function MonthView({ currentDate, events, onEventClick }: MonthViewProps)
           return (
             <div
               key={day}
-              className="border-b border-r border-border-secondary p-1 min-h-[80px]"
+              className="border-b border-r border-border-primary p-1 min-h-[80px]"
             >
-              <div className={`text-xs font-medium mb-0.5 w-6 h-6 flex items-center justify-center rounded-full ${
-                isToday ? "bg-accent text-white" : "text-text-secondary"
+              <div className={`font-mono tabular-nums text-xs font-medium mb-0.5 w-6 h-6 flex items-center justify-center rounded-full ${
+                isToday ? "bg-accent text-on-accent" : "text-text-secondary"
               }`}>
                 {day}
               </div>
@@ -78,7 +78,7 @@ export function MonthView({ currentDate, events, onEventClick }: MonthViewProps)
                   />
                 ))}
                 {dayEvents.length > 3 && (
-                  <div className="text-[0.625rem] text-text-tertiary pl-1">
+                  <div className="font-mono text-[10px] tabular-nums text-text-tertiary pl-1.5">
                     +{dayEvents.length - 3} more
                   </div>
                 )}

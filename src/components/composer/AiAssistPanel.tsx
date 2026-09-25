@@ -84,10 +84,10 @@ export function AiAssistPanel({ editor, isReplyMode, threadMessages }: AiAssistP
   };
 
   return (
-    <div className="px-3 py-2 border-b border-border-secondary bg-accent/5">
-      <div className="flex items-center gap-2 mb-2">
-        <Sparkles size={12} className="text-accent" />
-        <span className="text-xs font-medium text-accent">AI Assist</span>
+    <div className="px-4 py-2.5 border-b border-border-primary bg-bg-secondary">
+      <div className="flex items-center gap-1.5 mb-2">
+        <Sparkles size={12} className="text-text-tertiary" />
+        <span className="label-mono">AI Assist</span>
       </div>
 
       {/* Prompt input */}
@@ -104,14 +104,14 @@ export function AiAssistPanel({ editor, isReplyMode, threadMessages }: AiAssistP
             }
           }}
           placeholder={isReplyMode ? "Instructions for reply (optional)..." : "Describe what to write..."}
-          className="flex-1 px-2 py-1 text-xs bg-bg-tertiary border border-border-primary rounded outline-none focus:border-accent text-text-primary placeholder:text-text-tertiary"
+          className="flex-1 h-7 px-2.5 text-xs bg-bg-primary border border-border-primary rounded-md outline-none transition-shadow focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10 text-text-primary placeholder:text-text-tertiary disabled:opacity-50"
           disabled={loading}
         />
         {isReplyMode ? (
           <button
             onClick={handleGenerateReply}
             disabled={loading || !threadMessages?.length}
-            className="px-2 py-1 text-xs bg-accent text-white rounded hover:bg-accent-hover transition-colors disabled:opacity-50 flex items-center gap-1"
+            className="h-7 px-2.5 text-xs font-medium bg-accent text-on-accent rounded-md hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
           >
             {loading ? "..." : "Generate Reply"}
           </button>
@@ -119,7 +119,7 @@ export function AiAssistPanel({ editor, isReplyMode, threadMessages }: AiAssistP
           <button
             onClick={handleCompose}
             disabled={loading || !prompt.trim()}
-            className="px-2 py-1 text-xs bg-accent text-white rounded hover:bg-accent-hover transition-colors disabled:opacity-50 flex items-center gap-1"
+            className="h-7 px-2.5 text-xs font-medium bg-accent text-on-accent rounded-md hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
           >
             {loading ? "..." : "Generate"}
           </button>
@@ -128,7 +128,7 @@ export function AiAssistPanel({ editor, isReplyMode, threadMessages }: AiAssistP
 
       {/* Quick actions */}
       <div className="flex items-center gap-1.5">
-        <span className="text-xs text-text-tertiary mr-1">Transform:</span>
+        <span className="text-xs text-text-tertiary mr-0.5">Transform:</span>
         <QuickAction
           icon={<Wand2 size={11} />}
           label="Improve"
@@ -150,7 +150,7 @@ export function AiAssistPanel({ editor, isReplyMode, threadMessages }: AiAssistP
       </div>
 
       {error && (
-        <p className="text-xs text-danger mt-1">{error}</p>
+        <p className="text-xs text-danger mt-1.5">{error}</p>
       )}
     </div>
   );
@@ -171,7 +171,7 @@ function QuickAction({
     <button
       onClick={onClick}
       disabled={disabled}
-      className="flex items-center gap-1 px-2 py-0.5 text-xs text-text-secondary hover:text-text-primary bg-bg-tertiary hover:bg-bg-hover rounded border border-border-primary transition-colors disabled:opacity-50"
+      className="flex items-center gap-1 h-6 px-2 text-xs text-text-secondary hover:text-text-primary bg-bg-primary hover:bg-bg-hover rounded-md border border-border-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
     >
       {icon}
       {label}

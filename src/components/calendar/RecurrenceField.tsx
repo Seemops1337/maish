@@ -46,8 +46,8 @@ const WEEKDAY_NAMES = [
 ];
 
 const SELECT_CLASS =
-  "px-2 py-1 bg-bg-tertiary border border-border-primary rounded text-sm " +
-  "text-text-primary outline-none focus:border-accent disabled:opacity-50";
+  "px-2 h-8 bg-bg-primary border border-border-primary rounded-md text-sm " +
+  "text-text-primary outline-none focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10 disabled:opacity-50";
 
 export function RecurrenceField({
   value,
@@ -90,7 +90,7 @@ export function RecurrenceField({
   if (customRule) {
     return (
       <div className="border-t border-border-primary pt-3">
-        <div className="text-xs text-text-secondary mb-1">Repeat</div>
+        <div className="label-mono mb-1">Repeat</div>
         <p className="text-sm text-text-secondary">{customRule}</p>
         <p className="text-xs text-text-tertiary mt-1">
           This rule is more detailed than the options here, so it is kept as it is.
@@ -99,14 +99,14 @@ export function RecurrenceField({
           <div className="flex gap-3 mt-1.5">
             <button
               type="button"
-              className="text-xs text-accent hover:underline"
+              className="text-xs text-text-primary underline underline-offset-2 decoration-border-primary hover:decoration-text-primary"
               onClick={() => onChange({ ...DEFAULT_RECURRENCE, ...seedWeekly(startDate) })}
             >
               Replace with a simple rule
             </button>
             <button
               type="button"
-              className="text-xs text-accent hover:underline"
+              className="text-xs text-text-primary underline underline-offset-2 decoration-border-primary hover:decoration-text-primary"
               onClick={() => onChange(null)}
             >
               Remove repetition
@@ -125,7 +125,7 @@ export function RecurrenceField({
   return (
     <div className="border-t border-border-primary pt-3 space-y-2">
       <div>
-        <label htmlFor="recurrence-frequency" className="text-xs text-text-secondary block mb-1">
+        <label htmlFor="recurrence-frequency" className="label-mono block mb-1.5">
           Repeat
         </label>
         <select
@@ -165,7 +165,7 @@ export function RecurrenceField({
 
           {value.frequency === "weekly" && (
             <fieldset disabled={disabled}>
-              <legend className="text-xs text-text-secondary mb-1">On</legend>
+              <legend className="label-mono mb-1">On</legend>
               <div className="flex gap-1">
                 {WEEKDAY_LABELS.map((label, day) => {
                   const active = value.byDay.includes(day);
@@ -178,8 +178,8 @@ export function RecurrenceField({
                       onClick={() => toggleWeekday(day)}
                       className={`w-7 h-7 rounded-full text-xs border transition-colors ${
                         active
-                          ? "bg-accent text-white border-accent"
-                          : "bg-bg-tertiary text-text-secondary border-border-primary hover:bg-bg-hover"
+                          ? "bg-accent text-on-accent border-accent"
+                          : "bg-bg-primary text-text-secondary border-border-primary hover:bg-bg-hover"
                       }`}
                     >
                       {label}

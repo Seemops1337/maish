@@ -198,14 +198,13 @@ export function TasksPage() {
   }, [selectedIds, loadTasks]);
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-bg-primary/50">
+    <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-bg-primary">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-border-primary shrink-0 bg-bg-primary/60 backdrop-blur-sm">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-border-primary shrink-0 bg-bg-primary">
         <div className="flex items-center gap-2">
-          <CheckSquare size={18} className="text-accent" />
-          <h1 className="text-base font-semibold text-text-primary">Tasks</h1>
+          <h1 className="text-lg font-medium tracking-tight text-text-primary">Tasks</h1>
           {filteredTasks.length > 0 && (
-            <span className="text-xs text-text-tertiary bg-bg-tertiary px-2 py-0.5 rounded-full">
+            <span className="font-mono text-xs tabular-nums text-text-tertiary">
               {filteredTasks.length}
             </span>
           )}
@@ -214,13 +213,13 @@ export function TasksPage() {
         <div className="flex items-center gap-2">
           {/* Search */}
           <div className="relative">
-            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-tertiary" />
+            <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-tertiary" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search tasks..."
-              className="w-48 pl-8 pr-3 py-1.5 bg-bg-tertiary border border-border-primary rounded-lg text-xs text-text-primary outline-none focus:border-accent"
+              className="w-48 pl-8 pr-3 h-8 bg-bg-primary border border-border-primary rounded-md text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10"
             />
           </div>
 
@@ -228,7 +227,7 @@ export function TasksPage() {
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value as TaskFilterStatus)}
-            className="bg-bg-tertiary text-text-primary text-xs px-2.5 py-1.5 rounded-lg border border-border-primary"
+            className="h-8 bg-bg-primary text-text-primary text-sm px-2.5 rounded-md border border-border-primary outline-none hover:bg-bg-hover focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10"
           >
             <option value="incomplete">Active</option>
             <option value="all">All</option>
@@ -238,7 +237,7 @@ export function TasksPage() {
           <select
             value={filterPriority}
             onChange={(e) => setFilterPriority(e.target.value as TaskPriority | "all")}
-            className="bg-bg-tertiary text-text-primary text-xs px-2.5 py-1.5 rounded-lg border border-border-primary"
+            className="h-8 bg-bg-primary text-text-primary text-sm px-2.5 rounded-md border border-border-primary outline-none hover:bg-bg-hover focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10"
           >
             <option value="all">All priorities</option>
             <option value="urgent">Urgent</option>
@@ -252,7 +251,7 @@ export function TasksPage() {
           <select
             value={groupBy}
             onChange={(e) => setGroupBy(e.target.value as TaskGroupBy)}
-            className="bg-bg-tertiary text-text-primary text-xs px-2.5 py-1.5 rounded-lg border border-border-primary"
+            className="h-8 bg-bg-primary text-text-primary text-sm px-2.5 rounded-md border border-border-primary outline-none hover:bg-bg-hover focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10"
           >
             <option value="none">No grouping</option>
             <option value="priority">Group by priority</option>
@@ -264,18 +263,18 @@ export function TasksPage() {
 
       {/* Bulk actions bar */}
       {selectedIds.size > 0 && (
-        <div className="flex items-center gap-3 px-5 py-2 bg-accent/5 border-b border-accent/20">
-          <span className="text-xs text-text-secondary">{selectedIds.size} selected</span>
+        <div className="flex items-center gap-3 h-10 px-5 bg-bg-secondary border-b border-border-primary">
+          <span className="font-mono text-xs tabular-nums text-text-secondary">{selectedIds.size} selected</span>
           <button
             onClick={handleBulkComplete}
-            className="flex items-center gap-1 text-xs text-accent hover:text-accent-hover"
+            className="flex items-center gap-1 h-7 px-2 rounded-md text-xs text-text-primary hover:bg-bg-hover"
           >
             <CheckCircle2 size={13} />
             Complete
           </button>
           <button
             onClick={handleBulkDelete}
-            className="flex items-center gap-1 text-xs text-danger hover:opacity-80"
+            className="flex items-center gap-1 h-7 px-2 rounded-md text-xs text-danger hover:bg-bg-hover"
           >
             <Trash2 size={13} />
             Delete
@@ -298,8 +297,8 @@ export function TasksPage() {
       <div className="flex-1 overflow-y-auto py-2 px-3">
         {filteredTasks.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
-            <CheckSquare size={48} className="text-text-tertiary/30 mb-4" />
-            <p className="text-sm text-text-secondary mb-1">No tasks</p>
+            <CheckSquare size={24} className="text-text-tertiary mb-3" />
+            <p className="text-sm font-medium text-text-primary mb-1">No tasks</p>
             <p className="text-xs text-text-tertiary">
               {searchQuery ? "Try a different search term" : "Add a task above or press 't' on any email thread"}
             </p>
@@ -309,11 +308,11 @@ export function TasksPage() {
             {groupedTasks.map((group) => (
               <div key={group.label || "__ungrouped"}>
                 {group.label && (
-                  <h3 className="text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-2 px-3">
+                  <h3 className="label-mono mb-1.5 px-3">
                     {group.label}
                   </h3>
                 )}
-                <div className="space-y-0.5">
+                <div className="space-y-px">
                   {group.tasks.map((task) => (
                     <TaskItem
                       key={task.id}

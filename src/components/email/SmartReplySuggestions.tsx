@@ -80,13 +80,13 @@ export function SmartReplySuggestions({ threadId, accountId, messages, noReply }
   if (!available || messages.length === 0 || noReply) return null;
 
   return (
-    <div className="mx-4 my-2 p-3 rounded-lg bg-accent/5 border border-accent/20">
-      <div className="flex items-center gap-2 mb-2">
-        <Sparkles size={14} className="text-accent shrink-0" />
-        <span className="text-xs font-medium text-accent flex-1">Quick Replies</span>
+    <div className="mx-4 my-2 px-3 py-2.5 rounded-md border border-border-primary bg-bg-secondary">
+      <div className="flex items-center gap-1.5 mb-2">
+        <Sparkles size={12} className="text-text-tertiary shrink-0" />
+        <span className="label-mono flex-1">Quick Replies</span>
         <button
           onClick={handleRefresh}
-          className="p-0.5 text-text-tertiary hover:text-accent transition-colors"
+          className="p-1 rounded-md text-text-tertiary hover:text-text-primary hover:bg-bg-hover transition-colors"
           title="Refresh suggestions"
         >
           <RefreshCw size={12} className={loading ? "animate-spin" : ""} />
@@ -94,8 +94,8 @@ export function SmartReplySuggestions({ threadId, accountId, messages, noReply }
       </div>
       {loading && !replies && (
         <div className="flex items-center gap-2 text-text-tertiary">
-          <div className="w-3 h-3 border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
-          <span className="text-xs">Generating suggestions...</span>
+          <div className="w-3 h-3 border-2 border-border-primary border-t-text-secondary rounded-full animate-spin" />
+          <span className="font-mono text-xs">Generating suggestions...</span>
         </div>
       )}
       {replies && (
@@ -104,7 +104,7 @@ export function SmartReplySuggestions({ threadId, accountId, messages, noReply }
             <button
               key={i}
               onClick={() => handleReplyClick(reply)}
-              className="px-3 py-1.5 text-xs text-text-primary bg-bg-primary border border-border-primary rounded-full hover:bg-bg-hover hover:border-accent/40 transition-colors max-w-[280px] truncate"
+              className="h-7 px-3 text-[13px] text-text-primary bg-bg-primary border border-border-primary rounded-full hover:bg-bg-hover transition-colors max-w-[280px] truncate"
               title={reply}
             >
               {reply}

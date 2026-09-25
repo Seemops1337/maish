@@ -124,7 +124,7 @@ export function AddAccount({ onClose, onSuccess }: AddAccountProps) {
           </p>
 
           {error && (
-            <div className="bg-danger/10 border border-danger/20 rounded-lg p-3 mb-4 text-sm text-danger">
+            <div className="bg-danger/5 border border-danger/30 rounded-md p-3 mb-4 text-sm text-danger">
               {error}
             </div>
           )}
@@ -138,28 +138,28 @@ export function AddAccount({ onClose, onSuccess }: AddAccountProps) {
             </div>
           )}
 
-          <div className="flex gap-3 justify-between">
+          <div className="flex items-center gap-2 justify-between">
             <button
               onClick={() => {
                 setView("select-provider");
                 setStatus("idle");
                 setError(null);
               }}
-              className="px-4 py-2 text-sm text-text-secondary hover:text-text-primary transition-colors"
+              className="h-8 px-3 rounded-md text-sm text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors"
             >
               Back
             </button>
-            <div className="flex gap-3">
+            <div className="flex gap-2">
               <button
                 onClick={onClose}
-                className="px-4 py-2 text-sm text-text-secondary hover:text-text-primary transition-colors"
+                className="h-8 px-3 rounded-md text-sm text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleAddGmailAccount}
                 disabled={status === "authenticating" || status === "checking"}
-                className="px-4 py-2 text-sm bg-accent text-white rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="h-8 px-3 rounded-md text-sm font-medium bg-accent text-on-accent hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {status === "authenticating"
                   ? "Waiting..."
@@ -182,13 +182,13 @@ export function AddAccount({ onClose, onSuccess }: AddAccountProps) {
           Choose how you want to connect your email account.
         </p>
 
-        <div className="space-y-3">
+        <div className="space-y-2">
           <button
             onClick={() => setView("gmail")}
-            className="w-full flex items-center gap-4 p-4 rounded-lg border border-border-primary bg-bg-secondary hover:bg-bg-hover transition-colors text-left group"
+            className="w-full flex items-center gap-3 p-3 rounded-md border border-border-primary bg-bg-primary hover:bg-bg-hover transition-colors text-left group"
           >
-            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-bg-tertiary flex items-center justify-center">
-              <svg className="w-5 h-5" viewBox="0 0 24 24">
+            <div className="flex-shrink-0 w-9 h-9 rounded-md border border-border-primary bg-bg-secondary flex items-center justify-center">
+              <svg className="w-4 h-4" viewBox="0 0 24 24">
                 <path
                   d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
                   fill="#4285F4"
@@ -208,7 +208,7 @@ export function AddAccount({ onClose, onSuccess }: AddAccountProps) {
               </svg>
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-text-primary group-hover:text-accent transition-colors">
+              <div className="text-sm font-medium text-text-primary">
                 Google (Gmail)
               </div>
               <div className="text-xs text-text-tertiary mt-0.5">
@@ -219,13 +219,13 @@ export function AddAccount({ onClose, onSuccess }: AddAccountProps) {
 
           <button
             onClick={() => setView("imap")}
-            className="w-full flex items-center gap-4 p-4 rounded-lg border border-border-primary bg-bg-secondary hover:bg-bg-hover transition-colors text-left group"
+            className="w-full flex items-center gap-3 p-3 rounded-md border border-border-primary bg-bg-primary hover:bg-bg-hover transition-colors text-left group"
           >
-            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-bg-tertiary flex items-center justify-center">
-              <Mail className="w-5 h-5 text-text-secondary" />
+            <div className="flex-shrink-0 w-9 h-9 rounded-md border border-border-primary bg-bg-secondary flex items-center justify-center">
+              <Mail className="w-4 h-4 text-text-secondary" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-text-primary group-hover:text-accent transition-colors">
+              <div className="text-sm font-medium text-text-primary">
                 IMAP / SMTP
               </div>
               <div className="text-xs text-text-tertiary mt-0.5">
@@ -236,13 +236,13 @@ export function AddAccount({ onClose, onSuccess }: AddAccountProps) {
 
           <button
             onClick={() => setView("caldav")}
-            className="w-full flex items-center gap-4 p-4 rounded-lg border border-border-primary bg-bg-secondary hover:bg-bg-hover transition-colors text-left group"
+            className="w-full flex items-center gap-3 p-3 rounded-md border border-border-primary bg-bg-primary hover:bg-bg-hover transition-colors text-left group"
           >
-            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-bg-tertiary flex items-center justify-center">
-              <Calendar className="w-5 h-5 text-text-secondary" />
+            <div className="flex-shrink-0 w-9 h-9 rounded-md border border-border-primary bg-bg-secondary flex items-center justify-center">
+              <Calendar className="w-4 h-4 text-text-secondary" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-text-primary group-hover:text-accent transition-colors">
+              <div className="text-sm font-medium text-text-primary">
                 CalDAV (Calendar Only)
               </div>
               <div className="text-xs text-text-tertiary mt-0.5">
@@ -253,13 +253,13 @@ export function AddAccount({ onClose, onSuccess }: AddAccountProps) {
 
           <button
             onClick={() => setView("carddav")}
-            className="w-full flex items-center gap-4 p-4 rounded-lg border border-border-primary bg-bg-secondary hover:bg-bg-hover transition-colors text-left group"
+            className="w-full flex items-center gap-3 p-3 rounded-md border border-border-primary bg-bg-primary hover:bg-bg-hover transition-colors text-left group"
           >
-            <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-bg-tertiary flex items-center justify-center">
-              <Users className="w-5 h-5 text-text-secondary" />
+            <div className="flex-shrink-0 w-9 h-9 rounded-md border border-border-primary bg-bg-secondary flex items-center justify-center">
+              <Users className="w-4 h-4 text-text-secondary" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-text-primary group-hover:text-accent transition-colors">
+              <div className="text-sm font-medium text-text-primary">
                 CardDAV (Contacts Only)
               </div>
               <div className="text-xs text-text-tertiary mt-0.5">
@@ -272,7 +272,7 @@ export function AddAccount({ onClose, onSuccess }: AddAccountProps) {
         <div className="flex justify-end mt-4">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm text-text-secondary hover:text-text-primary transition-colors"
+            className="h-8 px-3 rounded-md text-sm text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors"
           >
             Cancel
           </button>

@@ -16,7 +16,6 @@ describe("uiStore", () => {
       readingPanePosition: "right",
       readFilter: "all",
       fontScale: "default",
-      colorTheme: "indigo",
       inboxViewMode: "unified",
     });
   });
@@ -144,18 +143,6 @@ describe("uiStore", () => {
     useUIStore.getState().setSendAndArchive(false);
     expect(setSetting).toHaveBeenCalledWith("send_and_archive", "false");
     expect(useUIStore.getState().sendAndArchive).toBe(false);
-  });
-
-  it("setColorTheme should persist to DB and update state", () => {
-    expect(useUIStore.getState().colorTheme).toBe("indigo");
-
-    useUIStore.getState().setColorTheme("rose");
-    expect(setSetting).toHaveBeenCalledWith("color_theme", "rose");
-    expect(useUIStore.getState().colorTheme).toBe("rose");
-
-    useUIStore.getState().setColorTheme("emerald");
-    expect(setSetting).toHaveBeenCalledWith("color_theme", "emerald");
-    expect(useUIStore.getState().colorTheme).toBe("emerald");
   });
 
   it("sidebarNavConfig should default to null", () => {

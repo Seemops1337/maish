@@ -8,12 +8,10 @@ import { runMigrations } from "./services/db/migrations";
 import { getAllAccounts } from "./services/db/accounts";
 import { getSetting } from "./services/db/settings";
 import { initializeClients } from "./services/gmail/tokenManager";
-import { getThemeById, COLOR_THEMES } from "./constants/themes";
-import type { ColorThemeId } from "./constants/themes";
 import type { ComposerMode } from "./stores/composerStore";
 
 export default function ComposerWindow() {
-  const { setTheme, setFontScale, setColorTheme } = useUIStore();
+  const { setTheme, setFontScale } = useUIStore();
   const { setAccounts } = useAccountStore();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,12 +33,6 @@ export default function ComposerWindow() {
         const savedFontScale = await getSetting("font_size");
         if (savedFontScale === "small" || savedFontScale === "default" || savedFontScale === "large" || savedFontScale === "xlarge") {
           setFontScale(savedFontScale);
-        }
-
-        // Restore color theme
-        const savedColorTheme = await getSetting("color_theme");
-        if (savedColorTheme && COLOR_THEMES.some((t) => t.id === savedColorTheme)) {
-          setColorTheme(savedColorTheme as ColorThemeId);
         }
 
         // Load accounts into store
@@ -137,37 +129,6 @@ export default function ComposerWindow() {
     root.classList.add(`font-scale-${fontScale}`);
   }, [fontScale]);
 
-  // Apply color theme CSS custom properties to <html>
-  const colorTheme = useUIStore((s) => s.colorTheme);
-  useEffect(() => {
-    const root = document.documentElement;
-    const props = ["--color-accent", "--color-accent-hover", "--color-accent-light", "--color-bg-selected", "--color-sidebar-active"];
-
-    const apply = () => {
-      if (colorTheme === "indigo") {
-        for (const p of props) root.style.removeProperty(p);
-        return;
-      }
-      const themeData = getThemeById(colorTheme);
-      const isDark =
-        theme === "dark" ||
-        (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
-      const colors = isDark ? themeData.dark : themeData.light;
-      root.style.setProperty("--color-accent", colors.accent);
-      root.style.setProperty("--color-accent-hover", colors.accentHover);
-      root.style.setProperty("--color-accent-light", colors.accentLight);
-      root.style.setProperty("--color-bg-selected", colors.bgSelected);
-      root.style.setProperty("--color-sidebar-active", colors.sidebarActive);
-    };
-
-    apply();
-
-    if (theme === "system") {
-      const mq = window.matchMedia("(prefers-color-scheme: dark)");
-      mq.addEventListener("change", apply);
-      return () => mq.removeEventListener("change", apply);
-    }
-  }, [colorTheme, theme]);
 
   if (loading) {
     return (

@@ -100,20 +100,20 @@ export function AddressInput({
   };
 
   return (
-    <div className="flex items-start gap-2">
-      <span className="text-xs text-text-tertiary pt-1.5 w-8 shrink-0">
+    <div className="flex items-start gap-2 px-4 py-1">
+      <span className="label-mono w-16 shrink-0 h-7 flex items-center">
         {label}
       </span>
-      <div className="flex-1 flex flex-wrap items-center gap-1 min-h-[32px] relative">
+      <div className="flex-1 flex flex-wrap items-center gap-1 min-h-7 relative">
         {addresses.map((addr) => (
           <span
             key={addr}
-            className="inline-flex items-center gap-1 bg-accent-light text-accent text-xs px-2 py-0.5 rounded-full"
+            className="inline-flex items-center gap-1 h-6 pl-2 pr-1.5 rounded-md border border-border-primary bg-bg-secondary text-xs text-text-primary"
           >
             {addr}
             <button
               onClick={() => onChange(addresses.filter((a) => a !== addr))}
-              className="hover:text-danger text-[0.625rem] leading-none"
+              className="text-text-tertiary hover:text-text-primary text-sm leading-none"
             >
               ×
             </button>
@@ -138,14 +138,14 @@ export function AddressInput({
 
         {/* Autocomplete dropdown */}
         {showSuggestions && (
-          <div className="absolute top-full left-0 mt-1 w-full bg-bg-primary border border-border-primary rounded-md shadow-lg z-50 py-1">
+          <div className="absolute top-full left-0 mt-1 w-full bg-bg-primary border border-border-primary rounded-md shadow-lg z-50 p-1">
             {suggestions.map((contact, i) => (
               <button
                 key={contact.id}
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => addAddress(contact.email)}
-                className={`w-full text-left px-3 py-1.5 text-sm hover:bg-bg-hover ${
-                  i === selectedIdx ? "bg-bg-hover" : ""
+                className={`w-full text-left px-2 py-1.5 rounded-md text-[13px] transition-colors ${
+                  i === selectedIdx ? "bg-bg-selected" : "hover:bg-bg-hover"
                 }`}
               >
                 <div className="text-text-primary">

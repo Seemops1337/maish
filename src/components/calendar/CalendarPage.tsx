@@ -306,7 +306,7 @@ export function CalendarPage() {
       )}
 
       {calendarError && !needsReauth && (
-        <div className="mx-6 my-4 p-4 rounded-lg bg-danger/10 border border-danger/30 flex items-start gap-3">
+        <div className="mx-5 my-4 p-4 rounded-md bg-danger/5 border border-danger/30 flex items-start gap-3">
           <div>
             <p className="text-sm font-medium text-text-primary">Calendar access error</p>
             <p className="text-xs text-text-secondary mt-1">{calendarError}</p>

@@ -8,12 +8,7 @@ import { formatRelativeDate } from "@/utils/date";
 import { Paperclip, Star, Check, Pin, BellRing, VolumeX } from "lucide-react";
 import type { DragData } from "@/components/dnd/DndProvider";
 
-const CATEGORY_COLORS: Record<string, string> = {
-  Updates: "bg-yellow-500/15 text-yellow-600 dark:text-yellow-400",
-  Promotions: "bg-green-500/15 text-green-600 dark:text-green-400",
-  Social: "bg-purple-500/15 text-purple-600 dark:text-purple-400",
-  Newsletters: "bg-orange-500/15 text-orange-600 dark:text-orange-400",
-};
+const BADGE_CATEGORIES = new Set(["Updates", "Promotions", "Social", "Newsletters"]);
 
 interface ThreadCardProps {
   thread: Thread;
@@ -79,25 +74,27 @@ export const ThreadCard = memo(function ThreadCard({ thread, isSelected, onClick
       onContextMenu={handleContextMenu}
       aria-label={`${thread.isRead ? "" : "Unread "}email from ${thread.fromName ?? thread.fromAddress ?? "Unknown"}: ${thread.subject ?? "(No subject)"}`}
       aria-selected={isSelected}
-      className={`w-full text-left border-b border-border-secondary group hover-lift press-scale ${
+      className={`w-full text-left border-b border-border-secondary group hover-lift ${
         emailDensity === "compact" ? "px-3 py-1.5" : emailDensity === "spacious" ? "px-4 py-4" : "px-4 py-3"
       } ${
         isDragging
           ? "opacity-50"
           : isMultiSelected
-            ? "bg-accent/10"
+            ? "bg-bg-selected"
             : isSelected
-              ? "bg-bg-selected"
+              ? "bg-bg-selected shadow-[inset_2px_0_0_var(--color-text-primary)]"
               : "hover:bg-bg-hover"
-      } ${isSpam ? "bg-red-500/8 dark:bg-red-500/10" : ""}`}
+      } ${isSpam ? "bg-danger/5" : ""}`}
     >
       <div className="flex items-start gap-3">
         {/* Avatar */}
         <div
-          className={`rounded-full flex items-center justify-center shrink-0 font-medium text-white ${
-            emailDensity === "compact" ? "w-7 h-7 text-xs" : emailDensity === "spacious" ? "w-10 h-10 text-sm" : "w-9 h-9 text-sm"
+          className={`rounded-full flex items-center justify-center shrink-0 font-medium ${
+            emailDensity === "compact" ? "w-6 h-6 text-[11px]" : emailDensity === "spacious" ? "w-9 h-9 text-sm" : "w-8 h-8 text-xs"
           } ${
-            isMultiSelected ? "bg-accent" : thread.isRead ? "bg-text-tertiary" : "bg-accent"
+            isMultiSelected || !thread.isRead
+              ? "bg-accent text-on-accent"
+              : "bg-bg-tertiary text-text-secondary border border-border-primary"
           }`}
         >
           {isMultiSelected ? <Check size={emailDensity === "compact" ? 14 : 16} /> : initial}
@@ -111,19 +108,19 @@ export const ThreadCard = memo(function ThreadCard({ thread, isSelected, onClick
               className={`text-sm truncate ${
                 thread.isRead
                   ? "text-text-secondary"
-                  : "font-semibold text-text-primary"
+                  : "font-medium text-text-primary"
               }`}
             >
               {thread.fromName ?? thread.fromAddress ?? "Unknown"}
             </span>
-            <span className="text-xs text-text-tertiary whitespace-nowrap shrink-0">
+            <span className="font-mono text-[11px] tabular-nums text-text-tertiary whitespace-nowrap shrink-0">
               {formatRelativeDate(thread.lastMessageAt)}
             </span>
           </div>
 
           {/* Subject */}
           <div
-            className={`text-sm truncate mt-0.5 ${
+            className={`text-[13px] truncate mt-0.5 ${
               thread.isRead ? "text-text-secondary" : "text-text-primary"
             }`}
           >
@@ -135,23 +132,23 @@ export const ThreadCard = memo(function ThreadCard({ thread, isSelected, onClick
             <span className="text-xs text-text-tertiary truncate flex-1">
               {thread.snippet}
             </span>
-            {showCategoryBadge && category && category !== "Primary" && CATEGORY_COLORS[category] && (
-              <span className={`shrink-0 text-[0.625rem] px-1.5 rounded-full leading-normal ${CATEGORY_COLORS[category]}`}>
+            {showCategoryBadge && category && category !== "Primary" && BADGE_CATEGORIES.has(category) && (
+              <span className="shrink-0 font-mono text-[10px] leading-4 uppercase tracking-wide px-1.5 rounded-full border border-border-primary text-text-tertiary">
                 {category}
               </span>
             )}
             {hasFollowUp && (
-              <span className="shrink-0 text-accent" title="Follow-up reminder set">
+              <span className="shrink-0 text-text-secondary" title="Follow-up reminder set">
                 <BellRing size={12} />
               </span>
             )}
             {thread.isMuted && (
-              <span className="shrink-0 text-warning" title="Muted">
+              <span className="shrink-0 text-text-tertiary" title="Muted">
                 <VolumeX size={12} />
               </span>
             )}
             {thread.isPinned && (
-              <span className="shrink-0 text-accent" title="Pinned">
+              <span className="shrink-0 text-text-secondary" title="Pinned">
                 <Pin size={12} className="fill-current" />
               </span>
             )}
@@ -161,12 +158,12 @@ export const ThreadCard = memo(function ThreadCard({ thread, isSelected, onClick
               </span>
             )}
             {thread.isStarred && (
-              <span className="shrink-0 text-warning star-animate" title="Starred">
+              <span className="shrink-0 text-text-primary star-animate" title="Starred">
                 <Star size={12} className="fill-current" />
               </span>
             )}
             {thread.messageCount > 1 && (
-              <span className="text-xs text-text-tertiary shrink-0 bg-bg-tertiary rounded-full px-1.5">
+              <span className="font-mono text-[10px] leading-4 tabular-nums text-text-secondary shrink-0 border border-border-primary rounded-full px-1.5">
                 {thread.messageCount}
               </span>
             )}

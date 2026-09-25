@@ -19,7 +19,7 @@ export function TaskQuickAdd({ onAdd, placeholder = "Add a task..." }: TaskQuick
   }, [value, onAdd]);
 
   return (
-    <div className="flex items-center gap-2 px-3 py-2">
+    <div className="flex items-center gap-2.5 h-10 px-3">
       <Plus size={14} className="text-text-tertiary shrink-0" />
       <input
         ref={inputRef}

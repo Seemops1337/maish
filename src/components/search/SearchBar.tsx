@@ -74,14 +74,14 @@ export function SearchBar() {
         onChange={(e) => handleChange(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="Search... (from: to: has:attachment)"
-        className="w-full bg-bg-tertiary text-text-primary text-sm pl-8 pr-14 py-1.5 rounded-md border border-border-primary focus:border-accent focus:outline-none placeholder:text-text-tertiary"
+        className="w-full h-8 bg-bg-primary text-text-primary text-sm pl-8 pr-14 rounded-md border border-border-primary outline-none transition-shadow focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10 placeholder:text-text-tertiary"
       />
       {searchQuery && (
-        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+        <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
           {searchQuery.trim().length >= 2 && (
             <button
               onClick={handleSaveAsSmartFolder}
-              className="text-text-tertiary hover:text-accent transition-colors"
+              className="p-1 rounded text-text-tertiary hover:text-text-primary hover:bg-bg-hover transition-colors"
               title="Save as Smart Folder"
             >
               <FolderPlus size={14} />
@@ -89,7 +89,7 @@ export function SearchBar() {
           )}
           <button
             onClick={handleClear}
-            className="text-text-tertiary hover:text-text-primary transition-colors"
+            className="p-1 rounded text-text-tertiary hover:text-text-primary hover:bg-bg-hover transition-colors"
           >
             <X size={14} />
           </button>

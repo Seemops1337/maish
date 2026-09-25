@@ -10,14 +10,14 @@ interface LinkConfirmDialogProps {
 
 export function LinkConfirmDialog({ linkAnalysis, onCancel, onConfirm }: LinkConfirmDialogProps) {
   const isHigh = linkAnalysis.riskLevel === "high";
-  const borderColor = isHigh ? "border-danger/40" : "border-warning/40";
-  const headerBg = isHigh ? "bg-danger/10" : "bg-warning/10";
+  const borderColor = isHigh ? "border-danger/30" : "border-warning/30";
+  const headerBg = isHigh ? "bg-danger/5" : "bg-warning/5";
   const headerText = isHigh ? "text-danger" : "text-warning";
 
   const customHeader = (
-    <div className={`px-4 py-3 ${headerBg} flex items-center gap-2.5 rounded-t-lg`}>
-      <ShieldAlert size={18} className={headerText} />
-      <h2 className={`text-sm font-semibold ${headerText}`}>
+    <div className={`px-4 py-3 ${headerBg} ${borderColor} border-b flex items-center gap-2 rounded-t-md`}>
+      <ShieldAlert size={16} className={headerText} />
+      <h2 className={`text-sm font-medium ${headerText}`}>
         {isHigh ? "High Risk Link" : "Suspicious Link"}
       </h2>
     </div>
@@ -30,15 +30,15 @@ export function LinkConfirmDialog({ linkAnalysis, onCancel, onConfirm }: LinkCon
       title=""
       width="w-full max-w-md mx-4"
       zIndex="z-[200]"
-      panelClassName={`${borderColor} rounded-xl shadow-xl overflow-hidden`}
+      panelClassName={`${borderColor} rounded-md overflow-hidden`}
       renderHeader={customHeader}
     >
       {/* Content */}
       <div className="px-4 py-3 space-y-3">
         {/* URL display */}
         <div>
-          <label className="text-xs text-text-tertiary block mb-1">Full URL</label>
-          <div className="flex items-start gap-2 p-2 bg-bg-tertiary rounded-md">
+          <label className="label-mono block mb-1.5">Full URL</label>
+          <div className="flex items-start gap-2 px-3 py-2 bg-bg-secondary border border-border-primary rounded-md">
             <ExternalLink size={14} className="text-text-tertiary shrink-0 mt-0.5" />
             <span className="text-xs text-text-primary break-all font-mono leading-relaxed">
               {linkAnalysis.url}
@@ -49,8 +49,8 @@ export function LinkConfirmDialog({ linkAnalysis, onCancel, onConfirm }: LinkCon
         {/* Display text if different */}
         {linkAnalysis.displayText && (
           <div>
-            <label className="text-xs text-text-tertiary block mb-1">Link text</label>
-            <p className="text-xs text-text-secondary px-2">
+            <label className="label-mono block mb-1.5">Link text</label>
+            <p className="text-[13px] text-text-secondary">
               {linkAnalysis.displayText}
             </p>
           </div>
@@ -59,29 +59,29 @@ export function LinkConfirmDialog({ linkAnalysis, onCancel, onConfirm }: LinkCon
         {/* Triggered rules */}
         {linkAnalysis.triggeredRules.length > 0 && (
           <div>
-            <label className="text-xs text-text-tertiary block mb-1.5">
+            <label className="label-mono block mb-1.5">
               Issues detected ({linkAnalysis.triggeredRules.length})
             </label>
             <ul className="space-y-1.5">
               {linkAnalysis.triggeredRules.map((rule) => (
                 <li
                   key={rule.ruleId}
-                  className="flex items-start gap-2 text-xs px-2"
+                  className="flex items-start gap-2 text-xs"
                 >
                   <span
-                    className={`shrink-0 mt-0.5 w-1.5 h-1.5 rounded-full ${
+                    className={`shrink-0 mt-1.5 w-1.5 h-1.5 rounded-full ${
                       rule.score >= 50
                         ? "bg-danger"
                         : rule.score >= 30
                           ? "bg-warning"
-                          : "bg-yellow-400"
+                          : "bg-text-tertiary"
                     }`}
                   />
                   <div>
                     <span className="font-medium text-text-primary">
                       {rule.name}
                     </span>
-                    <span className="text-text-tertiary ml-1">
+                    <span className="font-mono tabular-nums text-text-tertiary ml-1">
                       ({rule.score}pts)
                     </span>
                     <p className="text-text-tertiary mt-0.5">{rule.detail}</p>
@@ -97,13 +97,13 @@ export function LinkConfirmDialog({ linkAnalysis, onCancel, onConfirm }: LinkCon
       <div className="px-4 py-3 border-t border-border-primary flex items-center justify-end gap-2">
         <button
           onClick={onCancel}
-          className="px-3 py-1.5 text-xs font-medium bg-accent text-white rounded-md hover:bg-accent-hover transition-colors"
+          className="h-8 px-3 text-sm font-medium bg-accent text-on-accent rounded-md hover:bg-accent-hover transition-colors"
         >
           Go Back
         </button>
         <button
           onClick={onConfirm}
-          className="px-3 py-1.5 text-xs text-text-secondary bg-bg-tertiary border border-border-primary rounded-md hover:bg-bg-hover transition-colors"
+          className="h-8 px-3 text-sm text-text-primary bg-bg-primary border border-border-primary rounded-md hover:bg-bg-hover transition-colors"
         >
           Open Anyway
         </button>

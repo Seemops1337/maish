@@ -44,9 +44,9 @@ export function ConfirmDialog({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title} width="w-80">
-      <div className="p-4" onKeyDown={handleKeyDown}>
-        <div className="text-sm text-text-secondary mb-4">{message}</div>
-        <div className="flex justify-end gap-2">
+      <div onKeyDown={handleKeyDown}>
+        <div className="px-4 py-4 text-sm text-text-secondary">{message}</div>
+        <div className="flex justify-end gap-2 px-4 py-3 border-t border-border-primary bg-bg-secondary rounded-b-lg">
           <Button variant="secondary" onClick={onClose} disabled={loading}>
             {cancelLabel}
           </Button>

@@ -108,57 +108,61 @@ export function SignatureEditor() {
 
   return (
     <div className="space-y-3">
-      {signatures.map((sig) => (
-        <div
-          key={sig.id}
-          className="flex items-center justify-between py-2 px-3 bg-bg-secondary rounded-md"
-        >
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium text-text-primary flex items-center gap-2">
-              {sig.name}
-              {sig.is_default === 1 && (
-                <span className="text-[0.625rem] bg-accent/10 text-accent px-1.5 py-0.5 rounded">
-                  Default
-                </span>
-              )}
+      {signatures.length > 0 && (
+        <div className="space-y-0.5">
+          {signatures.map((sig) => (
+            <div
+              key={sig.id}
+              className="group flex items-center justify-between gap-3 -mx-2 px-2 py-1.5 rounded-md hover:bg-bg-hover"
+            >
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-text-primary flex items-center gap-2">
+                  {sig.name}
+                  {sig.is_default === 1 && (
+                    <span className="rounded-full border border-border-primary px-1.5 font-mono text-[10px] leading-4 text-text-secondary">
+                      Default
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => handleEdit(sig)}
+                  className="p-1 rounded-md text-text-tertiary hover:text-text-primary hover:bg-bg-hover"
+                >
+                  <Pencil size={14} />
+                </button>
+                <button
+                  onClick={() => handleDelete(sig.id)}
+                  className="p-1 rounded-md text-text-tertiary hover:text-danger hover:bg-bg-hover"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => handleEdit(sig)}
-              className="p-1 text-text-tertiary hover:text-text-primary"
-            >
-              <Pencil size={13} />
-            </button>
-            <button
-              onClick={() => handleDelete(sig.id)}
-              className="p-1 text-text-tertiary hover:text-danger"
-            >
-              <Trash2 size={13} />
-            </button>
-          </div>
+          ))}
         </div>
-      ))}
+      )}
 
       {showForm ? (
-        <div className="border border-border-primary rounded-md p-3 space-y-2">
+        <div className="rounded-md border border-border-primary bg-bg-secondary p-3 space-y-3">
           <TextField
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Signature name"
           />
-          <div className="border border-border-primary rounded overflow-hidden bg-bg-tertiary">
-            <div className="flex items-center justify-between">
+          <div className="border border-border-primary rounded-md overflow-hidden bg-bg-primary">
+            <div className="flex items-center justify-between border-b border-border-primary">
               {isHtmlMode ? (
-                <span className="px-2 py-1 text-xs text-text-secondary">HTML source</span>
+                <span className="px-3 py-1.5 label-mono">HTML source</span>
               ) : (
                 <EditorToolbar editor={editor} />
               )}
               <button
                 type="button"
                 onClick={toggleHtmlMode}
-                className={`p-1.5 mr-1 rounded transition-colors ${isHtmlMode ? "text-accent bg-accent/10" : "text-text-tertiary hover:text-text-primary"}`}
+                className={`p-1.5 mr-1 rounded-md transition-colors ${isHtmlMode ? "text-text-primary bg-bg-selected" : "text-text-tertiary hover:text-text-primary hover:bg-bg-hover"}`}
                 title={isHtmlMode ? "Switch to visual editor" : "Edit HTML source"}
               >
                 <Code size={14} />
@@ -168,7 +172,7 @@ export function SignatureEditor() {
               <textarea
                 value={rawHtml}
                 onChange={(e) => setRawHtml(e.target.value)}
-                className="w-full px-3 py-2 min-h-[80px] bg-bg-tertiary text-text-primary text-xs font-mono focus:outline-none resize-y"
+                className="w-full px-3 py-2 min-h-[80px] bg-bg-primary text-text-primary text-xs font-mono focus:outline-none resize-y"
                 spellCheck={false}
               />
             ) : (
@@ -181,7 +185,7 @@ export function SignatureEditor() {
                 type="checkbox"
                 checked={isDefault}
                 onChange={(e) => setIsDefault(e.target.checked)}
-                className="rounded"
+                className="accent-accent"
               />
               Set as default
             </label>
@@ -190,13 +194,13 @@ export function SignatureEditor() {
             <button
               onClick={handleSave}
               disabled={!name.trim()}
-              className="px-3 py-1.5 text-xs font-medium text-white bg-accent hover:bg-accent-hover rounded-md transition-colors disabled:opacity-50"
+              className="h-8 px-3 rounded-md text-sm font-medium bg-accent text-on-accent hover:bg-accent-hover transition-colors disabled:opacity-50"
             >
               {editingId ? "Update" : "Save"}
             </button>
             <button
               onClick={resetForm}
-              className="px-3 py-1.5 text-xs text-text-secondary hover:text-text-primary rounded-md transition-colors"
+              className="h-8 px-3 rounded-md text-sm text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors"
             >
               Cancel
             </button>
@@ -205,7 +209,7 @@ export function SignatureEditor() {
       ) : (
         <button
           onClick={() => setShowForm(true)}
-          className="text-xs text-accent hover:text-accent-hover"
+          className="inline-flex items-center h-8 px-3 rounded-md border border-border-primary bg-bg-primary text-sm text-text-primary hover:bg-bg-hover transition-colors"
         >
           + Add signature
         </button>

@@ -73,14 +73,14 @@ export function RawMessageModal({
       width="w-[720px] max-w-[90vw]"
       renderHeader={
         <div className="px-4 py-3 border-b border-border-primary flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-text-primary">
+          <h3 className="text-sm font-medium text-text-primary">
             Message Source
           </h3>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             {raw && (
               <button
                 onClick={handleCopy}
-                className="flex items-center gap-1 text-xs text-text-secondary hover:text-text-primary px-2 py-1 rounded hover:bg-bg-hover transition-colors"
+                className="flex items-center gap-1.5 h-7 px-2 rounded-md text-xs text-text-tertiary hover:text-text-primary hover:bg-bg-hover transition-colors"
                 title="Copy to clipboard"
               >
                 {copied ? <Check size={14} /> : <Copy size={14} />}
@@ -89,7 +89,7 @@ export function RawMessageModal({
             )}
             <button
               onClick={onClose}
-              className="text-text-tertiary hover:text-text-primary text-lg leading-none"
+              className="w-7 h-7 flex items-center justify-center rounded-md text-text-tertiary hover:text-text-primary hover:bg-bg-hover text-lg leading-none transition-colors"
             >
               &times;
             </button>
@@ -97,19 +97,19 @@ export function RawMessageModal({
         </div>
       }
     >
-      <div className="max-h-[70vh] overflow-y-auto p-4">
+      <div className="max-h-[70vh] overflow-y-auto p-4 bg-bg-secondary rounded-b-md">
         {loading && (
-          <div className="flex items-center justify-center py-12 text-text-tertiary text-sm">
+          <div className="flex items-center justify-center py-12 font-mono text-xs text-text-tertiary">
             Loading message source...
           </div>
         )}
         {error && (
-          <div className="text-danger text-sm py-4">
+          <div className="rounded-md border border-danger/30 bg-danger/5 px-3 py-2 text-danger text-sm">
             Failed to load message source: {error}
           </div>
         )}
         {raw && (
-          <pre className="text-xs font-mono text-text-secondary whitespace-pre-wrap break-all select-text">
+          <pre className="text-xs leading-relaxed font-mono text-text-secondary whitespace-pre-wrap break-all select-text">
             {raw}
           </pre>
         )}

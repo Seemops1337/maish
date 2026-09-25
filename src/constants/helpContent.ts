@@ -1164,27 +1164,11 @@ export const HELP_CATEGORIES: HelpCategory[] = [
         title: "Light & dark mode",
         summary: "Switch between light, dark, or system theme.",
         description:
-          "Choose between light mode, dark mode, or system-matched (follows your OS setting). Dark mode uses carefully chosen colors for comfortable reading in low-light environments, with a darker background and softer text. The theme switches instantly and persists across restarts. The animated gradient background also adapts — light mode uses blues/purples/pinks, dark mode uses deeper blues and purples.",
+          "Choose between light mode, dark mode, or system-matched (follows your OS setting). Both themes share the same monochrome look: near-white or near-black surfaces, hairline borders and Geist type, with color reserved for warnings and errors. The theme switches instantly and persists across restarts.",
         tips: [
           { text: "Change theme in Settings > General." },
           { text: "\"System\" follows your OS light/dark preference." },
-          { text: "Dark mode is optimized for low-light environments." },
-          { text: "The animated background gradient adapts to light/dark mode." },
-        ],
-        relatedSettingsTab: "general",
-      },
-      {
-        id: "accent-colors",
-        icon: Palette,
-        title: "Accent colors",
-        summary: "8 color presets to personalize the app.",
-        description:
-          "Choose from 8 accent color presets to personalize the look of the app: Indigo (default), Rose, Emerald, Amber, Sky, Violet, Orange, or Slate. Each preset has separate light and dark mode variants that are optimized for readability. The accent color is used for buttons, active states, links, badges, and highlights throughout the app. Accent colors are independent of the light/dark theme.",
-        tips: [
-          { text: "Change accent color in Settings > General." },
-          { text: "8 presets: Indigo, Rose, Emerald, Amber, Sky, Violet, Orange, Slate." },
-          { text: "Each color has optimized light and dark variants." },
-          { text: "Accent color is independent of light/dark theme." },
+          { text: "Turn on \"Reduce motion\" in Settings > General to switch off all animations and transitions." },
         ],
         relatedSettingsTab: "general",
       },

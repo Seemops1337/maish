@@ -214,7 +214,7 @@ export function EventDetailModal({ event, calendars, accountId, onClose, onUpdat
                   checked
                   readOnly
                   disabled
-                  className="rounded accent-[var(--color-accent)]"
+                  className="rounded accent-accent"
                 />
                 All day
               </label>
@@ -281,20 +281,20 @@ export function EventDetailModal({ event, calendars, accountId, onClose, onUpdat
           />
 
           <div>
-            <label className="text-xs text-text-secondary block mb-1">Description</label>
+            <label className="label-mono block mb-1.5">Description</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Add description"
               rows={3}
-              className="w-full px-3 py-1.5 bg-bg-tertiary border border-border-primary rounded text-sm text-text-primary outline-none focus:border-accent resize-none"
+              className="w-full px-3 py-2 bg-bg-primary border border-border-primary rounded-md text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10 resize-none"
             />
           </div>
 
           {isSeries && (
             <fieldset className="border-t border-border-primary pt-3">
               <legend className="sr-only">Which events to change</legend>
-              <div className="text-xs text-text-secondary mb-1.5">Apply changes to</div>
+              <div className="label-mono mb-1.5">Apply changes to</div>
               <div className="space-y-1">
                 {SCOPE_LABELS.map((option) => (
                   <label key={option.value} className="flex items-center gap-2 text-sm text-text-secondary cursor-pointer">
@@ -304,7 +304,7 @@ export function EventDetailModal({ event, calendars, accountId, onClose, onUpdat
                       value={option.value}
                       checked={scope === option.value}
                       onChange={() => setScope(option.value)}
-                      className="accent-[var(--color-accent)]"
+                      className="accent-accent"
                     />
                     {option.label}
                   </label>
@@ -334,7 +334,7 @@ export function EventDetailModal({ event, calendars, accountId, onClose, onUpdat
         {calendar && (
           <div className="flex items-center gap-2 text-xs text-text-tertiary">
             <span
-              className="w-2.5 h-2.5 rounded-full"
+              className="w-2 h-2 rounded-full"
               style={{ backgroundColor: calendar.color ?? "var(--color-accent)" }}
             />
             {calendar.display_name}
@@ -343,7 +343,7 @@ export function EventDetailModal({ event, calendars, accountId, onClose, onUpdat
 
         <div className="flex items-start gap-2.5 text-sm text-text-secondary">
           <Clock size={14} className="mt-0.5 shrink-0 text-text-tertiary" />
-          <div>
+          <div className="font-mono text-[13px] tabular-nums">
             {allDay ? (
               <>
                 <div>
@@ -386,7 +386,7 @@ export function EventDetailModal({ event, calendars, accountId, onClose, onUpdat
 
         {attendees.length > 0 && (
           <div className="border-t border-border-primary pt-3">
-            <div className="text-xs text-text-tertiary mb-1.5">Attendees</div>
+            <div className="label-mono mb-1.5">Attendees</div>
             <div className="space-y-1">
               {attendees.map((a, i) => (
                 <div key={i} className="flex items-center gap-2 text-sm text-text-secondary">

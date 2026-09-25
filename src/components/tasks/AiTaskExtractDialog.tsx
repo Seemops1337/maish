@@ -8,10 +8,10 @@ import { useTaskStore } from "@/stores/taskStore";
 
 const PRIORITY_OPTIONS: { value: TaskPriority; label: string; color: string }[] = [
   { value: "none", label: "None", color: "text-text-tertiary" },
-  { value: "low", label: "Low", color: "text-blue-400" },
-  { value: "medium", label: "Medium", color: "text-amber-400" },
-  { value: "high", label: "High", color: "text-orange-500" },
-  { value: "urgent", label: "Urgent", color: "text-red-500" },
+  { value: "low", label: "Low", color: "text-text-tertiary" },
+  { value: "medium", label: "Medium", color: "text-text-secondary" },
+  { value: "high", label: "High", color: "text-warning" },
+  { value: "urgent", label: "Urgent", color: "text-danger" },
 ];
 
 interface AiTaskExtractDialogProps {
@@ -90,24 +90,24 @@ export function AiTaskExtractDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={onClose} />
-      <div className="relative glass-modal rounded-xl shadow-2xl w-[480px] max-w-[90vw] overflow-hidden">
+      <div className="absolute inset-0 overlay-backdrop" onClick={onClose} />
+      <div className="relative surface-overlay border border-border-primary rounded-md w-[480px] max-w-[90vw] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border-secondary">
+        <div className="flex items-center justify-between px-4 py-3 border-b border-border-primary">
           <div className="flex items-center gap-2">
-            <Sparkles size={16} className="text-accent" />
-            <h3 className="text-sm font-semibold text-text-primary">Create Task from Email</h3>
+            <Sparkles size={14} className="text-text-tertiary" />
+            <h3 className="text-sm font-medium text-text-primary">Create Task from Email</h3>
           </div>
-          <button onClick={onClose} className="p-1 text-text-tertiary hover:text-text-primary">
+          <button onClick={onClose} className="p-1.5 rounded-md text-text-tertiary hover:text-text-primary hover:bg-bg-hover">
             <X size={16} />
           </button>
         </div>
 
         {/* Body */}
-        <div className="px-5 py-4 space-y-4">
+        <div className="px-4 py-4 space-y-4">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-8 gap-3">
-              <Loader2 size={24} className="animate-spin text-accent" />
+              <Loader2 size={20} className="animate-spin text-text-tertiary" />
               <p className="text-sm text-text-secondary">Extracting task from email...</p>
             </div>
           ) : error && !title ? (
@@ -118,38 +118,38 @@ export function AiTaskExtractDialog({
             <>
               {/* Title */}
               <div>
-                <label className="block text-xs font-medium text-text-secondary mb-1.5">Title</label>
+                <label className="label-mono block mb-1.5">Title</label>
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-3 py-2 bg-bg-tertiary border border-border-primary rounded-lg text-sm text-text-primary outline-none focus:border-accent"
+                  className="w-full px-3 h-8 bg-bg-primary border border-border-primary rounded-md text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10"
                   autoFocus
                 />
               </div>
 
               {/* Description */}
               <div>
-                <label className="block text-xs font-medium text-text-secondary mb-1.5">Description</label>
+                <label className="label-mono block mb-1.5">Description</label>
                 <textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 bg-bg-tertiary border border-border-primary rounded-lg text-sm text-text-primary outline-none focus:border-accent resize-none"
+                  className="w-full px-3 py-2 bg-bg-primary border border-border-primary rounded-md text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10 resize-none"
                 />
               </div>
 
               {/* Priority + Due Date */}
               <div className="flex gap-4">
                 <div className="flex-1">
-                  <label className="block text-xs font-medium text-text-secondary mb-1.5">
+                  <label className="label-mono block mb-1.5">
                     <Flag size={11} className="inline mr-1" />
                     Priority
                   </label>
                   <select
                     value={priority}
                     onChange={(e) => setPriority(e.target.value as TaskPriority)}
-                    className="w-full px-3 py-2 bg-bg-tertiary border border-border-primary rounded-lg text-sm text-text-primary outline-none focus:border-accent"
+                    className="w-full px-3 h-8 bg-bg-primary border border-border-primary rounded-md text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10"
                   >
                     {PRIORITY_OPTIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -157,7 +157,7 @@ export function AiTaskExtractDialog({
                   </select>
                 </div>
                 <div className="flex-1">
-                  <label className="block text-xs font-medium text-text-secondary mb-1.5">
+                  <label className="label-mono block mb-1.5">
                     <Calendar size={11} className="inline mr-1" />
                     Due date
                   </label>
@@ -165,7 +165,7 @@ export function AiTaskExtractDialog({
                     type="date"
                     value={dueDate}
                     onChange={(e) => setDueDate(e.target.value)}
-                    className="w-full px-3 py-2 bg-bg-tertiary border border-border-primary rounded-lg text-sm text-text-primary outline-none focus:border-accent"
+                    className="w-full px-3 h-8 bg-bg-primary border border-border-primary rounded-md text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10"
                   />
                 </div>
               </div>
@@ -179,17 +179,17 @@ export function AiTaskExtractDialog({
 
         {/* Footer */}
         {!loading && title && (
-          <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-border-secondary">
+          <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-border-primary bg-bg-secondary">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-sm text-text-secondary hover:text-text-primary transition-colors"
+              className="h-8 px-3 rounded-md text-sm bg-bg-primary border border-border-primary text-text-primary hover:bg-bg-hover transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={handleCreate}
               disabled={!title.trim() || creating}
-              className="px-4 py-2 text-sm font-medium text-white bg-accent hover:bg-accent-hover rounded-lg transition-colors disabled:opacity-50"
+              className="h-8 px-3 text-sm font-medium text-on-accent bg-accent hover:bg-accent-hover rounded-md transition-colors disabled:opacity-50"
             >
               {creating ? "Creating..." : "Create Task"}
             </button>

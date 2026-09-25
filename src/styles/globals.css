@@ -1,39 +1,59 @@
 @import "tailwindcss";
+@import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
 
+/*
+ * Design tokens — monochrome, after Vercel's Geist system.
+ * Surfaces separate by value and hairline borders, not by shadow or color.
+ */
 @theme {
-  --color-bg-primary: rgba(250, 250, 249, 0.92);
-  --color-bg-secondary: rgba(245, 245, 244, 0.88);
-  --color-bg-tertiary: rgba(231, 229, 228, 0.88);
-  --color-bg-hover: rgba(231, 229, 228, 0.65);
-  --color-bg-selected: rgba(224, 231, 255, 0.75);
+  --font-sans: "Geist Variable", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono Variable", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
-  --color-text-primary: #1c1917;
-  --color-text-secondary: #57534e;
-  --color-text-tertiary: #78716c;
+  --color-bg-primary: #ffffff;
+  --color-bg-secondary: #fafafa;
+  --color-bg-tertiary: #f2f2f2;
+  --color-bg-hover: rgba(0, 0, 0, 0.04);
+  --color-bg-selected: rgba(0, 0, 0, 0.07);
 
-  --color-border-primary: rgba(0, 0, 0, 0.08);
-  --color-border-secondary: rgba(0, 0, 0, 0.04);
+  --color-text-primary: #171717;
+  --color-text-secondary: #4d4d4d;
+  --color-text-tertiary: #7d7d7d;
 
-  --color-accent: #4f46e5;
-  --color-accent-hover: #4338ca;
-  --color-accent-light: #e0e7ff;
+  --color-border-primary: #ebebeb;
+  --color-border-secondary: #f2f2f2;
 
-  --color-danger: #dc2626;
-  --color-warning: #d97706;
-  --color-success: #059669;
+  --color-accent: #171717;
+  --color-accent-hover: #383838;
+  --color-accent-light: #ebebeb;
+  --color-on-accent: #ffffff;
 
-  --color-sidebar-bg: rgba(245, 245, 244, 0.95);
-  --color-sidebar-text: #1c1917;
-  --color-sidebar-hover: rgba(231, 229, 228, 0.8);
-  --color-sidebar-active: #4f46e5;
+  --color-danger: #d93036;
+  --color-warning: #c25100;
+  --color-success: #297a3a;
 
-  --glass-blur: 20px;
-  --glass-blur-heavy: 24px;
-  --glass-border: rgba(255, 255, 255, 0.2);
-  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  --glass-shadow-elevated: 0 16px 48px rgba(0, 0, 0, 0.14);
-  --glass-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 0.4);
-  --backdrop-blur-overlay: 16px;
+  --color-sidebar-bg: #fafafa;
+  --color-sidebar-text: #171717;
+  --color-sidebar-hover: rgba(0, 0, 0, 0.04);
+  --color-sidebar-active: #171717;
+
+  /* Radii stay sharp: 6px for cards, buttons and inputs */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 6px;
+  --radius-xl: 8px;
+  --radius-2xl: 10px;
+  --radius-3xl: 12px;
+
+  /* Elevation is a hairline ring; only floating layers add a soft drop */
+  --shadow-xs: 0 0 0 1px var(--color-border-primary);
+  --shadow-sm: 0 0 0 1px var(--color-border-primary);
+  --shadow-md: 0 0 0 1px var(--color-border-primary), 0 4px 12px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 0 0 1px var(--color-border-primary), 0 8px 24px rgba(0, 0, 0, 0.08);
+  --shadow-xl: 0 0 0 1px var(--color-border-primary), 0 12px 32px rgba(0, 0, 0, 0.1);
+  --shadow-2xl: 0 0 0 1px var(--color-border-primary), 0 16px 48px rgba(0, 0, 0, 0.12);
+
+  --overlay-backdrop: rgba(0, 0, 0, 0.32);
 }
 
 @custom-variant dark (&:where(.dark, .dark *));
@@ -42,31 +62,39 @@
  * Dark mode overrides — applied when <html class="dark">
  */
 .dark {
-  --color-bg-primary: rgba(15, 23, 42, 0.88);
-  --color-bg-secondary: rgba(30, 41, 59, 0.82);
-  --color-bg-tertiary: rgba(51, 65, 85, 0.78);
-  --color-bg-hover: rgba(51, 65, 85, 0.58);
-  --color-bg-selected: rgba(30, 58, 95, 0.68);
+  --color-bg-primary: #0a0a0a;
+  --color-bg-secondary: #111111;
+  --color-bg-tertiary: #1a1a1a;
+  --color-bg-hover: rgba(255, 255, 255, 0.06);
+  --color-bg-selected: rgba(255, 255, 255, 0.1);
 
-  --color-text-primary: #f8fafc;
-  --color-text-secondary: #cbd5e1;
-  --color-text-tertiary: #94a3b8;
+  --color-text-primary: #ededed;
+  --color-text-secondary: #a1a1a1;
+  --color-text-tertiary: #7d7d7d;
 
-  --color-border-primary: rgba(255, 255, 255, 0.1);
-  --color-border-secondary: rgba(255, 255, 255, 0.06);
+  --color-border-primary: #262626;
+  --color-border-secondary: #1a1a1a;
 
-  --color-accent: #818cf8;
-  --color-accent-hover: #6366f1;
-  --color-accent-light: #312e81;
+  --color-accent: #ededed;
+  --color-accent-hover: #d4d4d4;
+  --color-accent-light: #262626;
+  --color-on-accent: #0a0a0a;
 
-  --color-sidebar-bg: rgba(15, 23, 42, 0.88);
-  --color-sidebar-text: #e2e8f0;
-  --color-sidebar-hover: rgba(30, 41, 59, 0.7);
+  --color-danger: #ff6166;
+  --color-warning: #ff990a;
+  --color-success: #62c073;
 
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-  --glass-shadow-elevated: 0 16px 48px rgba(0, 0, 0, 0.3);
-  --glass-highlight: inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
+  --color-sidebar-bg: #111111;
+  --color-sidebar-text: #ededed;
+  --color-sidebar-hover: rgba(255, 255, 255, 0.06);
+  --color-sidebar-active: #ededed;
+
+  --shadow-md: 0 0 0 1px var(--color-border-primary), 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 0 0 1px var(--color-border-primary), 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-xl: 0 0 0 1px var(--color-border-primary), 0 12px 32px rgba(0, 0, 0, 0.55);
+  --shadow-2xl: 0 0 0 1px var(--color-border-primary), 0 16px 48px rgba(0, 0, 0, 0.6);
+
+  --overlay-backdrop: rgba(0, 0, 0, 0.6);
 }
 
 /* Font scale — set on <html> like .dark */
@@ -85,134 +113,38 @@ body,
 }
 
 body {
-  font-family:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
-    Arial, sans-serif;
-  background: linear-gradient(135deg, #f5f0eb 0%, #ede4f5 30%, #fce7f3 60%, #fef3e2 80%, #e8eff8 100%);
-  background-attachment: fixed;
+  font-family: var(--font-sans);
+  font-feature-settings: "rlig" 1, "calt" 0, "ss11" 1;
+  background: var(--color-bg-secondary);
   color: var(--color-text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   overflow: hidden;
 }
 
-.dark body {
-  background-image: linear-gradient(135deg, #0c1222 0%, #151030 35%, #1a0a2e 65%, #0f172a 100%);
+code,
+kbd,
+pre,
+samp {
+  font-family: var(--font-mono);
 }
 
-/* Animated gradient blobs behind content */
-.animated-bg {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  overflow: hidden;
-  pointer-events: none;
+/*
+ * Mono label — the uppercase stamp for section headers, metadata and eyebrows.
+ */
+@utility label-mono {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  line-height: 1rem;
+  font-weight: 500;
+  letter-spacing: 0.071em;
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
 }
 
-.animated-bg .blob {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  opacity: 0.5;
-  animation: blobMove 20s ease-in-out infinite alternate;
-}
-
-/* When user enables "Reduce motion" in settings, hide animated blobs entirely */
-.reduce-motion .animated-bg {
-  display: none;
-}
-
-.animated-bg .blob:nth-child(1) {
-  width: 500px;
-  height: 500px;
-  background: radial-gradient(circle, #c7d2fe 0%, #a5b4fc 50%, transparent 70%);
-  top: -10%;
-  left: -5%;
-  animation-duration: 22s;
-}
-
-.animated-bg .blob:nth-child(2) {
-  width: 450px;
-  height: 450px;
-  background: radial-gradient(circle, #ddd6fe 0%, #c4b5fd 50%, transparent 70%);
-  top: 30%;
-  right: -10%;
-  animation-duration: 18s;
-  animation-delay: -5s;
-}
-
-.animated-bg .blob:nth-child(3) {
-  width: 400px;
-  height: 400px;
-  background: radial-gradient(circle, #fecdd3 0%, #fda4af 50%, transparent 70%);
-  bottom: -5%;
-  left: 30%;
-  animation-duration: 25s;
-  animation-delay: -10s;
-}
-
-.animated-bg .blob:nth-child(4) {
-  width: 350px;
-  height: 350px;
-  background: radial-gradient(circle, #d9c8ae 0%, #c4a882 50%, transparent 70%);
-  bottom: 20%;
-  left: -8%;
-  animation-duration: 20s;
-  animation-delay: -3s;
-}
-
-.animated-bg .blob:nth-child(5) {
-  width: 300px;
-  height: 300px;
-  background: radial-gradient(circle, #fde68a 0%, #fbbf24 50%, transparent 70%);
-  top: 10%;
-  left: 50%;
-  animation-duration: 24s;
-  animation-delay: -8s;
-}
-
-@keyframes blobMove {
-  0% {
-    transform: translate3d(0, 0, 0);
-  }
-  25% {
-    transform: translate3d(60px, -40px, 0);
-  }
-  50% {
-    transform: translate3d(-30px, 50px, 0);
-  }
-  75% {
-    transform: translate3d(40px, 30px, 0);
-  }
-  100% {
-    transform: translate3d(-20px, -60px, 0);
-  }
-}
-
-/* Dark mode blobs */
-.dark .animated-bg .blob:nth-child(1) {
-  background: radial-gradient(circle, #1e40af 0%, #1d4ed8 50%, transparent 70%);
-  opacity: 0.3;
-}
-
-.dark .animated-bg .blob:nth-child(2) {
-  background: radial-gradient(circle, #5b21b6 0%, #6d28d9 50%, transparent 70%);
-  opacity: 0.25;
-}
-
-.dark .animated-bg .blob:nth-child(3) {
-  background: radial-gradient(circle, #9d174d 0%, #be185d 50%, transparent 70%);
-  opacity: 0.2;
-}
-
-.dark .animated-bg .blob:nth-child(4) {
-  background: radial-gradient(circle, #065f46 0%, #047857 50%, transparent 70%);
-  opacity: 0.25;
-}
-
-.dark .animated-bg .blob:nth-child(5) {
-  background: radial-gradient(circle, #92400e 0%, #b45309 50%, transparent 70%);
-  opacity: 0.2;
+/* Tight display tracking for headings */
+@utility tracking-display {
+  letter-spacing: -0.04em;
 }
 
 /* Prevent text selection on UI chrome (not email content) */
@@ -221,22 +153,18 @@ body {
   -webkit-user-select: none;
 }
 
-/* Glass utility classes */
-.glass-panel {
-  backdrop-filter: blur(var(--glass-blur));
-  -webkit-backdrop-filter: blur(var(--glass-blur));
-  box-shadow: var(--glass-shadow), var(--glass-highlight);
+/* Surface classes */
+.surface-panel {
+  background-color: var(--color-bg-primary);
 }
 
-.glass-modal {
-  backdrop-filter: blur(var(--glass-blur-heavy));
-  -webkit-backdrop-filter: blur(var(--glass-blur-heavy));
-  box-shadow: var(--glass-shadow-elevated), var(--glass-highlight);
+.surface-overlay {
+  background-color: var(--color-bg-primary);
+  box-shadow: var(--shadow-2xl);
 }
 
-.glass-backdrop {
-  backdrop-filter: blur(var(--backdrop-blur-overlay));
-  -webkit-backdrop-filter: blur(var(--backdrop-blur-overlay));
+.overlay-backdrop {
+  background-color: var(--overlay-backdrop);
 }
 
 /* Hide scrollbar utility — still scrollable via trackpad/wheel */
@@ -259,12 +187,12 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: var(--color-text-tertiary);
+  background-color: var(--color-border-primary);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: var(--color-text-secondary);
+  background-color: var(--color-text-tertiary);
 }
 
 /* ============================================
@@ -358,15 +286,11 @@ body {
 .toast-exit { opacity: 1; transform: translateY(0); }
 .toast-exit-active { opacity: 0; transform: translateY(16px); transition: all var(--anim-normal) ease-in; }
 
-/* Utility: hover lift — includes color transitions so it can replace transition-colors */
+/* Utility: hover transition — color only; the flat style has no lift */
 .hover-lift {
-  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, transform, box-shadow;
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, box-shadow;
   transition-duration: var(--anim-fast);
   transition-timing-function: ease;
-}
-.hover-lift:hover:not(:active) {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 /* Utility: press scale */
@@ -374,19 +298,14 @@ body {
   transform: scale(0.97);
 }
 
-/* Utility: interactive button (hover lift + press scale) */
+/* Utility: interactive button (color transition + press scale) */
 .interactive-btn {
   transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, transform, box-shadow;
   transition-duration: var(--anim-fast);
   transition-timing-function: ease;
 }
-.interactive-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
 .interactive-btn:active {
-  transform: scale(0.97);
-  box-shadow: none;
+  transform: scale(0.98);
 }
 
 /* Utility: star pop animation */
@@ -394,27 +313,31 @@ body {
   animation: starPop var(--anim-slow) ease-out;
 }
 
-/* Backdrop blur fade-in */
+/* Backdrop fade-in */
 .backdrop-animate {
-  animation: backdropIn var(--anim-slow) ease-out forwards;
+  animation: backdropIn var(--anim-normal) ease-out forwards;
 }
 
 @keyframes backdropIn {
   from {
-    backdrop-filter: blur(0px);
-    -webkit-backdrop-filter: blur(0px);
     background-color: rgba(0, 0, 0, 0);
   }
   to {
-    backdrop-filter: blur(var(--backdrop-blur-overlay));
-    -webkit-backdrop-filter: blur(var(--backdrop-blur-overlay));
-    background-color: rgba(0, 0, 0, 0.2);
+    background-color: var(--overlay-backdrop);
   }
 }
 
 /* Utility: stagger-in for list items */
 .stagger-in {
   animation: fadeIn var(--anim-normal) ease-out both;
+}
+
+/* Reduce motion — the in-app setting, and the OS preference below */
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  animation: none !important;
+  transition-duration: 0.01ms !important;
 }
 
 /* Accessibility: respect reduced motion preference */
@@ -424,9 +347,5 @@ body {
   *::after {
     animation: none !important;
     transition-duration: 0.01ms !important;
-  }
-
-  .animated-bg {
-    display: none;
   }
 }

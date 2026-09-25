@@ -122,15 +122,15 @@ export const MessageItem = memo(forwardRef<HTMLDivElement, MessageItemProps>(fun
   const fromDisplay = message.from_name ?? message.from_address ?? "Unknown";
 
   return (
-    <div ref={ref} className={`border-b border-border-secondary last:border-b-0 ${isSpam ? "bg-red-500/8 dark:bg-red-500/10" : ""} ${focused ? "ring-2 ring-inset ring-accent/50" : ""}`} onContextMenu={onContextMenu}>
+    <div ref={ref} className={`border-b border-border-primary last:border-b-0 ${isSpam ? "bg-danger/5" : ""} ${focused ? "shadow-[inset_2px_0_0_var(--color-text-primary)]" : ""}`} onContextMenu={onContextMenu}>
       {/* Header — always visible, click to expand/collapse */}
       <button
         onClick={handleToggle}
-        className="w-full text-left px-4 py-3 hover:bg-bg-hover transition-colors"
+        className="w-full text-left px-6 py-3.5 hover:bg-bg-hover transition-colors"
       >
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 min-w-0">
-            <div className="w-7 h-7 rounded-full bg-accent/20 text-accent flex items-center justify-center shrink-0 text-xs font-medium">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-full bg-bg-tertiary text-text-secondary border border-border-primary flex items-center justify-center shrink-0 text-xs font-medium">
               {fromDisplay[0]?.toUpperCase()}
             </div>
             <div className="min-w-0">
@@ -139,20 +139,20 @@ export const MessageItem = memo(forwardRef<HTMLDivElement, MessageItemProps>(fun
                 <AuthBadge authResults={message.auth_results} />
               </span>
               {!expanded && (
-                <span className="text-xs text-text-tertiary truncate block">
+                <span className="text-xs text-text-tertiary truncate block mt-0.5">
                   {message.snippet}
                 </span>
               )}
             </div>
           </div>
-          <span className="text-xs text-text-tertiary whitespace-nowrap shrink-0 ml-2">
+          <span className="font-mono text-[11px] tabular-nums text-text-tertiary whitespace-nowrap shrink-0 ml-2">
             {formatFullDate(message.date)}
           </span>
         </div>
         {expanded && (
-          <div className="mt-1 text-xs text-text-tertiary">
+          <div className="mt-1.5 pl-11 text-xs text-text-tertiary truncate">
             {message.to_addresses && (
-              <span>To: {message.to_addresses}</span>
+              <span><span className="font-mono text-[10px] uppercase tracking-wider mr-1.5">To</span>{message.to_addresses}</span>
             )}
           </div>
         )}
@@ -160,7 +160,7 @@ export const MessageItem = memo(forwardRef<HTMLDivElement, MessageItemProps>(fun
 
       {/* Body — shown when expanded and image setting resolved */}
       {expanded && (
-        <div className="px-4 pb-4">
+        <div className="px-6 pb-5">
           {!authBannerDismissed && (
             <AuthWarningBanner
               authResults={message.auth_results}
@@ -200,7 +200,7 @@ export const MessageItem = memo(forwardRef<HTMLDivElement, MessageItemProps>(fun
               riskyLinks={phishingScan?.riskyLinks ?? EMPTY_LINKS}
             />
           ) : (
-            <div className="py-8 text-center text-text-tertiary text-sm">Loading...</div>
+            <div className="py-8 text-center font-mono text-[11px] text-text-tertiary">Loading...</div>
           )}
 
           <InlineAttachmentPreview
@@ -275,7 +275,7 @@ function UnsubscribeLink({
     <button
       onClick={handleClick}
       disabled={status === "loading" || status === "done"}
-      className={`flex items-center gap-1 text-xs mb-2 transition-colors ${
+      className={`flex items-center gap-1.5 font-mono text-[11px] mb-3 transition-colors ${
         status === "done"
           ? "text-success"
           : status === "failed"

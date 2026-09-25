@@ -8,7 +8,6 @@ import {
   isText,
   canPreview,
   formatFileSize,
-  getFileIcon,
 } from "./fileTypeHelpers";
 
 describe("isDocument", () => {
@@ -120,8 +119,4 @@ describe("existing helpers", () => {
     expect(formatFileSize(1500000)).toBe("1.4 MB");
   });
 
-  it("getFileIcon returns emoji strings", () => {
-    expect(typeof getFileIcon("image/png")).toBe("string");
-    expect(typeof getFileIcon(null)).toBe("string");
-  });
 });

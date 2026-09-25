@@ -24,6 +24,7 @@ import {
   Calendar,
   Settings,
   Plus,
+  PenLine,
   Tag,
   ChevronDown,
   ChevronUp,
@@ -107,14 +108,14 @@ function DroppableNavItem({
       onClick={onClick}
       onContextMenu={onContextMenu}
       title={title}
-      className={`flex items-center w-full py-2 text-sm transition-colors press-scale ${
-        collapsed ? "justify-center px-0" : "gap-3 px-3 text-left"
+      className={`flex items-center w-full h-8 rounded-md text-sm transition-colors ${
+        collapsed ? "justify-center px-0" : "gap-2.5 px-2 text-left"
       } ${
         isOver
-          ? "bg-accent/20 ring-1 ring-accent"
+          ? "bg-bg-selected ring-1 ring-text-tertiary text-text-primary"
           : isActive
-            ? "bg-accent/10 text-accent font-medium"
-            : "hover:bg-sidebar-hover text-sidebar-text"
+            ? "bg-bg-selected text-text-primary font-medium"
+            : "text-text-secondary hover:bg-sidebar-hover hover:text-text-primary"
       }`}
     >
       {children(isOver)}
@@ -146,19 +147,19 @@ function DroppableLabelItem({
       onClick={onClick}
       onContextMenu={onContextMenu}
       title={collapsed ? label.name : undefined}
-      className={`group flex items-center w-full py-2 text-sm transition-colors ${
-        collapsed ? "justify-center px-0" : "gap-3 px-3 text-left"
+      className={`group flex items-center w-full h-8 rounded-md text-sm transition-colors ${
+        collapsed ? "justify-center px-0" : "gap-2.5 px-2 text-left"
       } ${
         isOver
-          ? "bg-accent/20 ring-1 ring-accent"
+          ? "bg-bg-selected ring-1 ring-text-tertiary text-text-primary"
           : isActive
-            ? "bg-accent/10 text-accent font-medium"
-            : "hover:bg-sidebar-hover text-sidebar-text"
+            ? "bg-bg-selected text-text-primary font-medium"
+            : "text-text-secondary hover:bg-sidebar-hover hover:text-text-primary"
       }`}
     >
       {collapsed ? (
         <span
-          className="w-7 h-7 rounded-md flex items-center justify-center text-xs font-semibold shrink-0"
+          className="w-7 h-7 rounded-md flex items-center justify-center font-mono text-xs font-medium shrink-0"
           style={label.colorBg
             ? { backgroundColor: label.colorBg, color: label.colorFg ?? "#ffffff" }
             : undefined
@@ -174,7 +175,7 @@ function DroppableLabelItem({
         <>
           {label.colorBg ? (
             <span
-              className="w-3 h-3 rounded-full shrink-0"
+              className="w-2 h-2 mx-1 rounded-full shrink-0"
               style={{ backgroundColor: label.colorBg }}
             />
           ) : (
@@ -186,7 +187,7 @@ function DroppableLabelItem({
             tabIndex={0}
             onClick={(e) => { e.stopPropagation(); onEditClick(); }}
             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); onEditClick(); } }}
-            className="opacity-0 group-hover:opacity-100 p-0.5 text-sidebar-text/40 hover:text-sidebar-text transition-opacity"
+            className="opacity-0 group-hover:opacity-100 p-0.5 rounded text-text-tertiary hover:text-text-primary transition-opacity"
             title="Edit label"
           >
             <Pencil size={12} />
@@ -352,23 +353,28 @@ export function Sidebar({ collapsed, onAddAccount }: SidebarProps) {
 
   return (
     <aside
-      className={`no-select flex flex-col bg-sidebar-bg text-sidebar-text border-r border-border-primary transition-all duration-200 glass-panel ${
+      className={`no-select flex flex-col bg-sidebar-bg text-sidebar-text border-r border-border-primary transition-all duration-200 ${
         collapsed ? "w-16" : "w-60"
       }`}
     >
       <AccountSwitcher collapsed={collapsed} onAddAccount={onAddAccount} />
 
       {/* Compose button */}
-      <div className="px-3 py-2">
+      <div className="px-3 pt-1 pb-3">
         <button
           onClick={() => openComposer()}
-          className="w-full flex items-center justify-center gap-2 bg-accent hover:bg-accent-hover text-white rounded-lg py-2 text-sm font-medium interactive-btn"
+          className="w-full h-8 flex items-center justify-center gap-2 bg-accent hover:bg-accent-hover text-on-accent rounded-md text-sm font-medium interactive-btn"
         >
-          {collapsed ? <Plus size={16} /> : "Compose"}
+          {collapsed ? <Plus size={16} /> : (
+            <>
+              <PenLine size={14} />
+              <span>Compose</span>
+            </>
+          )}
         </button>
       </div>
 
-      <nav className="flex-1 overflow-y-auto py-2">
+      <nav className={`flex-1 overflow-y-auto pb-2 space-y-px ${collapsed ? "px-2" : "px-3"}`}>
         {visibleNavItems.map((item, index) => {
           const Icon = item.icon;
           const isInbox = item.id === "inbox";
@@ -376,7 +382,7 @@ export function Sidebar({ collapsed, onAddAccount }: SidebarProps) {
           return (
             <div key={item.id}>
               {startsNewGroup && (
-                <hr className={`my-2 border-border-primary/60 ${collapsed ? "mx-4" : "mx-3"}`} />
+                <hr className={`my-2 border-border-primary ${collapsed ? "mx-2" : "mx-2"}`} />
               )}
               <DroppableNavItem
                 id={item.id}
@@ -395,15 +401,15 @@ export function Sidebar({ collapsed, onAddAccount }: SidebarProps) {
                 {() => (
                   <>
                     {isSyncingFolder === item.id ? (
-                      <Loader2 size={18} className="shrink-0 animate-spin text-accent" />
+                      <Loader2 size={16} className="shrink-0 animate-spin text-text-tertiary" />
                     ) : (
-                      <Icon size={18} className="shrink-0" />
+                      <Icon size={16} className="shrink-0" />
                     )}
                     {!collapsed && (
                       <span className="flex-1 truncate">{item.label}</span>
                     )}
                     {item.id === "tasks" && taskIncompleteCount > 0 && !collapsed && (
-                      <span className="text-[0.625rem] bg-accent/15 text-accent px-1.5 rounded-full leading-normal">
+                      <span className="font-mono text-[10px] leading-4 tabular-nums text-text-tertiary px-1.5 rounded-full border border-border-primary">
                         {taskIncompleteCount}
                       </span>
                     )}
@@ -425,8 +431,8 @@ export function Sidebar({ collapsed, onAddAccount }: SidebarProps) {
                         title={inboxViewMode === "split" ? "Switch to unified inbox" : "Switch to split inbox"}
                         className={`p-1 rounded transition-colors ${
                           inboxViewMode === "split"
-                            ? "text-accent hover:bg-accent/10"
-                            : "text-sidebar-text/40 hover:text-sidebar-text hover:bg-sidebar-hover"
+                            ? "text-text-primary hover:bg-bg-hover"
+                            : "text-text-tertiary hover:text-text-primary hover:bg-bg-hover"
                         }`}
                       >
                         <Columns2 size={14} />
@@ -447,10 +453,10 @@ export function Sidebar({ collapsed, onAddAccount }: SidebarProps) {
                         onClick={() => {
                           navigateToLabel("inbox", { category: cat.id });
                         }}
-                        className={`flex items-center gap-2 w-full py-1.5 pl-7 pr-3 text-left text-[0.8125rem] transition-colors ${
+                        className={`flex items-center gap-2 w-full h-7 pl-8 pr-2 rounded-md text-left text-[13px] transition-colors ${
                           isCatActive
-                            ? "text-accent font-medium"
-                            : "text-sidebar-text/70 hover:text-sidebar-text hover:bg-sidebar-hover"
+                            ? "text-text-primary font-medium bg-bg-hover"
+                            : "text-text-tertiary hover:text-text-primary hover:bg-sidebar-hover"
                         }`}
                       >
                         <CatIcon size={14} className="shrink-0" />
@@ -468,13 +474,13 @@ export function Sidebar({ collapsed, onAddAccount }: SidebarProps) {
         {showSmartFolders && (smartFolders.length > 0 || !collapsed) && (
           <>
             {!collapsed && (
-              <div className="flex items-center justify-between px-3 pt-4 pb-1">
-                <span className="text-xs font-medium text-sidebar-text/60 uppercase tracking-wider">
+              <div className="flex items-center justify-between px-2 pt-5 pb-1.5">
+                <span className="label-mono">
                   Smart Folders
                 </span>
                 <button
                   onClick={handleAddSmartFolder}
-                  className="p-0.5 text-sidebar-text/40 hover:text-sidebar-text transition-colors"
+                  className="p-0.5 rounded text-text-tertiary hover:text-text-primary hover:bg-bg-hover transition-colors"
                   title="Add smart folder"
                 >
                   <Plus size={14} />
@@ -490,16 +496,16 @@ export function Sidebar({ collapsed, onAddAccount }: SidebarProps) {
                   key={folder.id}
                   onClick={() => navigateToLabel(`smart-folder:${folder.id}`)}
                   title={collapsed ? folder.name : undefined}
-                  className={`flex items-center w-full py-2 text-sm transition-colors press-scale ${
-                    collapsed ? "justify-center px-0" : "gap-3 px-3 text-left"
+                  className={`flex items-center w-full h-8 rounded-md text-sm transition-colors ${
+                    collapsed ? "justify-center px-0" : "gap-2.5 px-2 text-left"
                   } ${
                     isActive
-                      ? "bg-accent/10 text-accent font-medium"
-                      : "hover:bg-sidebar-hover text-sidebar-text"
+                      ? "bg-bg-selected text-text-primary font-medium"
+                      : "text-text-secondary hover:bg-sidebar-hover hover:text-text-primary"
                   }`}
                 >
                   <Icon
-                    size={18}
+                    size={16}
                     className="shrink-0"
                     style={folder.color ? { color: folder.color } : undefined}
                   />
@@ -507,7 +513,7 @@ export function Sidebar({ collapsed, onAddAccount }: SidebarProps) {
                     <>
                       <span className="flex-1 truncate">{folder.name}</span>
                       {count > 0 && (
-                        <span className="text-[0.625rem] bg-accent/15 text-accent px-1.5 rounded-full leading-normal">
+                        <span className="font-mono text-[10px] leading-4 tabular-nums text-text-tertiary px-1.5 rounded-full border border-border-primary">
                           {count}
                         </span>
                       )}
@@ -523,13 +529,13 @@ export function Sidebar({ collapsed, onAddAccount }: SidebarProps) {
         {showLabels && (labels.length > 0 || !collapsed) && (
           <>
             {!collapsed && (
-              <div className="flex items-center justify-between px-3 pt-4 pb-1">
-                <span className="text-xs font-medium text-sidebar-text/60 uppercase tracking-wider">
+              <div className="flex items-center justify-between px-2 pt-5 pb-1.5">
+                <span className="label-mono">
                   Labels
                 </span>
                 <button
                   onClick={handleAddLabel}
-                  className="p-0.5 text-sidebar-text/40 hover:text-sidebar-text transition-colors"
+                  className="p-0.5 rounded text-text-tertiary hover:text-text-primary hover:bg-bg-hover transition-colors"
                   title="Add label"
                 >
                   <Plus size={14} />
@@ -587,7 +593,7 @@ export function Sidebar({ collapsed, onAddAccount }: SidebarProps) {
             {!collapsed && labels.length > LABELS_COLLAPSED_COUNT && (
               <button
                 onClick={() => setLabelsExpanded((v) => !v)}
-                className="flex items-center gap-2 w-full px-3 py-1.5 text-xs text-sidebar-text/60 hover:text-sidebar-text transition-colors"
+                className="flex items-center gap-2 w-full h-7 px-2 rounded-md font-mono text-[11px] text-text-tertiary hover:text-text-primary hover:bg-sidebar-hover transition-colors"
               >
                 {labelsExpanded ? (
                   <>
@@ -615,19 +621,19 @@ export function Sidebar({ collapsed, onAddAccount }: SidebarProps) {
       </nav>
 
       {/* Bottom bar: Settings + collapse toggle */}
-      <div className={`py-2 border-t border-border-primary flex ${collapsed ? "flex-col items-center gap-1 px-2" : "items-center gap-1 px-3"}`}>
+      <div className={`py-2 border-t border-border-primary flex ${collapsed ? "flex-col items-center gap-1 px-2" : "items-center gap-0.5 px-3"}`}>
         <button
           onClick={() => navigateToLabel("settings")}
           className={`flex items-center text-sm rounded-md transition-colors ${
-            collapsed ? "p-2 justify-center" : "gap-3 flex-1 px-3 py-2 text-left"
+            collapsed ? "p-2 justify-center" : "gap-2.5 flex-1 h-8 px-2 text-left"
           } ${
             activeLabel === "settings"
-              ? "bg-accent/10 text-accent font-medium"
-              : "text-sidebar-text hover:bg-sidebar-hover"
+              ? "bg-bg-selected text-text-primary font-medium"
+              : "text-text-secondary hover:text-text-primary hover:bg-sidebar-hover"
           }`}
           title="Settings"
         >
-          <Settings size={18} className="shrink-0" />
+          <Settings size={16} className="shrink-0" />
           {!collapsed && <span>Settings</span>}
         </button>
         <button
@@ -636,16 +642,16 @@ export function Sidebar({ collapsed, onAddAccount }: SidebarProps) {
             collapsed ? "p-2 justify-center" : "p-2"
           } ${
             activeLabel === "help"
-              ? "bg-accent/10 text-accent font-medium"
-              : "text-sidebar-text hover:bg-sidebar-hover"
+              ? "bg-bg-selected text-text-primary font-medium"
+              : "text-text-tertiary hover:text-text-primary hover:bg-sidebar-hover"
           }`}
           title="Help"
         >
-          <HelpCircle size={18} className="shrink-0" />
+          <HelpCircle size={16} className="shrink-0" />
         </button>
         <button
           onClick={toggleSidebar}
-          className="p-2 text-sidebar-text/60 hover:text-sidebar-text hover:bg-sidebar-hover rounded-md transition-colors"
+          className="p-2 text-text-tertiary hover:text-text-primary hover:bg-sidebar-hover rounded-md transition-colors"
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
         >
           {collapsed ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}
@@ -683,10 +689,10 @@ function PendingOpsIndicator({ collapsed }: { collapsed: boolean }) {
     <div className="px-3 py-2 border-t border-border-primary">
       {collapsed ? (
         <div className="flex justify-center">
-          <span className="bg-accent/20 text-accent text-xs font-medium px-1.5 py-0.5 rounded-full">{pendingOpsCount}</span>
+          <span className="font-mono text-[10px] leading-4 tabular-nums text-text-tertiary px-1.5 rounded-full border border-border-primary">{pendingOpsCount}</span>
         </div>
       ) : (
-        <div className="text-xs text-text-secondary">
+        <div className="font-mono text-[11px] text-text-tertiary">
           {pendingOpsCount} pending {pendingOpsCount === 1 ? "change" : "changes"}
         </div>
       )}

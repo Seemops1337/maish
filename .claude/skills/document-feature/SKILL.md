@@ -24,7 +24,7 @@ You just implemented or modified a feature. Now add or update its documentation 
    - `notifications-contacts` — Notifications/VIP, contact sidebar
    - `security` — Phishing, auth badges, remote images, link confirmation
    - `calendar` — Google Calendar
-   - `appearance` — Theme, accent colors, font/density, layout
+   - `appearance` — Theme, font/density, layout
    - `accounts-system` — Multi-account, system tray, global shortcut, pop-out windows
 
 3. **Add a new `HelpCard`** to the appropriate category's `cards` array, or **update an existing card** if the feature enhances something already documented. Each card needs:

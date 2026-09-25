@@ -61,64 +61,68 @@ export function WeekView({ currentDate, events, onEventClick }: WeekViewProps) {
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
-      {/* Day headers */}
-      <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-border-primary shrink-0">
-        <div className="border-r border-border-secondary" />
-        {days.map((day, i) => {
-          const isToday = day.toDateString() === todayStr;
-          return (
-            <div key={i} className="px-2 py-2 text-center border-r border-border-secondary">
-              <div className="text-xs text-text-tertiary">{DAY_NAMES[day.getDay()]}</div>
-              <div className={`text-sm font-medium mt-0.5 w-7 h-7 flex items-center justify-center mx-auto rounded-full ${
-                isToday ? "bg-accent text-white" : "text-text-primary"
-              }`}>
-                {day.getDate()}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* All-day events row */}
-      <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-border-primary shrink-0">
-        <div className="border-r border-border-secondary px-1 py-1 text-[0.625rem] text-text-tertiary">all-day</div>
-        {days.map((day, i) => {
-          const allDay = allDayByDay.get(day.getDate()) ?? [];
-          return (
-            <div key={i} className="border-r border-border-secondary px-1 py-1 space-y-0.5">
-              {allDay.map((e) => (
-                <button
-                  key={e.id}
-                  onClick={() => onEventClick(e)}
-                  className="w-full text-left text-[0.625rem] px-1 py-0.5 rounded bg-accent/10 text-accent truncate hover:bg-accent/20 transition-colors"
-                >
-                  {e.summary ?? "Event"}
-                </button>
-              ))}
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Time grid */}
+      {/* One scroll container for header, all-day row and hour grid, so a
+          scrollbar narrows all three alike and their columns stay aligned */}
       <div className="flex-1 overflow-y-auto">
+        <div className="sticky top-0 z-10 bg-bg-primary">
+          {/* Day headers */}
+          <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-border-primary">
+            <div className="border-r border-border-primary" />
+            {days.map((day, i) => {
+              const isToday = day.toDateString() === todayStr;
+              return (
+                <div key={i} className="px-2 py-2 text-center border-r border-border-primary">
+                  <div className="label-mono">{DAY_NAMES[day.getDay()]}</div>
+                  <div className={`font-mono tabular-nums text-sm font-medium mt-0.5 w-7 h-7 flex items-center justify-center mx-auto rounded-full ${
+                    isToday ? "bg-accent text-on-accent" : "text-text-primary"
+                  }`}>
+                    {day.getDate()}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* All-day events row */}
+          <div className="grid grid-cols-[60px_repeat(7,1fr)] border-b border-border-primary">
+            <div className="border-r border-border-primary px-1 py-1 font-mono text-[10px] text-text-tertiary text-right">all-day</div>
+            {days.map((day, i) => {
+              const allDay = allDayByDay.get(day.getDate()) ?? [];
+              return (
+                <div key={i} className="border-r border-border-primary px-1 py-1 space-y-0.5">
+                  {allDay.map((e) => (
+                    <button
+                      key={e.id}
+                      onClick={() => onEventClick(e)}
+                      className="w-full text-left text-[11px] leading-4 px-1.5 py-0.5 rounded-sm border-l-2 border-text-tertiary bg-bg-tertiary text-text-primary truncate hover:bg-bg-hover transition-colors"
+                    >
+                      {e.summary ?? "Event"}
+                    </button>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Time grid */}
         <div className="grid grid-cols-[60px_repeat(7,1fr)]">
           {HOURS.map((hour) => (
             <div key={hour} className="contents">
-              <div className="border-r border-b border-border-secondary h-12 px-1 flex items-start justify-end">
-                <span className="text-[0.625rem] text-text-tertiary -mt-1.5">
+              <div className="border-r border-b border-border-primary h-12 px-1 flex items-start justify-end">
+                <span className="font-mono text-[10px] tabular-nums text-text-tertiary -mt-1.5">
                   {hour === 0 ? "" : `${hour % 12 || 12}${hour < 12 ? "am" : "pm"}`}
                 </span>
               </div>
               {days.map((day, di) => {
                 const hourEvents = dayHourEvents.get(`${day.getDate()}-${hour}`) ?? [];
                 return (
-                  <div key={di} className="border-r border-b border-border-secondary h-12 relative px-0.5">
+                  <div key={di} className="border-r border-b border-border-primary h-12 relative px-0.5">
                     {hourEvents.map((e) => (
                       <button
                         key={e.id}
                         onClick={() => onEventClick(e)}
-                        className="absolute inset-x-0.5 text-[0.625rem] px-1 py-0.5 rounded bg-accent/15 text-accent truncate hover:bg-accent/25 transition-colors"
+                        className="absolute inset-x-0.5 text-left text-[11px] leading-4 px-1.5 py-0.5 rounded-sm border-l-2 border-text-tertiary bg-bg-tertiary text-text-primary truncate hover:bg-bg-hover transition-colors"
                         title={e.summary ?? "Event"}
                       >
                         {e.summary ?? "Event"}

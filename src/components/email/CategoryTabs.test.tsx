@@ -48,10 +48,11 @@ describe("CategoryTabs", () => {
     );
 
     const updatesBtn = screen.getByText("Updates").closest("button");
-    expect(updatesBtn?.className).toContain("text-accent");
+    expect(updatesBtn?.className).toContain("text-text-primary");
+    expect(updatesBtn?.className).not.toContain("text-text-secondary");
 
     const primaryBtn = screen.getByText("Primary").closest("button");
-    expect(primaryBtn?.className).toContain("text-text-tertiary");
+    expect(primaryBtn?.className).toContain("text-text-secondary");
   });
 
   it("calls onCategoryChange when a tab is clicked", () => {

@@ -4,7 +4,7 @@ import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import Image from "@tiptap/extension-image";
-import { Clock, Maximize2, Minimize2, ExternalLink } from "lucide-react";
+import { Clock, Maximize2, Minimize2, ExternalLink, X } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
 import { AddressInput } from "./AddressInput";
@@ -490,77 +490,79 @@ export function Composer() {
 
       {/* Composer window */}
       <div
-        className={`relative bg-bg-primary border rounded-lg glass-modal pointer-events-auto flex flex-col slide-up-panel ${
+        className={`relative bg-bg-primary border rounded-lg shadow-xl pointer-events-auto flex flex-col slide-up-panel ${
           isFullpage ? "w-full h-full max-w-5xl" : "w-full max-w-2xl max-h-[80vh]"
-        } ${isDragging ? "border-accent border-2" : "border-border-primary"}`}
+        } ${isDragging ? "border-text-tertiary" : "border-border-primary"}`}
         onDragEnter={handleDragEnter}
         onDragLeave={handleDragLeave}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
       >
         {isDragging && (
-          <div className="absolute inset-0 z-10 flex items-center justify-center bg-accent/10 rounded-lg pointer-events-none">
-            <span className="text-sm font-medium text-accent">Drop files to attach</span>
+          <div className="absolute inset-1 z-10 flex items-center justify-center bg-bg-secondary/90 border border-dashed border-text-tertiary rounded-md pointer-events-none">
+            <span className="text-sm font-medium text-text-primary">Drop files to attach</span>
           </div>
         )}
 
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-2.5 border-b border-border-primary bg-bg-secondary rounded-t-lg">
+        <div className="flex items-center justify-between h-10 pl-4 pr-2 border-b border-border-primary bg-bg-secondary rounded-t-lg">
           <span className="text-sm font-medium text-text-primary">
             {modeLabel}
           </span>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5">
             <button
               onClick={() => setViewMode(isFullpage ? "modal" : "fullpage")}
-              className="text-text-tertiary hover:text-text-primary p-1 rounded transition-colors"
+              className="p-1.5 rounded-md text-text-tertiary hover:text-text-primary hover:bg-bg-hover transition-colors"
               title={isFullpage ? "Collapse" : "Expand"}
             >
               {isFullpage ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
             </button>
             <button
               onClick={handlePopOutComposer}
-              className="text-text-tertiary hover:text-text-primary p-1 rounded transition-colors"
+              className="p-1.5 rounded-md text-text-tertiary hover:text-text-primary hover:bg-bg-hover transition-colors"
               title="Open in new window"
             >
               <ExternalLink size={14} />
             </button>
             <button
               onClick={closeComposer}
-              className="text-text-tertiary hover:text-text-primary text-lg leading-none p-1"
+              className="p-1.5 rounded-md text-text-tertiary hover:text-text-primary hover:bg-bg-hover transition-colors"
+              aria-label="Close"
             >
-              ×
+              <X size={14} />
             </button>
           </div>
         </div>
 
         {/* Address fields */}
-        <div className="px-3 py-2 space-y-1.5 border-b border-border-secondary">
+        <div className="divide-y divide-border-primary border-b border-border-primary">
           <FromSelector
             aliases={aliases}
             selectedEmail={fromEmail ?? activeAccount?.email ?? ""}
             onChange={(alias) => setFromEmail(alias.email)}
           />
-          <AddressInput label="To" addresses={to} onChange={setTo} />
-          {showCcBcc ? (
+          <div className={`relative ${showCcBcc ? "" : "pr-16"}`}>
+            <AddressInput label="To" addresses={to} onChange={setTo} />
+            {!showCcBcc && (
+              <button
+                onClick={() => setShowCcBcc(true)}
+                className="absolute right-2 top-1.5 h-6 px-2 rounded-md text-xs text-text-tertiary hover:text-text-primary hover:bg-bg-hover transition-colors"
+              >
+                Cc / Bcc
+              </button>
+            )}
+          </div>
+          {showCcBcc && (
             <>
               <AddressInput label="Cc" addresses={cc} onChange={setCc} />
               <AddressInput label="Bcc" addresses={bcc} onChange={setBcc} />
             </>
-          ) : (
-            <button
-              onClick={() => setShowCcBcc(true)}
-              className="text-xs text-accent hover:text-accent-hover ml-10"
-            >
-              Cc / Bcc
-            </button>
           )}
-        </div>
 
-        {/* Subject */}
-        <div className="px-3 py-1.5 border-b border-border-secondary">
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-text-tertiary w-8 shrink-0">
-              Sub
+          {/* Subject */}
+          <div className="flex items-center gap-2 px-4 h-9">
+            <span className="label-mono w-16 shrink-0">
+              Subject
             </span>
             <input
               type="text"
@@ -599,27 +601,28 @@ export function Composer() {
         </div>
 
         {/* Attachments */}
-        <div className="border-t border-border-secondary">
+        <div className="border-t border-border-primary">
           <AttachmentPicker />
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between px-4 py-2.5 border-t border-border-primary bg-bg-secondary rounded-b-lg">
-          <div className="flex items-center gap-3">
-            <div className="text-xs text-text-tertiary">
+        <div className="flex items-center justify-between gap-3 pl-4 pr-3 py-2 border-t border-border-primary bg-bg-secondary rounded-b-lg">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="text-xs text-text-tertiary truncate">
               {fromEmail ?? activeAccount?.email ?? "No account"}
             </div>
             {savedLabel && (
-              <span className={`text-xs text-text-tertiary italic transition-opacity duration-200 ${isSaving ? "animate-pulse" : ""}`}>
+              <span className={`shrink-0 font-mono text-xs text-text-tertiary transition-opacity duration-200 ${isSaving ? "animate-pulse" : ""}`}>
                 {savedLabel}
               </span>
             )}
             <SignatureSelector />
             <TemplatePicker editor={editor} />
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <Button
-              variant="secondary"
+              variant="ghost"
+              className="h-8"
               onClick={handleDiscard}
             >
               Discard
@@ -628,17 +631,17 @@ export function Composer() {
               <button
                 onClick={handleSend}
                 disabled={to.length === 0}
-                className="px-4 py-1.5 text-xs font-medium text-white bg-accent hover:bg-accent-hover rounded-l-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="h-8 px-3.5 text-sm font-medium text-on-accent bg-accent hover:bg-accent-hover rounded-l-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Send
               </button>
               <button
                 onClick={() => setShowSchedule(true)}
                 disabled={to.length === 0}
-                className="px-2 py-1.5 text-white bg-accent hover:bg-accent-hover border-l border-white/20 rounded-r-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="h-8 px-2 text-on-accent bg-accent hover:bg-accent-hover border-l border-on-accent/20 rounded-r-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Schedule send"
               >
-                <Clock size={12} />
+                <Clock size={14} />
               </button>
             </div>
           </div>
