@@ -185,7 +185,7 @@ describe("LabelEditor", () => {
     fireEvent.click(colorButton);
 
     // The button should now have a ring indicating selection
-    expect(colorButton.className).toContain("ring-1");
+    expect(colorButton.className).toContain("ring-2");
   });
 
   it("shows edit form under the label being edited, not at bottom", () => {

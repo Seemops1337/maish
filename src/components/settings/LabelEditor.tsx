@@ -67,7 +67,7 @@ export function LabelEditor() {
   return (
     <div className="space-y-3">
       {error && (
-        <div className="flex items-center gap-2 px-3 py-2 bg-danger/10 text-danger text-xs rounded-md">
+        <div className="flex items-center gap-2 px-3 py-2 border border-danger/20 bg-danger/5 text-danger text-xs rounded-md">
           <span className="flex-1">{error}</span>
           <button onClick={() => setError(null)} className="shrink-0">
             <X size={12} />
@@ -79,67 +79,71 @@ export function LabelEditor() {
         <p className="text-sm text-text-tertiary">No user labels</p>
       )}
 
-      {labels.map((label, index) => (
-        <div key={label.id}>
-          <div className="flex items-center justify-between py-2 px-3 bg-bg-secondary rounded-md">
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              {label.colorBg ? (
-                <span
-                  className="w-3 h-3 rounded-full shrink-0"
-                  style={{ backgroundColor: label.colorBg }}
-                />
-              ) : (
-                <span className="w-3 h-3 rounded-full shrink-0 bg-text-tertiary/30" />
+      {labels.length > 0 && (
+        <div className="space-y-0.5">
+          {labels.map((label, index) => (
+            <div key={label.id}>
+              <div className="group flex items-center justify-between gap-3 -mx-2 px-2 py-1.5 rounded-md hover:bg-bg-hover">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  {label.colorBg ? (
+                    <span
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ backgroundColor: label.colorBg }}
+                    />
+                  ) : (
+                    <span className="w-2 h-2 rounded-full shrink-0 bg-text-tertiary/30" />
+                  )}
+                  <span className="text-sm font-medium text-text-primary truncate">
+                    {label.name}
+                  </span>
+                </div>
+                <div className="flex items-center gap-0.5">
+                  <button
+                    onClick={() => handleMoveUp(index)}
+                    disabled={index === 0}
+                    className="p-1 rounded-md text-text-tertiary hover:text-text-primary hover:bg-bg-hover disabled:opacity-30 disabled:cursor-not-allowed"
+                    title="Move up"
+                  >
+                    <ChevronUp size={14} />
+                  </button>
+                  <button
+                    onClick={() => handleMoveDown(index)}
+                    disabled={index === labels.length - 1}
+                    className="p-1 rounded-md text-text-tertiary hover:text-text-primary hover:bg-bg-hover disabled:opacity-30 disabled:cursor-not-allowed"
+                    title="Move down"
+                  >
+                    <ChevronDown size={14} />
+                  </button>
+                  <button
+                    onClick={() => handleEdit(label)}
+                    className="p-1 rounded-md text-text-tertiary hover:text-text-primary hover:bg-bg-hover"
+                    title="Edit"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(label)}
+                    className="p-1 rounded-md text-text-tertiary hover:text-danger hover:bg-bg-hover"
+                    title="Delete"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
+              {/* Inline edit form under the label being edited */}
+              {showForm && editingId === label.id && activeAccountId && (
+                <div className="mt-1">
+                  <LabelForm
+                    accountId={activeAccountId}
+                    label={editingLabel}
+                    onDone={resetForm}
+                  />
+                </div>
               )}
-              <span className="text-sm font-medium text-text-primary truncate">
-                {label.name}
-              </span>
             </div>
-            <div className="flex items-center gap-0.5">
-              <button
-                onClick={() => handleMoveUp(index)}
-                disabled={index === 0}
-                className="p-1 text-text-tertiary hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed"
-                title="Move up"
-              >
-                <ChevronUp size={13} />
-              </button>
-              <button
-                onClick={() => handleMoveDown(index)}
-                disabled={index === labels.length - 1}
-                className="p-1 text-text-tertiary hover:text-text-primary disabled:opacity-30 disabled:cursor-not-allowed"
-                title="Move down"
-              >
-                <ChevronDown size={13} />
-              </button>
-              <button
-                onClick={() => handleEdit(label)}
-                className="p-1 text-text-tertiary hover:text-text-primary"
-                title="Edit"
-              >
-                <Pencil size={13} />
-              </button>
-              <button
-                onClick={() => handleDelete(label)}
-                className="p-1 text-text-tertiary hover:text-danger"
-                title="Delete"
-              >
-                <Trash2 size={13} />
-              </button>
-            </div>
-          </div>
-          {/* Inline edit form under the label being edited */}
-          {showForm && editingId === label.id && activeAccountId && (
-            <div className="mt-1">
-              <LabelForm
-                accountId={activeAccountId}
-                label={editingLabel}
-                onDone={resetForm}
-              />
-            </div>
-          )}
+          ))}
         </div>
-      ))}
+      )}
 
       {/* New label form at bottom */}
       {showForm && !editingId && activeAccountId ? (
@@ -150,7 +154,7 @@ export function LabelEditor() {
       ) : !showForm && (
         <button
           onClick={() => { setShowForm(true); setEditingId(null); setError(null); }}
-          className="text-xs text-accent hover:text-accent-hover"
+          className="inline-flex items-center h-8 px-3 rounded-md border border-border-primary bg-bg-primary text-sm text-text-primary hover:bg-bg-hover transition-colors"
         >
           + Add label
         </button>

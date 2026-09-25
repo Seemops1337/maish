@@ -104,10 +104,10 @@ interface TestStatus {
 }
 
 const inputClass =
-  "w-full px-3 py-2 bg-bg-secondary border border-border-primary rounded-lg text-sm text-text-primary outline-none focus:border-accent transition-colors";
-const labelClass = "block text-xs font-medium text-text-secondary mb-1";
+  "w-full h-8 px-3 bg-bg-primary border border-border-primary rounded-md text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10 transition-shadow";
+const labelClass = "label-mono block mb-1.5";
 const selectClass =
-  "w-full px-3 py-2 bg-bg-secondary border border-border-primary rounded-lg text-sm text-text-primary outline-none focus:border-accent transition-colors appearance-none";
+  "w-full h-8 px-3 bg-bg-primary border border-border-primary rounded-md text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10 transition-shadow";
 
 /** Map UI security value ("ssl") to Rust config value ("tls") */
 function mapSecurity(security: string): string {
@@ -407,7 +407,7 @@ export function AddImapAccount({
   };
 
   const renderStepIndicator = () => (
-    <div className="flex items-center justify-center gap-1 mb-6">
+    <div className="flex items-center justify-center gap-1 mb-5">
       {steps.map((step, i) => {
         const isActive = i === currentStepIndex;
         const isCompleted = i < currentStepIndex;
@@ -415,15 +415,15 @@ export function AddImapAccount({
           <div key={step} className="flex items-center gap-1">
             {i > 0 && (
               <div
-                className={`w-6 h-px ${isCompleted ? "bg-accent" : "bg-border-primary"}`}
+                className={`w-6 h-px ${isCompleted ? "bg-text-tertiary" : "bg-border-primary"}`}
               />
             )}
             <div
               className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-colors ${
                 isActive
-                  ? "bg-accent/10 text-accent"
+                  ? "bg-bg-selected text-text-primary"
                   : isCompleted
-                    ? "text-accent"
+                    ? "text-text-secondary"
                     : "text-text-tertiary"
               }`}
             >
@@ -448,10 +448,10 @@ export function AddImapAccount({
             <button
               type="button"
               onClick={() => updateForm("authMode", "password")}
-              className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors ${
+              className={`flex-1 flex items-center justify-center gap-2 px-3 h-9 text-sm rounded-md border transition-colors ${
                 form.authMode === "password"
-                  ? "border-accent bg-accent/10 text-accent"
-                  : "border-border-primary bg-bg-secondary text-text-secondary hover:bg-bg-hover"
+                  ? "border-text-primary bg-bg-selected text-text-primary"
+                  : "border-border-primary bg-bg-primary text-text-secondary hover:bg-bg-hover"
               }`}
             >
               <KeyRound className="w-4 h-4" />
@@ -466,10 +466,10 @@ export function AddImapAccount({
                 updateForm("oauthProvider", detectedOAuthProviderId);
               }
             }}
-            className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 text-sm rounded-lg border transition-colors ${
+            className={`flex-1 flex items-center justify-center gap-2 px-3 h-9 text-sm rounded-md border transition-colors ${
               form.authMode === "oauth2"
-                ? "border-accent bg-accent/10 text-accent"
-                : "border-border-primary bg-bg-secondary text-text-secondary hover:bg-bg-hover"
+                ? "border-text-primary bg-bg-selected text-text-primary"
+                : "border-border-primary bg-bg-primary text-text-secondary hover:bg-bg-hover"
             }`}
           >
             <ShieldCheck className="w-4 h-4" />
@@ -516,7 +516,7 @@ export function AddImapAccount({
         </div>
 
         {hasOAuthTokens ? (
-          <div className="flex items-center gap-2 p-3 rounded-lg bg-success/10 border border-success/20">
+          <div className="flex items-center gap-2 p-3 rounded-md bg-success/5 border border-success/30">
             <CheckCircle2 className="w-4 h-4 text-success flex-shrink-0" />
             <div className="text-sm text-success">
               Connected as <span className="font-medium">{form.oauthEmail}</span>
@@ -526,7 +526,7 @@ export function AddImapAccount({
           <button
             onClick={() => providerId && handleOAuthConnect(providerId)}
             disabled={oauthConnecting || !form.oauthClientId.trim()}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm bg-accent text-on-accent rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-2 h-9 px-4 text-sm font-medium bg-accent text-on-accent rounded-md hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {oauthConnecting ? (
               <>
@@ -543,7 +543,7 @@ export function AddImapAccount({
         )}
 
         {oauthError && (
-          <div className="bg-danger/10 border border-danger/20 rounded-lg p-3 text-sm text-danger">
+          <div className="bg-danger/5 border border-danger/30 rounded-md p-3 text-sm text-danger">
             {oauthError}
           </div>
         )}
@@ -551,10 +551,10 @@ export function AddImapAccount({
         <p className="text-xs text-text-tertiary">
           You need to register an app with {providerName} to get a Client ID.{" "}
           {providerId === "microsoft" && (
-            <>Register at the Azure Portal (App Registrations) with redirect URI <code className="text-accent">http://127.0.0.1:17248</code>.</>
+            <>Register at the Azure Portal (App Registrations) with redirect URI <code className="font-mono text-text-secondary">http://127.0.0.1:17248</code>.</>
           )}
           {providerId === "yahoo" && (
-            <>Register at the Yahoo Demaishper Network with redirect URI <code className="text-accent">http://127.0.0.1:17248</code>.</>
+            <>Register at the Yahoo Demaishper Network with redirect URI <code className="font-mono text-text-secondary">http://127.0.0.1:17248</code>.</>
           )}
         </p>
       </div>
@@ -669,7 +669,7 @@ export function AddImapAccount({
           value={form.imapHost}
           onChange={(e) => updateForm("imapHost", e.target.value)}
           placeholder="imap.example.com"
-          className={inputClass}
+          className={`${inputClass} font-mono tabular-nums`}
           autoFocus
         />
       </div>
@@ -685,7 +685,7 @@ export function AddImapAccount({
             onChange={(e) =>
               updateForm("imapPort", parseInt(e.target.value, 10) || 0)
             }
-            className={inputClass}
+            className={`${inputClass} font-mono tabular-nums`}
           />
         </div>
         <div>
@@ -698,7 +698,7 @@ export function AddImapAccount({
             onChange={(e) =>
               handleImapSecurityChange(e.target.value as SecurityType)
             }
-            className={selectClass}
+            className={`${selectClass} font-mono tabular-nums`}
           >
             <option value="ssl">SSL/TLS</option>
             <option value="starttls">STARTTLS</option>
@@ -712,7 +712,7 @@ export function AddImapAccount({
           type="checkbox"
           checked={form.acceptInvalidCerts}
           onChange={(e) => updateForm("acceptInvalidCerts", e.target.checked)}
-          className="rounded border-border-primary text-accent focus:ring-accent"
+          className="accent-accent"
         />
         <label
           htmlFor="accept-invalid-certs"
@@ -744,7 +744,7 @@ export function AddImapAccount({
           value={form.smtpHost}
           onChange={(e) => updateForm("smtpHost", e.target.value)}
           placeholder="smtp.example.com"
-          className={inputClass}
+          className={`${inputClass} font-mono tabular-nums`}
           autoFocus
         />
       </div>
@@ -760,7 +760,7 @@ export function AddImapAccount({
             onChange={(e) =>
               updateForm("smtpPort", parseInt(e.target.value, 10) || 0)
             }
-            className={inputClass}
+            className={`${inputClass} font-mono tabular-nums`}
           />
         </div>
         <div>
@@ -773,7 +773,7 @@ export function AddImapAccount({
             onChange={(e) =>
               handleSmtpSecurityChange(e.target.value as SecurityType)
             }
-            className={selectClass}
+            className={`${selectClass} font-mono tabular-nums`}
           >
             <option value="ssl">SSL/TLS</option>
             <option value="starttls">STARTTLS</option>
@@ -789,7 +789,7 @@ export function AddImapAccount({
               type="checkbox"
               checked={form.samePassword}
               onChange={(e) => updateForm("samePassword", e.target.checked)}
-              className="rounded border-border-primary text-accent focus:ring-accent"
+              className="accent-accent"
             />
             <label
               htmlFor="smtp-same-password"
@@ -821,7 +821,7 @@ export function AddImapAccount({
   const renderTestResult = (label: string, status: TestStatus) => {
     const icon =
       status.state === "testing" ? (
-        <Loader2 className="w-4 h-4 animate-spin text-accent" />
+        <Loader2 className="w-4 h-4 animate-spin text-text-tertiary" />
       ) : status.state === "success" ? (
         <CheckCircle2 className="w-4 h-4 text-success" />
       ) : status.state === "error" ? (
@@ -831,7 +831,7 @@ export function AddImapAccount({
       );
 
     return (
-      <div className="flex items-start gap-3 p-3 rounded-lg bg-bg-secondary border border-border-primary">
+      <div className="flex items-start gap-3 p-3 rounded-md bg-bg-primary border border-border-primary">
         <div className="mt-0.5">{icon}</div>
         <div className="flex-1 min-w-0">
           <div className="text-sm font-medium text-text-primary">{label}</div>
@@ -867,7 +867,7 @@ export function AddImapAccount({
       <button
         onClick={testBothConnections}
         disabled={imapTest.state === "testing" || smtpTest.state === "testing"}
-        className="w-full px-4 py-2 text-sm bg-bg-secondary border border-border-primary rounded-lg text-text-primary hover:bg-bg-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full h-8 px-4 text-sm font-medium bg-bg-primary border border-border-primary rounded-md text-text-primary hover:bg-bg-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {imapTest.state === "testing" || smtpTest.state === "testing"
           ? "Testing..."
@@ -877,7 +877,7 @@ export function AddImapAccount({
       </button>
 
       {saveError && (
-        <div className="bg-danger/10 border border-danger/20 rounded-lg p-3 text-sm text-danger">
+        <div className="bg-danger/5 border border-danger/30 rounded-md p-3 text-sm text-danger">
           {saveError}
         </div>
       )}
@@ -904,14 +904,16 @@ export function AddImapAccount({
       title="Add IMAP/SMTP Account"
       width="w-full max-w-lg"
     >
-      <div className="p-4" onKeyDown={handleKeyDown}>
-        {renderStepIndicator()}
-        {renderStepContent()}
+      <div onKeyDown={handleKeyDown}>
+        <div className="p-4">
+          {renderStepIndicator()}
+          {renderStepContent()}
+        </div>
 
-        <div className="flex items-center justify-between mt-6">
+        <div className="flex items-center justify-between px-4 py-3 border-t border-border-primary bg-bg-secondary rounded-b-lg">
           <button
             onClick={goPrev}
-            className="flex items-center gap-1 px-3 py-2 text-sm text-text-secondary hover:text-text-primary transition-colors"
+            className="flex items-center gap-1 h-8 px-3 -ml-3 rounded-md text-sm text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
             Back
@@ -920,7 +922,7 @@ export function AddImapAccount({
           <div className="flex gap-2">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-sm text-text-secondary hover:text-text-primary transition-colors"
+              className="h-8 px-3 rounded-md text-sm text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors"
             >
               Cancel
             </button>
@@ -929,7 +931,7 @@ export function AddImapAccount({
               <button
                 onClick={handleSave}
                 disabled={!bothTestsPassed || saving}
-                className="px-4 py-2 text-sm bg-accent text-on-accent rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="h-8 px-3 text-sm font-medium bg-accent text-on-accent rounded-md hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saving ? "Adding..." : "Add Account"}
               </button>
@@ -937,7 +939,7 @@ export function AddImapAccount({
               <button
                 onClick={goNext}
                 disabled={!canGoNext()}
-                className="flex items-center gap-1 px-4 py-2 text-sm bg-accent text-on-accent rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-1 h-8 px-3 text-sm font-medium bg-accent text-on-accent rounded-md hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Next
                 <ArrowRight className="w-3.5 h-3.5" />

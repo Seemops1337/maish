@@ -63,7 +63,7 @@ export function ContactEditor() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search contacts..."
-          className="w-full pl-8 pr-3 py-1.5 bg-bg-tertiary border border-border-primary rounded text-sm text-text-primary outline-none focus:border-accent"
+          className="w-full h-8 pl-8 pr-3 bg-bg-primary border border-border-primary rounded-md text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10"
         />
       </div>
 
@@ -72,11 +72,11 @@ export function ContactEditor() {
           {search ? "No matching contacts" : "No contacts yet"}
         </p>
       ) : (
-        <div className="space-y-1 max-h-[300px] overflow-y-auto">
+        <div className="space-y-0.5 max-h-[300px] overflow-y-auto -mx-2">
           {filtered.map((contact) => (
             <div
               key={contact.id}
-              className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-bg-hover group"
+              className="flex items-center justify-between gap-3 py-1.5 px-2 rounded-md hover:bg-bg-hover group"
             >
               {editingId === contact.id ? (
                 <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -88,19 +88,19 @@ export function ContactEditor() {
                       if (e.key === "Enter") handleSaveEdit();
                       if (e.key === "Escape") setEditingId(null);
                     }}
-                    className="flex-1 min-w-0 px-2 py-0.5 bg-bg-tertiary border border-border-primary rounded text-sm text-text-primary outline-none focus:border-accent"
+                    className="flex-1 min-w-0 h-7 px-2 bg-bg-primary border border-border-primary rounded-md text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10"
                     autoFocus
                     placeholder="Display name"
                   />
                   <button
                     onClick={handleSaveEdit}
-                    className="p-1 text-success hover:bg-bg-hover rounded"
+                    className="p-1 rounded-md text-text-primary hover:bg-bg-hover"
                   >
                     <Check size={14} />
                   </button>
                   <button
                     onClick={() => setEditingId(null)}
-                    className="p-1 text-text-tertiary hover:text-text-primary hover:bg-bg-hover rounded"
+                    className="p-1 rounded-md text-text-tertiary hover:text-text-primary hover:bg-bg-hover"
                   >
                     <X size={14} />
                   </button>
@@ -118,22 +118,22 @@ export function ContactEditor() {
                     )}
                   </div>
                   <div className="flex items-center gap-1">
-                    <span className="text-xs text-text-tertiary mr-2">
+                    <span className="font-mono text-xs tabular-nums text-text-tertiary mr-2">
                       {contact.frequency}x
                     </span>
                     <button
                       onClick={() => handleEdit(contact)}
-                      className="p-1 text-text-tertiary hover:text-text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="p-1 rounded-md text-text-tertiary hover:text-text-primary hover:bg-bg-hover opacity-0 group-hover:opacity-100 transition-opacity"
                       title="Edit name"
                     >
-                      <Pencil size={13} />
+                      <Pencil size={14} />
                     </button>
                     <button
                       onClick={() => handleDelete(contact.id)}
-                      className="p-1 text-text-tertiary hover:text-danger opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="p-1 rounded-md text-text-tertiary hover:text-danger hover:bg-bg-hover opacity-0 group-hover:opacity-100 transition-opacity"
                       title="Delete contact"
                     >
-                      <Trash2 size={13} />
+                      <Trash2 size={14} />
                     </button>
                   </div>
                 </>
@@ -143,7 +143,7 @@ export function ContactEditor() {
         </div>
       )}
 
-      <p className="text-xs text-text-tertiary">
+      <p className="font-mono text-xs tabular-nums text-text-tertiary">
         {contacts.length} contact{contacts.length !== 1 ? "s" : ""} total
       </p>
     </div>

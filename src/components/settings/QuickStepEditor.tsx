@@ -163,104 +163,108 @@ export function QuickStepEditor() {
 
   return (
     <div className="space-y-3">
-      {quickSteps.map((qs) => (
-        <div
-          key={qs.id}
-          className="flex items-center justify-between py-2 px-3 bg-bg-secondary rounded-md"
-        >
-          <div className="flex items-center gap-2 flex-1 min-w-0">
-            <GripVertical size={12} className="text-text-tertiary shrink-0" />
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-text-primary flex items-center gap-2">
-                {qs.name}
-                {qs.shortcut && (
-                  <kbd className="text-[0.625rem] bg-bg-tertiary text-text-tertiary px-1.5 py-0.5 rounded border border-border-primary font-mono">
-                    {qs.shortcut}
-                  </kbd>
-                )}
-                {qs.is_enabled !== 1 && (
-                  <span className="text-[0.625rem] bg-bg-tertiary text-text-tertiary px-1.5 py-0.5 rounded">
-                    Disabled
-                  </span>
-                )}
+      {quickSteps.length > 0 && (
+        <div className="space-y-0.5">
+          {quickSteps.map((qs) => (
+            <div
+              key={qs.id}
+              className="group flex items-center justify-between gap-3 -mx-2 px-2 py-1.5 rounded-md hover:bg-bg-hover"
+            >
+              <div className="flex items-center gap-2 flex-1 min-w-0">
+                <GripVertical size={12} className="text-text-tertiary shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-text-primary flex items-center gap-2">
+                    {qs.name}
+                    {qs.shortcut && (
+                      <kbd className="font-mono text-[11px] leading-none px-1.5 py-1 rounded border border-border-primary bg-bg-secondary text-text-tertiary">
+                        {qs.shortcut}
+                      </kbd>
+                    )}
+                    {qs.is_enabled !== 1 && (
+                      <span className="rounded-full border border-border-primary px-1.5 font-mono text-[10px] leading-4 text-text-tertiary">
+                        Disabled
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs text-text-tertiary truncate">
+                    {describeActions(qs.actions_json)}
+                  </div>
+                </div>
               </div>
-              <div className="text-xs text-text-tertiary truncate">
-                {describeActions(qs.actions_json)}
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => handleToggleEnabled(qs)}
+                  className={`relative inline-flex h-4 w-7 shrink-0 items-center rounded-full border transition-colors ${
+                    qs.is_enabled === 1 ? "bg-accent border-accent" : "bg-bg-tertiary border-border-primary"
+                  }`}
+                  title={qs.is_enabled === 1 ? "Disable" : "Enable"}
+                >
+                  <span
+                    className={`h-3 w-3 rounded-full bg-bg-primary shadow-sm transition-transform ${
+                      qs.is_enabled === 1 ? "translate-x-3" : "translate-x-0.5"
+                    }`}
+                  />
+                </button>
+                <button
+                  onClick={() => handleEdit(qs)}
+                  className="p-1 rounded-md text-text-tertiary hover:text-text-primary hover:bg-bg-hover"
+                >
+                  <Pencil size={14} />
+                </button>
+                <button
+                  onClick={() => handleDelete(qs.id)}
+                  className="p-1 rounded-md text-text-tertiary hover:text-danger hover:bg-bg-hover"
+                >
+                  <Trash2 size={14} />
+                </button>
               </div>
             </div>
-          </div>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => handleToggleEnabled(qs)}
-              className={`w-8 h-4 rounded-full transition-colors relative ${
-                qs.is_enabled === 1 ? "bg-accent" : "bg-bg-tertiary"
-              }`}
-              title={qs.is_enabled === 1 ? "Disable" : "Enable"}
-            >
-              <span
-                className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform shadow ${
-                  qs.is_enabled === 1 ? "translate-x-4" : ""
-                }`}
-              />
-            </button>
-            <button
-              onClick={() => handleEdit(qs)}
-              className="p-1 text-text-tertiary hover:text-text-primary"
-            >
-              <Pencil size={13} />
-            </button>
-            <button
-              onClick={() => handleDelete(qs.id)}
-              className="p-1 text-text-tertiary hover:text-danger"
-            >
-              <Trash2 size={13} />
-            </button>
-          </div>
+          ))}
         </div>
-      ))}
+      )}
 
       {showForm ? (
-        <div className="border border-border-primary rounded-md p-3 space-y-3">
+        <div className="rounded-md border border-border-primary bg-bg-secondary p-3 space-y-3">
           <input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Quick step name"
-            className="w-full px-3 py-1.5 bg-bg-tertiary border border-border-primary rounded text-sm text-text-primary outline-none focus:border-accent"
+            className="w-full h-8 px-3 bg-bg-primary border border-border-primary rounded-md text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10"
           />
           <input
             type="text"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Description (optional)"
-            className="w-full px-3 py-1 bg-bg-tertiary border border-border-primary rounded text-xs text-text-primary outline-none focus:border-accent"
+            className="w-full h-8 px-3 bg-bg-primary border border-border-primary rounded-md text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10"
           />
 
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="text-xs text-text-secondary block mb-1">Shortcut (optional)</label>
+              <label className="label-mono block mb-1.5">Shortcut (optional)</label>
               <input
                 type="text"
                 value={shortcut}
                 onChange={(e) => setShortcut(e.target.value)}
                 placeholder="e.g. Ctrl+Shift+1"
-                className="w-full px-3 py-1 bg-bg-tertiary border border-border-primary rounded text-xs text-text-primary outline-none focus:border-accent font-mono"
+                className="w-full h-8 px-3 bg-bg-primary border border-border-primary rounded-md text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10 font-mono"
               />
             </div>
             <div className="flex-1">
-              <label className="text-xs text-text-secondary block mb-1">Icon (optional)</label>
+              <label className="label-mono block mb-1.5">Icon (optional)</label>
               <input
                 type="text"
                 value={icon}
                 onChange={(e) => setIcon(e.target.value)}
                 placeholder="e.g. Archive, Star"
-                className="w-full px-3 py-1 bg-bg-tertiary border border-border-primary rounded text-xs text-text-primary outline-none focus:border-accent"
+                className="w-full h-8 px-3 bg-bg-primary border border-border-primary rounded-md text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10"
               />
             </div>
           </div>
 
           <div>
-            <div className="text-xs font-medium text-text-secondary mb-1.5">Action chain</div>
+            <div className="label-mono mb-1.5">Action chain</div>
             <div className="space-y-2">
               {actions.map((action, index) => {
                 const needsLabelParam = action.type === "applyLabel" || action.type === "removeLabel";
@@ -269,7 +273,7 @@ export function QuickStepEditor() {
 
                 return (
                   <div key={index} className="flex items-start gap-2">
-                    <span className="text-xs text-text-tertiary mt-1.5 w-5 text-right shrink-0">
+                    <span className="font-mono text-xs tabular-nums text-text-tertiary mt-2 w-5 text-right shrink-0">
                       {index + 1}.
                     </span>
                     <div className="flex-1 space-y-1">
@@ -277,7 +281,7 @@ export function QuickStepEditor() {
                         <select
                           value={action.type}
                           onChange={(e) => updateAction(index, e.target.value as QuickStepActionType)}
-                          className="w-full bg-bg-tertiary text-text-primary text-xs px-2 py-1.5 rounded border border-border-primary appearance-none pr-6"
+                          className="w-full h-8 bg-bg-primary text-text-primary text-sm px-2.5 rounded-md border border-border-primary outline-none focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10 appearance-none pr-7"
                         >
                           {ACTION_TYPE_METADATA.map((m) => (
                             <option key={m.type} value={m.type}>
@@ -285,13 +289,13 @@ export function QuickStepEditor() {
                             </option>
                           ))}
                         </select>
-                        <ChevronDown size={10} className="absolute right-2 top-1/2 -translate-y-1/2 text-text-tertiary pointer-events-none" />
+                        <ChevronDown size={12} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-tertiary pointer-events-none" />
                       </div>
                       {needsLabelParam && labels.length > 0 && (
                         <select
                           value={action.params?.labelId ?? ""}
                           onChange={(e) => updateActionParams(index, { labelId: e.target.value })}
-                          className="w-full bg-bg-tertiary text-text-primary text-xs px-2 py-1 rounded border border-border-primary"
+                          className="w-full h-8 bg-bg-primary text-text-primary text-sm px-2.5 rounded-md border border-border-primary outline-none focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10"
                         >
                           <option value="">Select label...</option>
                           {labels.map((l) => (
@@ -303,7 +307,7 @@ export function QuickStepEditor() {
                         <select
                           value={action.params?.category ?? ""}
                           onChange={(e) => updateActionParams(index, { category: e.target.value })}
-                          className="w-full bg-bg-tertiary text-text-primary text-xs px-2 py-1 rounded border border-border-primary"
+                          className="w-full h-8 bg-bg-primary text-text-primary text-sm px-2.5 rounded-md border border-border-primary outline-none focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10"
                         >
                           <option value="">Select category...</option>
                           {ALL_CATEGORIES.map((cat) => (
@@ -315,7 +319,7 @@ export function QuickStepEditor() {
                         <select
                           value={action.params?.snoozeDuration ?? ""}
                           onChange={(e) => updateActionParams(index, { snoozeDuration: Number(e.target.value) })}
-                          className="w-full bg-bg-tertiary text-text-primary text-xs px-2 py-1 rounded border border-border-primary"
+                          className="w-full h-8 bg-bg-primary text-text-primary text-sm px-2.5 rounded-md border border-border-primary outline-none focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10"
                         >
                           <option value="">Select duration...</option>
                           <option value={3600000}>1 hour</option>
@@ -328,10 +332,10 @@ export function QuickStepEditor() {
                     </div>
                     <button
                       onClick={() => removeAction(index)}
-                      className="p-1 text-text-tertiary hover:text-danger mt-0.5"
+                      className="p-1 mt-1 rounded-md text-text-tertiary hover:text-danger hover:bg-bg-hover"
                       title="Remove action"
                     >
-                      <Trash2 size={12} />
+                      <Trash2 size={14} />
                     </button>
                   </div>
                 );
@@ -339,7 +343,7 @@ export function QuickStepEditor() {
             </div>
             <button
               onClick={addAction}
-              className="flex items-center gap-1 text-xs text-accent hover:text-accent-hover mt-2"
+              className="inline-flex items-center gap-1 h-7 px-2 -ml-2 mt-2 rounded-md text-xs text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors"
             >
               <Plus size={12} />
               Add action
@@ -351,7 +355,7 @@ export function QuickStepEditor() {
               type="checkbox"
               checked={continueOnError}
               onChange={(e) => setContinueOnError(e.target.checked)}
-              className="rounded"
+              className="accent-accent"
             />
             Continue on error (run remaining actions even if one fails)
           </label>
@@ -360,13 +364,13 @@ export function QuickStepEditor() {
             <button
               onClick={handleSave}
               disabled={!name.trim() || actions.length === 0}
-              className="px-3 py-1.5 text-xs font-medium text-on-accent bg-accent hover:bg-accent-hover rounded-md transition-colors disabled:opacity-50"
+              className="h-8 px-3 rounded-md text-sm font-medium bg-accent text-on-accent hover:bg-accent-hover transition-colors disabled:opacity-50"
             >
               {editingId ? "Update" : "Save"}
             </button>
             <button
               onClick={resetForm}
-              className="px-3 py-1.5 text-xs text-text-secondary hover:text-text-primary rounded-md transition-colors"
+              className="h-8 px-3 rounded-md text-sm text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors"
             >
               Cancel
             </button>
@@ -375,7 +379,7 @@ export function QuickStepEditor() {
       ) : (
         <button
           onClick={() => setShowForm(true)}
-          className="text-xs text-accent hover:text-accent-hover"
+          className="inline-flex items-center h-8 px-3 rounded-md border border-border-primary bg-bg-primary text-sm text-text-primary hover:bg-bg-hover transition-colors"
         >
           + Add quick step
         </button>

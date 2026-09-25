@@ -158,56 +158,60 @@ export function FilterEditor() {
 
   return (
     <div className="space-y-3">
-      {filters.map((filter) => (
-        <div
-          key={filter.id}
-          className="flex items-center justify-between py-2 px-3 bg-bg-secondary rounded-md"
-        >
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium text-text-primary flex items-center gap-2">
-              {filter.name}
-              {filter.is_enabled !== 1 && (
-                <span className="text-[0.625rem] bg-bg-tertiary text-text-tertiary px-1.5 py-0.5 rounded">
-                  Disabled
-                </span>
-              )}
+      {filters.length > 0 && (
+        <div className="space-y-0.5">
+          {filters.map((filter) => (
+            <div
+              key={filter.id}
+              className="group flex items-center justify-between gap-3 -mx-2 px-2 py-1.5 rounded-md hover:bg-bg-hover"
+            >
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-text-primary flex items-center gap-2">
+                  {filter.name}
+                  {filter.is_enabled !== 1 && (
+                    <span className="rounded-full border border-border-primary px-1.5 font-mono text-[10px] leading-4 text-text-tertiary">
+                      Disabled
+                    </span>
+                  )}
+                </div>
+                <div className="text-xs text-text-tertiary truncate">
+                  {filterDescriptions.get(filter.id) ?? "No criteria"}
+                </div>
+              </div>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => handleToggleEnabled(filter)}
+                  className={`relative inline-flex h-4 w-7 shrink-0 items-center rounded-full border transition-colors ${
+                    filter.is_enabled === 1 ? "bg-accent border-accent" : "bg-bg-tertiary border-border-primary"
+                  }`}
+                  title={filter.is_enabled === 1 ? "Disable" : "Enable"}
+                >
+                  <span
+                    className={`h-3 w-3 rounded-full bg-bg-primary shadow-sm transition-transform ${
+                      filter.is_enabled === 1 ? "translate-x-3" : "translate-x-0.5"
+                    }`}
+                  />
+                </button>
+                <button
+                  onClick={() => handleEdit(filter)}
+                  className="p-1 rounded-md text-text-tertiary hover:text-text-primary hover:bg-bg-hover"
+                >
+                  <Pencil size={14} />
+                </button>
+                <button
+                  onClick={() => handleDelete(filter.id)}
+                  className="p-1 rounded-md text-text-tertiary hover:text-danger hover:bg-bg-hover"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
             </div>
-            <div className="text-xs text-text-tertiary truncate">
-              {filterDescriptions.get(filter.id) ?? "No criteria"}
-            </div>
-          </div>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => handleToggleEnabled(filter)}
-              className={`w-8 h-4 rounded-full transition-colors relative ${
-                filter.is_enabled === 1 ? "bg-accent" : "bg-bg-tertiary"
-              }`}
-              title={filter.is_enabled === 1 ? "Disable" : "Enable"}
-            >
-              <span
-                className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full transition-transform shadow ${
-                  filter.is_enabled === 1 ? "translate-x-4" : ""
-                }`}
-              />
-            </button>
-            <button
-              onClick={() => handleEdit(filter)}
-              className="p-1 text-text-tertiary hover:text-text-primary"
-            >
-              <Pencil size={13} />
-            </button>
-            <button
-              onClick={() => handleDelete(filter.id)}
-              className="p-1 text-text-tertiary hover:text-danger"
-            >
-              <Trash2 size={13} />
-            </button>
-          </div>
+          ))}
         </div>
-      ))}
+      )}
 
       {showForm ? (
-        <div className="border border-border-primary rounded-md p-3 space-y-3">
+        <div className="rounded-md border border-border-primary bg-bg-secondary p-3 space-y-3">
           <TextField
             type="text"
             value={name}
@@ -216,7 +220,7 @@ export function FilterEditor() {
           />
 
           <div>
-            <div className="text-xs font-medium text-text-secondary mb-1.5">Match criteria</div>
+            <div className="label-mono mb-1.5">Match criteria</div>
             <div className="space-y-1.5">
               <TextField
                 type="text"
@@ -247,7 +251,7 @@ export function FilterEditor() {
                   type="checkbox"
                   checked={criteriaHasAttachment}
                   onChange={(e) => setCriteriaHasAttachment(e.target.checked)}
-                  className="rounded"
+                  className="accent-accent"
                 />
                 Has attachment
               </label>
@@ -255,7 +259,7 @@ export function FilterEditor() {
           </div>
 
           <div>
-            <div className="text-xs font-medium text-text-secondary mb-1.5">Actions</div>
+            <div className="label-mono mb-1.5">Actions</div>
             <div className="space-y-1.5">
               {labels.length > 0 && (
                 <div className="flex items-center gap-2">
@@ -263,7 +267,7 @@ export function FilterEditor() {
                   <select
                     value={actionLabel}
                     onChange={(e) => setActionLabel(e.target.value)}
-                    className="flex-1 bg-bg-tertiary text-text-primary text-xs px-2 py-1 rounded border border-border-primary"
+                    className="flex-1 h-8 bg-bg-primary text-text-primary text-sm px-2.5 rounded-md border border-border-primary outline-none focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10"
                   >
                     <option value="">None</option>
                     {labels.map((l) => (
@@ -274,19 +278,19 @@ export function FilterEditor() {
               )}
               <div className="flex flex-wrap gap-3">
                 <label className="flex items-center gap-1.5 text-xs text-text-secondary">
-                  <input type="checkbox" checked={actionArchive} onChange={(e) => setActionArchive(e.target.checked)} className="rounded" />
+                  <input type="checkbox" checked={actionArchive} onChange={(e) => setActionArchive(e.target.checked)} className="accent-accent" />
                   Archive
                 </label>
                 <label className="flex items-center gap-1.5 text-xs text-text-secondary">
-                  <input type="checkbox" checked={actionStar} onChange={(e) => setActionStar(e.target.checked)} className="rounded" />
+                  <input type="checkbox" checked={actionStar} onChange={(e) => setActionStar(e.target.checked)} className="accent-accent" />
                   Star
                 </label>
                 <label className="flex items-center gap-1.5 text-xs text-text-secondary">
-                  <input type="checkbox" checked={actionMarkRead} onChange={(e) => setActionMarkRead(e.target.checked)} className="rounded" />
+                  <input type="checkbox" checked={actionMarkRead} onChange={(e) => setActionMarkRead(e.target.checked)} className="accent-accent" />
                   Mark as read
                 </label>
                 <label className="flex items-center gap-1.5 text-xs text-text-secondary">
-                  <input type="checkbox" checked={actionTrash} onChange={(e) => setActionTrash(e.target.checked)} className="rounded" />
+                  <input type="checkbox" checked={actionTrash} onChange={(e) => setActionTrash(e.target.checked)} className="accent-accent" />
                   Trash
                 </label>
               </div>
@@ -297,13 +301,13 @@ export function FilterEditor() {
             <button
               onClick={handleSave}
               disabled={!name.trim()}
-              className="px-3 py-1.5 text-xs font-medium text-on-accent bg-accent hover:bg-accent-hover rounded-md transition-colors disabled:opacity-50"
+              className="h-8 px-3 rounded-md text-sm font-medium bg-accent text-on-accent hover:bg-accent-hover transition-colors disabled:opacity-50"
             >
               {editingId ? "Update" : "Save"}
             </button>
             <button
               onClick={resetForm}
-              className="px-3 py-1.5 text-xs text-text-secondary hover:text-text-primary rounded-md transition-colors"
+              className="h-8 px-3 rounded-md text-sm text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors"
             >
               Cancel
             </button>
@@ -312,7 +316,7 @@ export function FilterEditor() {
       ) : (
         <button
           onClick={() => setShowForm(true)}
-          className="text-xs text-accent hover:text-accent-hover"
+          className="inline-flex items-center h-8 px-3 rounded-md border border-border-primary bg-bg-primary text-sm text-text-primary hover:bg-bg-hover transition-colors"
         >
           + Add filter
         </button>

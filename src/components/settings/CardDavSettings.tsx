@@ -112,7 +112,7 @@ export function CardDavSettings({ account, onSaved }: CardDavSettingsProps) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h4 className="text-sm font-medium text-text-primary">Contacts (CardDAV)</h4>
-        {isConfigured && <span className="text-xs text-success font-medium">Connected</span>}
+        {isConfigured && <span className="rounded-full border px-1.5 font-mono text-[10px] leading-4 border-success/30 text-success">Connected</span>}
       </div>
       <p className="text-xs text-text-tertiary">
         Sync address books from a CardDAV server. Synced contacts appear in the composer's
@@ -180,8 +180,8 @@ export function CardDavSettings({ account, onSaved }: CardDavSettingsProps) {
       </div>
 
       {isConfigured && books.length > 0 && (
-        <div className="space-y-2 pt-2 border-t border-border-secondary">
-          <h5 className="text-xs font-medium text-text-secondary">Address books</h5>
+        <div className="space-y-2 pt-3 border-t border-border-primary">
+          <h5 className="label-mono">Address books</h5>
           {books.map((book) => (
             <label
               key={book.id}
@@ -196,7 +196,7 @@ export function CardDavSettings({ account, onSaved }: CardDavSettingsProps) {
               <BookUser size={14} className="text-text-tertiary" />
               <span className="flex-1 truncate">{book.display_name ?? book.remote_id}</span>
               {book.is_read_only === 1 && (
-                <span className="text-xs text-text-tertiary">read-only</span>
+                <span className="rounded-full border px-1.5 font-mono text-[10px] leading-4 border-border-primary text-text-tertiary">read-only</span>
               )}
             </label>
           ))}

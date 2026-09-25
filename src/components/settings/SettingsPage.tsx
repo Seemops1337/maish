@@ -73,6 +73,19 @@ const tabs: { id: SettingsTab; label: string; icon: LucideIcon }[] = [
   { id: "about", label: "About", icon: Info },
 ];
 
+const selectClass =
+  "w-48 h-8 bg-bg-primary text-text-primary text-sm px-2.5 rounded-md border border-border-primary outline-none focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10";
+const inputClass =
+  "h-8 px-3 bg-bg-primary border border-border-primary rounded-md text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10";
+const smallButtonClass =
+  "inline-flex items-center gap-1.5 h-7 px-2.5 rounded-md border border-border-primary bg-bg-primary text-xs font-medium text-text-primary hover:bg-bg-hover transition-colors disabled:opacity-50";
+const smallDangerButtonClass =
+  "inline-flex items-center h-7 px-2.5 rounded-md text-xs font-medium text-danger hover:bg-danger/10 transition-colors disabled:opacity-50";
+const codeClass = "font-mono text-xs bg-bg-tertiary px-1 py-0.5 rounded text-text-primary";
+const footerClass = "text-xs text-text-tertiary bg-bg-secondary rounded-b-md";
+const pillClass =
+  "rounded-full border border-border-primary px-1.5 font-mono text-[10px] leading-4 text-text-secondary";
+
 export function SettingsPage() {
   const theme = useUIStore((s) => s.theme);
   const setTheme = useUIStore((s) => s.setTheme);
@@ -352,23 +365,23 @@ export function SettingsPage() {
   const activeTabDef = tabs.find((t) => t.id === activeTab);
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-bg-primary/50">
+    <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-bg-primary">
       {/* Header */}
-      <div className="flex items-center gap-3 px-5 py-3 border-b border-border-primary shrink-0 bg-bg-primary">
+      <div className="flex items-center gap-2 h-12 px-4 border-b border-border-primary shrink-0 bg-bg-primary">
         <button
           onClick={() => navigateToLabel("inbox")}
-          className="p-1.5 -ml-1 rounded-md text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors"
+          className="p-1.5 -ml-1.5 rounded-md text-text-tertiary hover:text-text-primary hover:bg-bg-hover transition-colors"
           title="Back to Inbox"
         >
-          <ArrowLeft size={18} />
+          <ArrowLeft size={16} />
         </button>
-        <h1 className="text-base font-semibold text-text-primary">Settings</h1>
+        <h1 className="text-lg font-medium tracking-tight text-text-primary">Settings</h1>
       </div>
 
       {/* Body: sidebar nav + content */}
       <div className="flex flex-1 min-h-0">
         {/* Vertical tab sidebar */}
-        <nav className="w-48 border-r border-border-primary py-2 overflow-y-auto shrink-0 bg-bg-primary/30">
+        <nav className="w-52 border-r border-border-primary p-2 space-y-0.5 overflow-y-auto shrink-0 bg-bg-secondary">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -376,13 +389,13 @@ export function SettingsPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2.5 w-full px-4 py-2 text-[0.8125rem] transition-colors ${
+                className={`flex items-center gap-2 w-full h-8 px-2 rounded-md text-sm transition-colors ${
                   isActive
-                    ? "bg-bg-selected text-accent font-medium"
+                    ? "bg-bg-selected text-text-primary font-medium"
                     : "text-text-secondary hover:bg-bg-hover hover:text-text-primary"
                 }`}
               >
-                <Icon size={15} className="shrink-0" />
+                <Icon size={16} className="shrink-0" />
                 {tab.label}
               </button>
             );
@@ -391,11 +404,11 @@ export function SettingsPage() {
 
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto">
-          <div className="max-w-2xl px-8 py-6">
+          <div className="max-w-3xl px-8 py-8">
             {/* Tab title */}
             {activeTabDef && (
-              <div className="mb-6">
-                <h2 className="text-lg font-semibold text-text-primary">
+              <div className="mb-8">
+                <h2 className="text-2xl font-medium tracking-display text-text-primary">
                   {activeTabDef.label}
                 </h2>
               </div>
@@ -413,7 +426,7 @@ export function SettingsPage() {
                           setTheme(val);
                           setSetting("theme", val);
                         }}
-                        className="w-48 bg-bg-tertiary text-text-primary text-sm px-3 py-1.5 rounded-md border border-border-primary focus:border-accent outline-none"
+                        className={selectClass}
                       >
                         <option value="system">System</option>
                         <option value="light">Light</option>
@@ -426,7 +439,7 @@ export function SettingsPage() {
                         onChange={(e) => {
                           setReadingPanePosition(e.target.value as "right" | "bottom" | "hidden");
                         }}
-                        className="w-48 bg-bg-tertiary text-text-primary text-sm px-3 py-1.5 rounded-md border border-border-primary focus:border-accent outline-none"
+                        className={selectClass}
                       >
                         <option value="right">Right</option>
                         <option value="bottom">Bottom</option>
@@ -439,7 +452,7 @@ export function SettingsPage() {
                         onChange={(e) => {
                           setEmailDensity(e.target.value as "compact" | "default" | "spacious");
                         }}
-                        className="w-48 bg-bg-tertiary text-text-primary text-sm px-3 py-1.5 rounded-md border border-border-primary focus:border-accent outline-none"
+                        className={selectClass}
                       >
                         <option value="compact">Compact</option>
                         <option value="default">Default</option>
@@ -452,7 +465,7 @@ export function SettingsPage() {
                         onChange={(e) => {
                           setFontScale(e.target.value as "small" | "default" | "large" | "xlarge");
                         }}
-                        className="w-48 bg-bg-tertiary text-text-primary text-sm px-3 py-1.5 rounded-md border border-border-primary focus:border-accent outline-none"
+                        className={selectClass}
                       >
                         <option value="small">Small</option>
                         <option value="default">Default</option>
@@ -466,7 +479,7 @@ export function SettingsPage() {
                         onChange={(e) => {
                           setInboxViewMode(e.target.value as "unified" | "split");
                         }}
-                        className="w-48 bg-bg-tertiary text-text-primary text-sm px-3 py-1.5 rounded-md border border-border-primary focus:border-accent outline-none"
+                        className={selectClass}
                       >
                         <option value="unified">Unified</option>
                         <option value="split">Split (Categories)</option>
@@ -521,7 +534,7 @@ export function SettingsPage() {
                             setPhishingSensitivity(val);
                             await setSetting("phishing_sensitivity", val);
                           }}
-                          className="w-48 bg-bg-tertiary text-text-primary text-sm px-3 py-1.5 rounded-md border border-border-primary focus:border-accent outline-none"
+                          className={selectClass}
                         >
                           <option value="low">Low (fewer warnings)</option>
                           <option value="default">Default</option>
@@ -532,10 +545,10 @@ export function SettingsPage() {
                   </Section>
 
                   <Section title="Storage">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-4">
                       <div>
-                        <span className="text-sm text-text-secondary">Attachment cache</span>
-                        <p className="text-xs text-text-tertiary mt-0.5">
+                        <span className="text-sm text-text-primary">Attachment cache</span>
+                        <p className="font-mono text-xs tabular-nums text-text-tertiary mt-0.5">
                           {cacheSizeMb !== null ? `${cacheSizeMb} MB used` : "Calculating..."}
                         </p>
                       </div>
@@ -554,7 +567,6 @@ export function SettingsPage() {
                           }
                         }}
                         disabled={clearingCache}
-                        className="bg-bg-tertiary text-text-primary border border-border-primary"
                       >
                         {clearingCache ? "Clearing..." : "Clear Cache"}
                       </Button>
@@ -567,7 +579,7 @@ export function SettingsPage() {
                           setCacheMaxMb(val);
                           await setSetting("attachment_cache_max_mb", val);
                         }}
-                        className="w-48 bg-bg-tertiary text-text-primary text-sm px-3 py-1.5 rounded-md border border-border-primary focus:border-accent outline-none"
+                        className={selectClass}
                       >
                         <option value="100">100 MB</option>
                         <option value="250">250 MB</option>
@@ -604,8 +616,8 @@ export function SettingsPage() {
                     <>
                       <Section title="Category Filters">
                         <div>
-                          <span className="text-sm text-text-secondary">Notify for categories</span>
-                          <div className="flex flex-wrap gap-2 mt-2">
+                          <span className="text-sm text-text-primary">Notify for categories</span>
+                          <div className="flex flex-wrap gap-1.5 mt-2.5">
                             {(["Primary", "Updates", "Promotions", "Social", "Newsletters"] as const).map((cat) => (
                               <button
                                 key={cat}
@@ -616,10 +628,10 @@ export function SettingsPage() {
                                   setNotifyCategories(next);
                                   await setSetting("notify_categories", [...next].join(","));
                                 }}
-                                className={`px-2.5 py-1 text-xs rounded-full transition-colors border ${
+                                className={`h-7 px-3 text-xs rounded-full transition-colors border ${
                                   notifyCategories.has(cat)
-                                    ? "bg-accent/15 text-accent border-accent/30"
-                                    : "bg-bg-tertiary text-text-tertiary border-border-primary hover:text-text-primary"
+                                    ? "bg-accent text-on-accent border-accent"
+                                    : "bg-bg-primary text-text-secondary border-border-primary hover:bg-bg-hover hover:text-text-primary"
                                 }`}
                               >
                                 {cat}
@@ -629,14 +641,15 @@ export function SettingsPage() {
                         </div>
                       </Section>
 
-                      <Section title="VIP Senders">
-                        <p className="text-xs text-text-tertiary mb-2">
-                          These senders always trigger notifications regardless of category
-                        </p>
-                        <div className="space-y-1.5">
+                      <Section
+                        title="VIP Senders"
+                        description="These senders always trigger notifications regardless of category"
+                      >
+                        {vipSenders.length > 0 && (
+                        <div className="space-y-0.5">
                           {vipSenders.map((vip) => (
-                            <div key={vip.email_address} className="flex items-center justify-between py-1.5 px-3 bg-bg-secondary rounded-md">
-                              <span className="text-xs text-text-primary truncate">
+                            <div key={vip.email_address} className="flex items-center justify-between h-8 -mx-2 px-2 rounded-md hover:bg-bg-hover">
+                              <span className="text-sm text-text-primary truncate">
                                 {vip.display_name ? `${vip.display_name} (${vip.email_address})` : vip.email_address}
                               </span>
                               <button
@@ -647,20 +660,21 @@ export function SettingsPage() {
                                   await removeVipSender(activeId, vip.email_address);
                                   setVipSenders((prev) => prev.filter((v) => v.email_address !== vip.email_address));
                                 }}
-                                className="text-xs text-danger hover:text-danger/80 ml-2 shrink-0"
+                                className={`${smallDangerButtonClass} ml-2 shrink-0`}
                               >
                                 Remove
                               </button>
                             </div>
                           ))}
                         </div>
-                        <div className="flex gap-2 mt-2">
+                        )}
+                        <div className="flex gap-2">
                           <input
                             type="email"
                             value={newVipEmail}
                             onChange={(e) => setNewVipEmail(e.target.value)}
                             placeholder="email@example.com"
-                            className="flex-1 px-3 py-1.5 bg-bg-tertiary border border-border-primary rounded-md text-xs text-text-primary outline-none focus:border-accent"
+                            className={`flex-1 ${inputClass}`}
                             onKeyDown={async (e) => {
                               if (e.key !== "Enter" || !newVipEmail.trim()) return;
                               const activeId = accounts.find((a) => a.isActive)?.id;
@@ -700,7 +714,7 @@ export function SettingsPage() {
                       <select
                         value={undoSendDelay}
                         onChange={(e) => handleUndoDelayChange(e.target.value)}
-                        className="w-48 bg-bg-tertiary text-text-primary text-sm px-3 py-1.5 rounded-md border border-border-primary focus:border-accent outline-none"
+                        className={selectClass}
                       >
                         <option value="5">5 seconds</option>
                         <option value="10">10 seconds</option>
@@ -722,7 +736,7 @@ export function SettingsPage() {
                         onChange={(e) => {
                           setDefaultReplyMode(e.target.value as "reply" | "replyAll");
                         }}
-                        className="w-48 bg-bg-tertiary text-text-primary text-sm px-3 py-1.5 rounded-md border border-border-primary focus:border-accent outline-none"
+                        className={selectClass}
                       >
                         <option value="reply">Reply</option>
                         <option value="replyAll">Reply All</option>
@@ -734,7 +748,7 @@ export function SettingsPage() {
                         onChange={(e) => {
                           setMarkAsReadBehavior(e.target.value as "instant" | "2s" | "manual");
                         }}
-                        className="w-48 bg-bg-tertiary text-text-primary text-sm px-3 py-1.5 rounded-md border border-border-primary focus:border-accent outline-none"
+                        className={selectClass}
                       >
                         <option value="instant">Instantly</option>
                         <option value="2s">After 2 seconds</option>
@@ -755,39 +769,42 @@ export function SettingsPage() {
 
               {activeTab === "mail-rules" && (
                 <>
-                  <Section title="Labels">
-                    <p className="text-xs text-text-tertiary mb-3">
-                      Create, rename, recolor, delete, or reorder your Gmail labels.
-                    </p>
+                  <Section
+                    title="Labels"
+                    description="Create, rename, recolor, delete, or reorder your Gmail labels."
+                  >
                     <LabelEditor />
                   </Section>
 
-                  <Section title="Filters">
-                    <p className="text-xs text-text-tertiary mb-3">
-                      Filters automatically apply actions to new incoming emails during sync.
-                    </p>
+                  <Section
+                    title="Filters"
+                    description="Filters automatically apply actions to new incoming emails during sync."
+                  >
                     <FilterEditor />
                   </Section>
 
-                  <Section title="Smart Labels">
-                    <p className="text-xs text-text-tertiary mb-3">
-                      Describe what emails should get a label using plain English. AI automatically labels matching emails during sync.
-                    </p>
+                  <Section
+                    title="Smart Labels"
+                    description="Describe what emails should get a label using plain English. AI automatically labels matching emails during sync."
+                  >
                     <SmartLabelEditor />
                   </Section>
 
-                  <Section title="Smart Folders">
-                    <p className="text-xs text-text-tertiary mb-3">
-                      Smart folders are saved searches that automatically show matching emails. Use search operators like <code className="bg-bg-tertiary px-1 rounded">is:unread</code>, <code className="bg-bg-tertiary px-1 rounded">from:</code>, <code className="bg-bg-tertiary px-1 rounded">has:attachment</code>, <code className="bg-bg-tertiary px-1 rounded">after:</code>.
-                    </p>
+                  <Section
+                    title="Smart Folders"
+                    description={
+                      <>
+                        Smart folders are saved searches that automatically show matching emails. Use search operators like <code className={codeClass}>is:unread</code>, <code className={codeClass}>from:</code>, <code className={codeClass}>has:attachment</code>, <code className={codeClass}>after:</code>.
+                      </>
+                    }
+                  >
                     <SmartFolderEditor />
                   </Section>
 
-                  <Section title="Quick Steps">
-                    <p className="text-xs text-text-tertiary mb-3">
-                      Quick steps let you chain multiple actions together into a single click.
-                      Apply them from the right-click menu on any thread.
-                    </p>
+                  <Section
+                    title="Quick Steps"
+                    description="Quick steps let you chain multiple actions together into a single click. Apply them from the right-click menu on any thread."
+                  >
                     <QuickStepEditor />
                   </Section>
                 </>
@@ -795,17 +812,17 @@ export function SettingsPage() {
 
               {activeTab === "people" && (
                 <>
-                  <Section title="Contacts">
-                    <p className="text-xs text-text-tertiary mb-3">
-                      Contacts are automatically added when you send or receive emails. Edit display names or remove contacts below.
-                    </p>
+                  <Section
+                    title="Contacts"
+                    description="Contacts are automatically added when you send or receive emails. Edit display names or remove contacts below."
+                  >
                     <ContactEditor />
                   </Section>
 
-                  <Section title="Subscriptions">
-                    <p className="text-xs text-text-tertiary mb-3">
-                      View all detected newsletter and promotional senders. Unsubscribe using RFC 8058 one-click POST, mailto, or browser fallback.
-                    </p>
+                  <Section
+                    title="Subscriptions"
+                    description="View all detected newsletter and promotional senders. Unsubscribe using RFC 8058 one-click POST, mailto, or browser fallback."
+                  >
                     <SubscriptionManager />
                   </Section>
                 </>
@@ -819,30 +836,30 @@ export function SettingsPage() {
                         No mail accounts connected
                       </p>
                     ) : (
-                      <div className="space-y-2">
+                      <>
                         {accounts.filter((a) => !isDavOnly(a.provider)).map((account) => {
                           const providerLabel = account.provider === "imap" ? "IMAP" : "Gmail";
                           return (
                             <div
                               key={account.id}
-                              className="flex items-center justify-between py-2.5 px-4 bg-bg-secondary rounded-lg"
+                              className="flex items-center justify-between gap-4"
                             >
-                              <div>
+                              <div className="min-w-0">
                                 <div className="text-sm font-medium text-text-primary flex items-center gap-2">
                                   {account.displayName ?? account.email}
-                                  <span className="text-[0.6rem] font-medium px-1.5 py-0.5 rounded-full bg-bg-tertiary text-text-tertiary">
+                                  <span className={pillClass}>
                                     {providerLabel}
                                   </span>
                                 </div>
-                                <div className="text-xs text-text-tertiary">
+                                <div className="text-xs text-text-tertiary truncate">
                                   {account.email}
                                 </div>
                               </div>
-                              <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-1.5 shrink-0">
                                 <button
                                   onClick={() => handleReauthorizeAccount(account.id, account.email)}
                                   disabled={reauthStatus[account.id] === "authorizing"}
-                                  className="text-xs text-accent hover:text-accent-hover transition-colors disabled:opacity-50"
+                                  className={smallButtonClass}
                                 >
                                   {reauthStatus[account.id] === "authorizing" && "Waiting..."}
                                   {reauthStatus[account.id] === "done" && "Done!"}
@@ -852,7 +869,7 @@ export function SettingsPage() {
                                 <button
                                   onClick={() => handleResyncAccount(account.id)}
                                   disabled={resyncStatus[account.id] === "syncing"}
-                                  className="text-xs text-accent hover:text-accent-hover transition-colors disabled:opacity-50"
+                                  className={smallButtonClass}
                                 >
                                   {resyncStatus[account.id] === "syncing" && "Resyncing..."}
                                   {resyncStatus[account.id] === "done" && "Done!"}
@@ -861,7 +878,7 @@ export function SettingsPage() {
                                 </button>
                                 <button
                                   onClick={() => handleRemoveAccount(account.id)}
-                                  className="text-xs text-danger hover:text-danger/80 transition-colors"
+                                  className={smallDangerButtonClass}
                                 >
                                   Remove
                                 </button>
@@ -869,38 +886,38 @@ export function SettingsPage() {
                             </div>
                           );
                         })}
-                      </div>
+                      </>
                     )}
                   </Section>
 
                   {accounts.some((a) => isDavOnly(a.provider)) && (
                     <Section title="Calendar and Contact Accounts">
-                      <div className="space-y-2">
+                      <>
                         {accounts.filter((a) => isDavOnly(a.provider)).map((account) => (
                           <div
                             key={account.id}
-                            className="flex items-center justify-between py-2.5 px-4 bg-bg-secondary rounded-lg"
+                            className="flex items-center justify-between gap-4"
                           >
-                            <div>
+                            <div className="min-w-0">
                               <div className="text-sm font-medium text-text-primary flex items-center gap-2">
                                 {account.displayName ?? account.email}
-                                <span className="text-[0.6rem] font-medium px-1.5 py-0.5 rounded-full bg-accent/10 text-accent">
+                                <span className={pillClass}>
                                   {account.provider === "carddav" ? "CardDAV" : "CalDAV"}
                                 </span>
                               </div>
-                              <div className="text-xs text-text-tertiary">
+                              <div className="text-xs text-text-tertiary truncate">
                                 {account.email}
                               </div>
                             </div>
                             <button
                               onClick={() => handleRemoveAccount(account.id)}
-                              className="text-xs text-danger hover:text-danger/80 transition-colors"
+                              className={`${smallDangerButtonClass} shrink-0`}
                             >
                               Remove
                             </button>
                           </div>
                         ))}
-                      </div>
+                      </>
                     </Section>
                   )}
 
@@ -938,8 +955,8 @@ export function SettingsPage() {
                   </Section>
 
                   <Section title="Sync">
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm text-text-secondary">
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-sm text-text-primary">
                         Check for new mail
                       </span>
                       <Button
@@ -952,9 +969,9 @@ export function SettingsPage() {
                         {isSyncing ? "Syncing..." : "Sync now"}
                       </Button>
                     </div>
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-4">
                       <div>
-                        <span className="text-sm text-text-secondary">
+                        <span className="text-sm text-text-primary">
                           Full resync
                         </span>
                         <p className="text-xs text-text-tertiary mt-0.5">
@@ -967,7 +984,6 @@ export function SettingsPage() {
                         icon={<RefreshCw size={14} className={isSyncing ? "animate-spin" : ""} />}
                         onClick={handleForceFullSync}
                         disabled={isSyncing || accounts.length === 0}
-                        className="bg-bg-tertiary text-text-primary border border-border-primary"
                       >
                         {isSyncing ? "Syncing..." : "Full resync"}
                       </Button>
@@ -983,7 +999,7 @@ export function SettingsPage() {
                           setSyncPeriodDays(val);
                           await setSetting("sync_period_days", val);
                         }}
-                        className="w-48 bg-bg-tertiary text-text-primary text-sm px-3 py-1.5 rounded-md border border-border-primary focus:border-accent outline-none"
+                        className={selectClass}
                       >
                         <option value="30">Last 30 days</option>
                         <option value="90">Last 90 days</option>
@@ -991,7 +1007,7 @@ export function SettingsPage() {
                         <option value="365">Last 1 year</option>
                       </select>
                     </SettingRow>
-                    <p className="text-xs text-text-tertiary">
+                    <p className={footerClass}>
                       Changes apply on the next full resync.
                     </p>
                   </Section>
@@ -1006,10 +1022,10 @@ export function SettingsPage() {
 
               {activeTab === "ai" && (
                 <>
-                  <Section title="Provider">
-                    <p className="text-xs text-text-tertiary mb-3">
-                      Choose which AI provider to use for summarization, compose assistance, and smart categorization.
-                    </p>
+                  <Section
+                    title="Provider"
+                    description="Choose which AI provider to use for summarization, compose assistance, and smart categorization."
+                  >
                     <SettingRow label="AI Provider">
                       <select
                         value={aiProvider}
@@ -1021,7 +1037,7 @@ export function SettingsPage() {
                           const { clearProviderClients } = await import("@/services/ai/providerManager");
                           clearProviderClients();
                         }}
-                        className="w-48 bg-bg-tertiary text-text-primary text-sm px-3 py-1.5 rounded-md border border-border-primary focus:border-accent outline-none"
+                        className={selectClass}
                       >
                         <option value="claude">Claude (Anthropic)</option>
                         <option value="openai">OpenAI</option>
@@ -1030,7 +1046,7 @@ export function SettingsPage() {
                         <option value="copilot">GitHub Copilot</option>
                       </select>
                     </SettingRow>
-                    <p className="text-xs text-text-tertiary">
+                    <p className={footerClass}>
                       {aiProvider === "claude" && `Uses ${PROVIDER_MODELS.claude.find((m) => m.id === claudeModel)?.label ?? claudeModel}.`}
                       {aiProvider === "openai" && `Uses ${PROVIDER_MODELS.openai.find((m) => m.id === openaiModel)?.label ?? openaiModel}.`}
                       {aiProvider === "gemini" && `Uses ${PROVIDER_MODELS.gemini.find((m) => m.id === geminiModel)?.label ?? geminiModel}.`}
@@ -1089,7 +1105,6 @@ export function SettingsPage() {
                               }
                             }}
                             disabled={!ollamaServerUrl.trim() || !ollamaModel.trim() || aiTesting}
-                            className="bg-bg-tertiary text-text-primary border border-border-primary"
                           >
                             {aiTesting ? "Testing..." : "Test Connection"}
                           </Button>
@@ -1157,7 +1172,7 @@ export function SettingsPage() {
                               const { clearProviderClients } = await import("@/services/ai/providerManager");
                               clearProviderClients();
                             }}
-                            className="w-48 bg-bg-tertiary text-text-primary text-sm px-3 py-1.5 rounded-md border border-border-primary focus:border-accent outline-none"
+                            className={selectClass}
                           >
                             {PROVIDER_MODELS[aiProvider].map((m) => (
                               <option key={m.id} value={m.id}>{m.label}</option>
@@ -1219,7 +1234,6 @@ export function SettingsPage() {
                               : aiProvider === "copilot" ? copilotApiKey.trim()
                               : geminiApiKey.trim()) || aiTesting
                             }
-                            className="bg-bg-tertiary text-text-primary border border-border-primary"
                           >
                             {aiTesting ? "Testing..." : "Test Connection"}
                           </Button>
@@ -1289,9 +1303,9 @@ export function SettingsPage() {
                       }}
                     />
                     {aiWritingStyleEnabled && (
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-4">
                         <div>
-                          <span className="text-sm text-text-secondary">Writing style profile</span>
+                          <span className="text-sm text-text-primary">Writing style profile</span>
                           <p className="text-xs text-text-tertiary mt-0.5">
                             Reanalyze your writing style from recent sent emails
                           </p>
@@ -1317,7 +1331,6 @@ export function SettingsPage() {
                             }
                           }}
                           disabled={styleAnalyzing}
-                          className="bg-bg-tertiary text-text-primary border border-border-primary"
                         >
                           {styleAnalyzing ? "Analyzing..." : styleAnalyzeDone ? "Done!" : "Reanalyze"}
                         </Button>
@@ -1325,13 +1338,19 @@ export function SettingsPage() {
                     )}
                   </Section>
 
-                  <Section title="Categories">
-                    <p className="text-xs text-text-tertiary mb-1">
-                      Incoming emails are automatically sorted using rule-based heuristics (Gmail labels, sender domain, headers). When AI is enabled, it refines results for better accuracy.
-                    </p>
-                    <p className="text-xs text-text-tertiary mb-3">
-                      Enable auto-archive to skip the inbox for specific categories.
-                    </p>
+                  <Section
+                    title="Categories"
+                    description={
+                      <>
+                        <p>
+                          Incoming emails are automatically sorted using rule-based heuristics (Gmail labels, sender domain, headers). When AI is enabled, it refines results for better accuracy.
+                        </p>
+                        <p>
+                          Enable auto-archive to skip the inbox for specific categories.
+                        </p>
+                      </>
+                    }
+                  >
                     {(["Updates", "Promotions", "Social", "Newsletters"] as const).map((cat) => (
                       <ToggleRow
                         key={cat}
@@ -1349,10 +1368,11 @@ export function SettingsPage() {
                     ))}
                   </Section>
 
-                  <Section title="Bundling & Delivery Schedules">
-                    <p className="text-xs text-text-tertiary mb-3">
-                      Collapse categories into a single row in the inbox. Optionally set a delivery schedule to batch emails.
-                    </p>
+                  <Section
+                    title="Bundling & Delivery Schedules"
+                    description="Collapse categories into a single row in the inbox. Optionally set a delivery schedule to batch emails."
+                    flush
+                  >
                     <BundleSettings />
                   </Section>
                 </>
@@ -1401,40 +1421,40 @@ function SendAsAliasesSection() {
   };
 
   return (
-    <Section title="Send-As Aliases">
-      <p className="text-xs text-text-tertiary mb-3">
-        These aliases are synced from your Gmail settings. You can select which alias to use as the default sender.
-      </p>
+    <Section
+      title="Send-As Aliases"
+      description="These aliases are synced from your Gmail settings. You can select which alias to use as the default sender."
+    >
       {aliases.length === 0 ? (
         <p className="text-sm text-text-tertiary">
           No aliases found. Aliases are fetched from Gmail on startup.
         </p>
       ) : (
-        <div className="space-y-2">
+        <>
           {aliases.map((alias) => (
             <div
               key={alias.id}
-              className="flex items-center justify-between py-2.5 px-4 bg-bg-secondary rounded-lg"
+              className="flex items-center justify-between gap-4"
             >
               <div className="flex items-center gap-3 min-w-0">
-                <Mail size={15} className="text-text-tertiary shrink-0" />
+                <Mail size={16} className="text-text-tertiary shrink-0" />
                 <div className="min-w-0">
                   <div className="text-sm font-medium text-text-primary truncate">
                     {alias.displayName ? `${alias.displayName} <${alias.email}>` : alias.email}
                   </div>
-                  <div className="flex items-center gap-2 mt-0.5">
+                  <div className="flex items-center gap-1.5 mt-1">
                     {alias.isPrimary && (
-                      <span className="text-[0.625rem] bg-accent/15 text-accent px-1.5 py-0.5 rounded-full">
+                      <span className={pillClass}>
                         Primary
                       </span>
                     )}
                     {alias.isDefault && (
-                      <span className="text-[0.625rem] bg-success/15 text-success px-1.5 py-0.5 rounded-full">
+                      <span className={`${pillClass} bg-bg-tertiary`}>
                         Default
                       </span>
                     )}
                     {alias.verificationStatus !== "accepted" && (
-                      <span className="text-[0.625rem] bg-warning/15 text-warning px-1.5 py-0.5 rounded-full">
+                      <span className="rounded-full border border-warning/30 px-1.5 font-mono text-[10px] leading-4 text-warning">
                         {alias.verificationStatus}
                       </span>
                     )}
@@ -1444,14 +1464,14 @@ function SendAsAliasesSection() {
               {!alias.isDefault && (
                 <button
                   onClick={() => handleSetDefault(alias)}
-                  className="text-xs text-accent hover:text-accent-hover transition-colors shrink-0 ml-3"
+                  className={`${smallButtonClass} shrink-0`}
                 >
                   Set as default
                 </button>
               )}
             </div>
           ))}
-        </div>
+        </>
       )}
     </Section>
   );
@@ -1496,39 +1516,38 @@ function SyncOfflineSection() {
 
   return (
     <Section title="Sync & Offline">
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4">
           <div>
-            <span className="text-sm text-text-secondary">Pending operations</span>
+            <span className="text-sm text-text-primary">Pending operations</span>
             <p className="text-xs text-text-tertiary mt-0.5">
               Changes waiting to sync to the server
             </p>
           </div>
-          <span className="text-sm font-mono text-text-primary">{pendingCount}</span>
+          <span className="font-mono text-sm tabular-nums text-text-primary">{pendingCount}</span>
         </div>
 
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4">
           <div>
-            <span className="text-sm text-text-secondary">Failed operations</span>
+            <span className="text-sm text-text-primary">Failed operations</span>
             <p className="text-xs text-text-tertiary mt-0.5">
               Changes that could not be synced after multiple retries
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-sm font-mono text-text-primary">{failedCount}</span>
+            <span className="font-mono text-sm tabular-nums text-text-primary">{failedCount}</span>
             {failedCount > 0 && (
               <>
                 <button
                   onClick={handleRetryFailed}
                   disabled={loading}
-                  className="text-xs text-accent hover:text-accent-hover transition-colors disabled:opacity-50"
+                  className={smallButtonClass}
                 >
                   Retry
                 </button>
                 <button
                   onClick={handleClearFailed}
                   disabled={loading}
-                  className="text-xs text-danger hover:opacity-80 transition-colors disabled:opacity-50"
+                  className={smallDangerButtonClass}
                 >
                   Clear
                 </button>
@@ -1536,7 +1555,6 @@ function SyncOfflineSection() {
             )}
           </div>
         </div>
-      </div>
     </Section>
   );
 }
@@ -1628,11 +1646,11 @@ function DemaishperTab() {
       </Section>
 
       <Section title="Updates">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4">
           <div>
-            <span className="text-sm text-text-secondary">Software updates</span>
+            <span className="text-sm text-text-primary">Software updates</span>
             {updateVersion && (
-              <p className="text-xs text-accent mt-0.5">
+              <p className="font-mono text-xs tabular-nums text-text-secondary mt-0.5">
                 v{updateVersion} available
               </p>
             )}
@@ -1658,7 +1676,6 @@ function DemaishperTab() {
                 icon={<RefreshCw size={14} className={checkingForUpdate ? "animate-spin" : ""} />}
                 onClick={handleCheckForUpdate}
                 disabled={checkingForUpdate}
-                className="bg-bg-tertiary text-text-primary border border-border-primary"
               >
                 {checkingForUpdate ? "Checking..." : "Check for Updates"}
               </Button>
@@ -1668,9 +1685,9 @@ function DemaishperTab() {
       </Section>
 
       <Section title="Demaishper Tools">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4">
           <div>
-            <span className="text-sm text-text-secondary">Open DevTools</span>
+            <span className="text-sm text-text-primary">Open DevTools</span>
             <p className="text-xs text-text-tertiary mt-0.5">
               Open the WebView demaishper tools inspector
             </p>
@@ -1682,7 +1699,6 @@ function DemaishperTab() {
               const { invoke } = await import("@tauri-apps/api/core");
               await invoke("open_devtools");
             }}
-            className="bg-bg-tertiary text-text-primary border border-border-primary"
           >
             Open DevTools
           </Button>
@@ -1709,11 +1725,12 @@ function AboutTab() {
   return (
     <>
       <Section title="Maish">
-        <div className="flex items-center gap-3 mb-2">
-          <img src={appIcon} alt="Maish" className="w-12 h-12 rounded-xl" />
+        <div className="space-y-3">
+        <div className="flex items-center gap-3">
+          <img src={appIcon} alt="Maish" className="w-10 h-10 rounded-lg" />
           <div>
-            <h3 className="text-base font-semibold text-text-primary">Maish</h3>
-            <p className="text-sm text-text-tertiary">
+            <h3 className="text-base font-medium text-text-primary">Maish</h3>
+            <p className="font-mono text-xs tabular-nums text-text-tertiary">
               {appVersion ? `Version ${appVersion}` : "Loading..."}
             </p>
           </div>
@@ -1721,13 +1738,13 @@ function AboutTab() {
         <p className="text-sm text-text-secondary leading-relaxed">
           A fast, open-source desktop email client built with privacy in mind. Your emails stay on your machine — no cloud, no tracking.
         </p>
+        </div>
       </Section>
 
       <Section title="Links">
-        <div className="space-y-1">
           <button
             onClick={() => openExternal("https://maishmail.app")}
-            className="flex items-center gap-3 w-full px-4 py-2.5 rounded-lg bg-bg-secondary hover:bg-bg-hover transition-colors text-left"
+            className="flex items-center gap-3 w-full hover:bg-bg-hover first:rounded-t-md last:rounded-b-md transition-colors text-left"
           >
             <Globe size={16} className="text-text-tertiary shrink-0" />
             <div className="min-w-0 flex-1">
@@ -1739,7 +1756,7 @@ function AboutTab() {
 
           <button
             onClick={() => openExternal("https://github.com/avihaymenahem/maish")}
-            className="flex items-center gap-3 w-full px-4 py-2.5 rounded-lg bg-bg-secondary hover:bg-bg-hover transition-colors text-left"
+            className="flex items-center gap-3 w-full hover:bg-bg-hover first:rounded-t-md last:rounded-b-md transition-colors text-left"
           >
             <Github size={16} className="text-text-tertiary shrink-0" />
             <div className="min-w-0 flex-1">
@@ -1751,7 +1768,7 @@ function AboutTab() {
 
           <button
             onClick={() => openExternal("mailto:info@maishmail.app")}
-            className="flex items-center gap-3 w-full px-4 py-2.5 rounded-lg bg-bg-secondary hover:bg-bg-hover transition-colors text-left"
+            className="flex items-center gap-3 w-full hover:bg-bg-hover first:rounded-t-md last:rounded-b-md transition-colors text-left"
           >
             <Mail size={16} className="text-text-tertiary shrink-0" />
             <div className="min-w-0 flex-1">
@@ -1760,20 +1777,19 @@ function AboutTab() {
             </div>
             <ExternalLink size={14} className="text-text-tertiary shrink-0" />
           </button>
-        </div>
       </Section>
 
       <Section title="License">
-        <div className="px-4 py-3 bg-bg-secondary rounded-lg">
+        <div>
           <div className="flex items-center gap-2 mb-2">
-            <Scale size={15} className="text-text-tertiary" />
+            <Scale size={16} className="text-text-tertiary" />
             <span className="text-sm font-medium text-text-primary">Apache License 2.0</span>
           </div>
           <p className="text-xs text-text-secondary leading-relaxed mb-3">
             Licensed under the Apache License, Version 2.0. You may obtain a copy of the License at{" "}
             <button
               onClick={() => openExternal("https://www.apache.org/licenses/LICENSE-2.0")}
-              className="text-accent hover:text-accent-hover transition-colors"
+              className="text-text-primary underline underline-offset-2 decoration-border-primary hover:decoration-text-primary transition-colors"
             >
               apache.org/licenses/LICENSE-2.0
             </button>
@@ -1790,9 +1806,9 @@ function AboutTab() {
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between">
-      <span className="text-sm text-text-secondary">{label}</span>
-      <span className="text-sm text-text-primary font-mono">{value}</span>
+    <div className="flex items-center justify-between gap-4">
+      <span className="text-sm text-text-primary">{label}</span>
+      <span className="font-mono text-[13px] tabular-nums text-text-secondary">{value}</span>
     </div>
   );
 }
@@ -1862,15 +1878,15 @@ function ShortcutsTab() {
   return (
     <>
       <Section title="Global Shortcut">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4">
           <div>
-            <span className="text-sm text-text-secondary">Quick compose</span>
+            <span className="text-sm text-text-primary">Quick compose</span>
             <p className="text-xs text-text-tertiary mt-0.5">
               Open compose window from any app
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <kbd className="text-xs bg-bg-tertiary px-2 py-1 rounded border border-border-primary font-mono">
+            <kbd className="font-mono text-[11px] leading-none px-1.5 py-1 rounded border border-border-primary bg-bg-secondary text-text-tertiary">
               {composeShortcut}
             </kbd>
             <button
@@ -1878,10 +1894,10 @@ function ShortcutsTab() {
               onClick={() => setRecordingGlobal(true)}
               onKeyDown={handleGlobalRecord}
               onBlur={() => setRecordingGlobal(false)}
-              className={`text-xs px-2.5 py-1 rounded-md transition-colors ${
+              className={`h-7 px-2.5 rounded-md border text-xs font-medium transition-colors ${
                 recordingGlobal
-                  ? "bg-accent text-on-accent"
-                  : "bg-bg-tertiary text-text-secondary hover:text-text-primary border border-border-primary"
+                  ? "bg-accent text-on-accent border-accent"
+                  : "bg-bg-primary text-text-primary border-border-primary hover:bg-bg-hover"
               }`}
             >
               {recordingGlobal ? "Press keys..." : "Change"}
@@ -1890,22 +1906,22 @@ function ShortcutsTab() {
         </div>
       </Section>
 
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-sm text-text-tertiary">
+      <div className="flex items-center justify-between gap-4">
+        <p className="text-[13px] text-text-secondary">
           Click a shortcut to rebind it. Press any key or key combination to set.
         </p>
         {hasCustom && (
           <button
             onClick={resetAll}
-            className="text-xs text-accent hover:text-accent-hover transition-colors shrink-0 ml-4"
+            className={`${smallButtonClass} shrink-0`}
           >
             Reset all
           </button>
         )}
       </div>
       {SHORTCUTS.map((section) => (
-        <Section key={section.category} title={section.category}>
-          <div className="space-y-1">
+        <Section key={section.category} title={section.category} flush>
+          <div className="divide-y divide-border-primary">
             {section.items.map((item) => {
               const currentKey = keyMap[item.id] ?? item.keys;
               const isDefault = currentKey === defaults[item.id];
@@ -1914,9 +1930,9 @@ function ShortcutsTab() {
               return (
                 <div
                   key={item.id}
-                  className="flex items-center justify-between py-2 px-1"
+                  className="flex items-center justify-between h-10 px-4"
                 >
-                  <span className="text-sm text-text-secondary">
+                  <span className="text-sm text-text-primary">
                     {item.desc}
                   </span>
                   <div className="flex items-center gap-2 ml-4 shrink-0">
@@ -1926,10 +1942,10 @@ function ShortcutsTab() {
                         if (isRecording) handleKeyRecord(e, item.id);
                       }}
                       onBlur={() => { if (isRecording) setRecordingId(null); }}
-                      className={`text-xs px-2.5 py-1 rounded-md font-mono transition-colors ${
+                      className={`h-6 px-2 rounded border font-mono text-[11px] transition-colors ${
                         isRecording
-                          ? "bg-accent text-on-accent"
-                          : "bg-bg-tertiary text-text-tertiary hover:text-text-primary border border-border-primary"
+                          ? "bg-accent text-on-accent border-accent"
+                          : "bg-bg-secondary text-text-secondary border-border-primary hover:text-text-primary hover:bg-bg-hover"
                       }`}
                     >
                       {isRecording ? "Press key..." : currentKey}
@@ -1937,7 +1953,7 @@ function ShortcutsTab() {
                     {!isDefault && (
                       <button
                         onClick={() => resetKey(item.id)}
-                        className="text-xs text-text-tertiary hover:text-text-primary"
+                        className="w-5 h-5 inline-flex items-center justify-center rounded-md text-xs text-text-tertiary hover:text-text-primary hover:bg-bg-hover"
                         title={`Reset to ${defaults[item.id]}`}
                       >
                         ×
@@ -2045,8 +2061,8 @@ function SidebarNavEditor() {
       items.every((item, i) => item.id === ALL_NAV_ITEMS[i]?.id && item.visible));
 
   return (
-    <Section title="Sidebar">
-      <div className="space-y-1">
+    <Section title="Sidebar" flush>
+      <div className="p-2 space-y-0.5">
         {items.map((item, index) => {
           const nav = navLookup.get(item.id);
           if (!nav) return null;
@@ -2055,14 +2071,14 @@ function SidebarNavEditor() {
           return (
             <div
               key={item.id}
-              className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors ${
+              className={`flex items-center gap-2 h-9 rounded-md px-2 text-sm hover:bg-bg-hover transition-colors ${
                 item.visible ? "text-text-primary" : "text-text-tertiary"
               }`}
             >
               <button
                 onClick={() => moveItem(index, -1)}
                 disabled={index === 0}
-                className="p-0.5 rounded text-text-tertiary hover:text-text-primary disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
+                className="p-0.5 rounded-md text-text-tertiary hover:text-text-primary hover:bg-bg-hover disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
                 title="Move up"
               >
                 <ChevronUp size={14} />
@@ -2070,7 +2086,7 @@ function SidebarNavEditor() {
               <button
                 onClick={() => moveItem(index, 1)}
                 disabled={index === items.length - 1}
-                className="p-0.5 rounded text-text-tertiary hover:text-text-primary disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
+                className="p-0.5 rounded-md text-text-tertiary hover:text-text-primary hover:bg-bg-hover disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
                 title="Move down"
               >
                 <ChevronDown size={14} />
@@ -2080,18 +2096,18 @@ function SidebarNavEditor() {
               <button
                 onClick={() => toggleItem(index)}
                 disabled={isInbox}
-                className={`relative w-10 h-5 rounded-full transition-colors shrink-0 ${
+                className={`relative inline-flex items-center w-9 h-5 rounded-full border transition-colors shrink-0 ${
                   isInbox
-                    ? "bg-accent/40 cursor-not-allowed"
+                    ? "bg-accent border-accent opacity-40 cursor-not-allowed"
                     : item.visible
-                      ? "bg-accent cursor-pointer"
-                      : "bg-bg-tertiary cursor-pointer"
+                      ? "bg-accent border-accent cursor-pointer"
+                      : "bg-bg-tertiary border-border-primary cursor-pointer"
                 }`}
                 title={isInbox ? "Inbox is always visible" : item.visible ? "Hide" : "Show"}
               >
                 <span
-                  className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${
-                    item.visible ? "translate-x-5" : ""
+                  className={`w-4 h-4 bg-bg-primary rounded-full shadow-sm transition-transform ${
+                    item.visible ? "translate-x-4" : "translate-x-0.5"
                   }`}
                 />
               </button>
@@ -2102,7 +2118,7 @@ function SidebarNavEditor() {
       {!isDefault && (
         <button
           onClick={resetToDefaults}
-          className="flex items-center gap-1.5 text-xs text-accent hover:text-accent-hover mt-2 transition-colors"
+          className="flex items-center gap-1.5 w-full px-4 py-2.5 bg-bg-secondary rounded-b-md text-xs text-text-secondary hover:text-text-primary transition-colors"
         >
           <RotateCcw size={12} />
           Reset to defaults
@@ -2112,20 +2128,37 @@ function SidebarNavEditor() {
   );
 }
 
+/**
+ * A titled settings card. Each direct child is a padded row separated by a
+ * hairline; `flush` drops the row padding for children that lay out their own.
+ */
 function Section({
   title,
+  description,
+  flush = false,
   children,
 }: {
   title: string;
+  description?: React.ReactNode;
+  flush?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <div>
-      <h3 className="text-xs font-semibold uppercase tracking-wider text-text-tertiary mb-3">
-        {title}
-      </h3>
-      <div className="space-y-3">{children}</div>
-    </div>
+    <section>
+      <div className="mb-3">
+        <h3 className="text-base font-medium tracking-tight text-text-primary">{title}</h3>
+        {description && (
+          <div className="mt-1 space-y-1 text-[13px] leading-relaxed text-text-secondary">{description}</div>
+        )}
+      </div>
+      <div
+        className={`rounded-md border border-border-primary bg-bg-primary divide-y divide-border-primary${
+          flush ? "" : " *:px-4 *:py-3"
+        }`}
+      >
+        {children}
+      </div>
+    </section>
   );
 }
 
@@ -2137,8 +2170,8 @@ function SettingRow({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between">
-      <label className="text-sm text-text-secondary">{label}</label>
+    <div className="flex items-center justify-between gap-4">
+      <label className="text-sm text-text-primary">{label}</label>
       {children}
     </div>
   );
@@ -2189,14 +2222,14 @@ function BundleSettings() {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="divide-y divide-border-primary">
       {(["Newsletters", "Promotions", "Social", "Updates"] as const).map((cat) => {
         const rule = rules[cat];
         return (
-          <div key={cat} className="py-3 px-4 bg-bg-secondary rounded-lg space-y-2">
+          <div key={cat} className="px-4 py-3 space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-text-primary">{cat}</span>
-              <div className="flex items-center gap-3">
+              <span className="text-sm text-text-primary">{cat}</span>
+              <div className="flex items-center gap-4">
                 <label className="flex items-center gap-1.5 text-xs text-text-secondary">
                   <input
                     type="checkbox"
@@ -2229,10 +2262,10 @@ function BundleSettings() {
                           : [...rule.days, idx].sort();
                         saveRule(cat, { days });
                       }}
-                      className={`w-8 h-7 text-[0.625rem] rounded transition-colors ${
+                      className={`w-10 h-7 rounded-md border font-mono text-[11px] transition-colors ${
                         rule.days.includes(idx)
-                          ? "bg-accent text-on-accent"
-                          : "bg-bg-tertiary text-text-tertiary border border-border-primary"
+                          ? "bg-accent text-on-accent border-accent"
+                          : "bg-bg-primary text-text-secondary border-border-primary hover:bg-bg-hover"
                       }`}
                     >
                       {name}
@@ -2248,7 +2281,7 @@ function BundleSettings() {
                       const [h, m] = e.target.value.split(":").map(Number);
                       saveRule(cat, { hour: h ?? 9, minute: m ?? 0 });
                     }}
-                    className="bg-bg-tertiary text-text-primary text-xs px-2 py-1 rounded border border-border-primary"
+                    className="h-7 bg-bg-primary text-text-primary font-mono text-xs tabular-nums px-2 rounded-md border border-border-primary outline-none focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10"
                   />
                 </div>
               </div>
@@ -2272,22 +2305,22 @@ function ToggleRow({
   onToggle: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex items-center justify-between gap-4">
       <div>
-        <span className="text-sm text-text-secondary">{label}</span>
+        <span className="text-sm text-text-primary">{label}</span>
         {description && (
           <p className="text-xs text-text-tertiary mt-0.5">{description}</p>
         )}
       </div>
       <button
         onClick={onToggle}
-        className={`w-10 h-5 rounded-full transition-colors relative shrink-0 ml-4 ${
-          checked ? "bg-accent" : "bg-bg-tertiary"
+        className={`relative inline-flex items-center w-9 h-5 rounded-full border transition-colors shrink-0 ${
+          checked ? "bg-accent border-accent" : "bg-bg-tertiary border-border-primary"
         }`}
       >
         <span
-          className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform shadow ${
-            checked ? "translate-x-5" : ""
+          className={`w-4 h-4 bg-bg-primary rounded-full shadow-sm transition-transform ${
+            checked ? "translate-x-4" : "translate-x-0.5"
           }`}
         />
       </button>

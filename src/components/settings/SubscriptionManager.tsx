@@ -109,24 +109,24 @@ export function SubscriptionManager() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search senders..."
-            className="w-full pl-8 pr-3 py-1.5 bg-bg-tertiary border border-border-primary rounded-md text-xs text-text-primary outline-none focus:border-accent"
+            className="w-full h-8 pl-8 pr-3 bg-bg-primary border border-border-primary rounded-md text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10"
           />
         </div>
         {selectedIds.size > 0 && (
           <button
             onClick={handleBulkUnsubscribe}
-            className="px-3 py-1.5 text-xs bg-danger text-white rounded-md hover:bg-danger/80 transition-colors shrink-0"
+            className="h-8 px-3 rounded-md text-sm font-medium bg-danger text-white hover:bg-danger/90 transition-colors shrink-0"
           >
             Unsubscribe ({selectedIds.size})
           </button>
         )}
       </div>
 
-      <p className="text-xs text-text-tertiary">
+      <p className="font-mono text-xs tabular-nums text-text-tertiary">
         {subscriptions.length} sender{subscriptions.length !== 1 ? "s" : ""} detected with unsubscribe headers.
       </p>
 
-      <div className="space-y-1 max-h-[500px] overflow-y-auto">
+      <div className="-mx-2 space-y-0.5 max-h-[500px] overflow-y-auto">
         {filtered.map((sub) => {
           const parsed = parseUnsubscribeHeaders(
             sub.latest_unsubscribe_header,
@@ -139,8 +139,8 @@ export function SubscriptionManager() {
           return (
             <div
               key={sub.from_address}
-              className={`flex items-center gap-3 py-2.5 px-3 rounded-lg transition-colors ${
-                isSelected ? "bg-accent/10" : "bg-bg-secondary hover:bg-bg-hover"
+              className={`flex items-center gap-3 py-2 px-2 rounded-md transition-colors ${
+                isSelected ? "bg-bg-selected" : "hover:bg-bg-hover"
               }`}
             >
               <input
@@ -156,27 +156,27 @@ export function SubscriptionManager() {
                     {sub.from_name ?? sub.from_address}
                   </span>
                   {isUnsubscribed && (
-                    <span className="text-[0.625rem] px-1.5 rounded-full bg-success/15 text-success">
+                    <span className="rounded-full border px-1.5 font-mono text-[10px] leading-4 border-success/30 text-success">
                       Unsubscribed
                     </span>
                   )}
                   {parsed.hasOneClick && !isUnsubscribed && (
-                    <span className="text-[0.625rem] px-1.5 rounded-full bg-accent/15 text-accent">
+                    <span className="rounded-full border px-1.5 font-mono text-[10px] leading-4 border-border-primary text-text-secondary">
                       One-click
                     </span>
                   )}
                 </div>
                 <div className="flex items-center gap-2 text-xs text-text-tertiary mt-0.5">
                   <span className="truncate">{sub.from_address}</span>
-                  <span className="shrink-0">{sub.message_count} emails</span>
-                  <span className="shrink-0">{formatRelativeDate(sub.latest_date)}</span>
+                  <span className="shrink-0 font-mono tabular-nums">{sub.message_count} emails</span>
+                  <span className="shrink-0 font-mono tabular-nums">{formatRelativeDate(sub.latest_date)}</span>
                 </div>
               </div>
               {!isUnsubscribed && (
                 <button
                   onClick={() => handleUnsubscribe(sub)}
                   disabled={isLoading}
-                  className="flex items-center gap-1 px-2.5 py-1 text-xs text-danger hover:text-danger/80 bg-bg-tertiary rounded-md border border-border-primary transition-colors disabled:opacity-50 shrink-0"
+                  className="flex items-center gap-1 h-7 px-2.5 text-xs text-danger bg-bg-primary rounded-md border border-border-primary hover:bg-danger/5 hover:border-danger/30 transition-colors disabled:opacity-50 shrink-0"
                 >
                   {isLoading ? (
                     <Loader2 size={12} className="animate-spin" />
