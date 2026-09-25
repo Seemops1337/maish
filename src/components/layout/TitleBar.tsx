@@ -30,8 +30,8 @@ export function TitleBar() {
       className="flex items-center justify-between h-9 bg-sidebar-bg border-b border-border-primary select-none shrink-0"
     >
       {/* App title — left side (extra padding on macOS for traffic light buttons) */}
-      <div data-tauri-drag-region className={`flex items-center gap-2 ${isMac ? "pl-20" : "pl-4"}`}>
-        <span data-tauri-drag-region className="text-xs font-semibold text-sidebar-text tracking-wide">
+      <div data-tauri-drag-region className={`flex items-center gap-2 ${isMac ? "pl-[84px]" : "pl-4"}`}>
+        <span data-tauri-drag-region className="label-mono text-text-secondary">
           Maish
         </span>
       </div>
@@ -41,21 +41,21 @@ export function TitleBar() {
         <div className="flex items-center h-full">
           <button
             onClick={handleMinimize}
-            className="h-full px-3.5 flex items-center justify-center text-sidebar-text/70 hover:bg-sidebar-hover transition-colors"
+            className="h-full px-3.5 flex items-center justify-center text-text-tertiary hover:text-text-primary hover:bg-sidebar-hover transition-colors"
             title="Minimize"
           >
             <Minus size={14} />
           </button>
           <button
             onClick={handleMaximize}
-            className="h-full px-3.5 flex items-center justify-center text-sidebar-text/70 hover:bg-sidebar-hover transition-colors"
+            className="h-full px-3.5 flex items-center justify-center text-text-tertiary hover:text-text-primary hover:bg-sidebar-hover transition-colors"
             title={maximized ? "Restore" : "Maximize"}
           >
             {maximized ? <Copy size={12} /> : <Square size={12} />}
           </button>
           <button
             onClick={handleClose}
-            className="h-full px-3.5 flex items-center justify-center text-sidebar-text/70 hover:bg-danger hover:text-white transition-colors"
+            className="h-full px-3.5 flex items-center justify-center text-text-tertiary hover:bg-danger hover:text-white transition-colors"
             title="Close"
           >
             <X size={14} />

@@ -44,13 +44,3 @@ export function isArchive(mimeType: string | null): boolean {
   return mimeType.includes("zip") || mimeType.includes("compressed") || mimeType.includes("archive") || mimeType.includes("tar") || mimeType === "application/gzip" || mimeType === "application/x-gzip";
 }
 
-export function getFileIcon(mimeType: string | null): string {
-  if (!mimeType) return "\u{1F4CE}";
-  if (mimeType.startsWith("image/")) return "\u{1F5BC}";
-  if (mimeType.startsWith("video/")) return "\u{1F3AC}";
-  if (mimeType.startsWith("audio/")) return "\u{1F3B5}";
-  if (mimeType === "application/pdf") return "\u{1F4C4}";
-  if (mimeType.includes("spreadsheet") || mimeType.includes("excel")) return "\u{1F4CA}";
-  if (mimeType.includes("zip") || mimeType.includes("compressed") || mimeType.includes("archive")) return "\u{1F4E6}";
-  return "\u{1F4CE}";
-}

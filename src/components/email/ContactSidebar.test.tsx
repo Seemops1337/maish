@@ -52,7 +52,6 @@ vi.mock("@/router/navigate", () => ({
 
 vi.mock("@/utils/fileTypeHelpers", () => ({
   formatFileSize: vi.fn((bytes: number) => `${bytes} B`),
-  getFileIcon: vi.fn(() => "\u{1F4CE}"),
 }));
 
 // Import mocked modules to configure per-test

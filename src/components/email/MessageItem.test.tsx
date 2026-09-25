@@ -117,7 +117,7 @@ describe("MessageItem", () => {
       <MessageItem message={makeMessage()} isLast={true} blockImages={false} isSpam={true} />,
     );
     const wrapper = container.firstElementChild!;
-    expect(wrapper.className).toContain("bg-red-500/8");
+    expect(wrapper.className).toContain("bg-danger/5");
   });
 
   it("does not apply red background when isSpam is false", () => {
@@ -125,7 +125,7 @@ describe("MessageItem", () => {
       <MessageItem message={makeMessage()} isLast={true} blockImages={false} isSpam={false} />,
     );
     const wrapper = container.firstElementChild!;
-    expect(wrapper.className).not.toContain("bg-red-500");
+    expect(wrapper.className).not.toContain("bg-danger");
   });
 
   it("does not apply red background when isSpam is undefined", () => {
@@ -133,7 +133,7 @@ describe("MessageItem", () => {
       <MessageItem message={makeMessage()} isLast={true} blockImages={false} />,
     );
     const wrapper = container.firstElementChild!;
-    expect(wrapper.className).not.toContain("bg-red-500");
+    expect(wrapper.className).not.toContain("bg-danger");
   });
 
   it("applies focus ring when focused prop is true", () => {
@@ -141,7 +141,7 @@ describe("MessageItem", () => {
       <MessageItem message={makeMessage()} isLast={false} blockImages={false} focused={true} />,
     );
     const wrapper = container.firstElementChild!;
-    expect(wrapper.className).toContain("ring-accent/50");
+    expect(wrapper.className).toContain("shadow-[inset_2px_0_0_var(--color-text-primary)]");
   });
 
   it("does not apply focus ring when focused is false", () => {
@@ -149,7 +149,7 @@ describe("MessageItem", () => {
       <MessageItem message={makeMessage()} isLast={false} blockImages={false} focused={false} />,
     );
     const wrapper = container.firstElementChild!;
-    expect(wrapper.className).not.toContain("ring-accent/50");
+    expect(wrapper.className).not.toContain("shadow-[inset_2px_0_0_var(--color-text-primary)]");
   });
 
   it("auto-expands when focused becomes true", () => {

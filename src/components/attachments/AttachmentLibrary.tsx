@@ -187,14 +187,13 @@ export function AttachmentLibrary() {
   const searchRef = useRef<HTMLInputElement>(null);
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-bg-primary">
       {/* Header */}
-      <div className="shrink-0 px-4 py-3 border-b border-border-primary">
+      <div className="shrink-0 px-5 py-3 bg-bg-primary border-b border-border-primary">
         <div className="flex items-center gap-3 flex-wrap">
           <div className="flex items-center gap-2">
-            <Paperclip size={18} className="text-text-secondary" />
-            <h1 className="text-base font-semibold text-text-primary">Attachments</h1>
-            <span className="text-xs text-text-tertiary">({filtered.length})</span>
+            <h1 className="text-lg font-medium tracking-tight text-text-primary">Attachments</h1>
+            <span className="font-mono text-xs tabular-nums text-text-tertiary">({filtered.length})</span>
           </div>
 
           <div className="flex-1" />
@@ -208,7 +207,7 @@ export function AttachmentLibrary() {
               placeholder="Search attachments..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-8 pr-3 py-1.5 text-xs rounded-md border border-border-primary bg-bg-secondary text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-1 focus:ring-accent w-48"
+              className="pl-8 pr-3 h-8 text-sm rounded-md border border-border-primary bg-bg-primary text-text-primary placeholder:text-text-tertiary outline-none focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10 w-48"
             />
           </div>
 
@@ -216,7 +215,7 @@ export function AttachmentLibrary() {
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value as TypeFilter)}
-            className="text-xs rounded-md border border-border-primary bg-bg-secondary text-text-primary px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-accent"
+            className="h-8 text-sm rounded-md border border-border-primary bg-bg-primary text-text-primary px-2 outline-none hover:bg-bg-hover focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10"
           >
             {TYPE_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
@@ -226,7 +225,7 @@ export function AttachmentLibrary() {
           <select
             value={senderFilter}
             onChange={(e) => setSenderFilter(e.target.value)}
-            className="text-xs rounded-md border border-border-primary bg-bg-secondary text-text-primary px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-accent max-w-40"
+            className="h-8 text-sm rounded-md border border-border-primary bg-bg-primary text-text-primary px-2 outline-none hover:bg-bg-hover focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10 max-w-40"
           >
             <option value="all">All senders</option>
             {senders.map((s) => (
@@ -239,7 +238,7 @@ export function AttachmentLibrary() {
           <select
             value={dateFilter}
             onChange={(e) => setDateFilter(e.target.value as DateFilter)}
-            className="text-xs rounded-md border border-border-primary bg-bg-secondary text-text-primary px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-accent"
+            className="h-8 text-sm rounded-md border border-border-primary bg-bg-primary text-text-primary px-2 outline-none hover:bg-bg-hover focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10"
           >
             {DATE_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
@@ -249,7 +248,7 @@ export function AttachmentLibrary() {
           <select
             value={sizeFilter}
             onChange={(e) => setSizeFilter(e.target.value as SizeFilter)}
-            className="text-xs rounded-md border border-border-primary bg-bg-secondary text-text-primary px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-accent"
+            className="h-8 text-sm rounded-md border border-border-primary bg-bg-primary text-text-primary px-2 outline-none hover:bg-bg-hover focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10"
           >
             {SIZE_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>{o.label}</option>
@@ -257,17 +256,17 @@ export function AttachmentLibrary() {
           </select>
 
           {/* View toggle */}
-          <div className="flex border border-border-primary rounded-md overflow-hidden">
+          <div className="flex bg-bg-tertiary rounded-md p-0.5">
             <button
               onClick={() => setViewMode("grid")}
-              className={`p-1.5 ${viewMode === "grid" ? "bg-accent/10 text-accent" : "text-text-tertiary hover:text-text-primary"}`}
+              className={`p-1.5 rounded transition-colors ${viewMode === "grid" ? "bg-bg-primary shadow-sm text-text-primary" : "text-text-tertiary hover:text-text-primary"}`}
               title="Grid view"
             >
               <LayoutGrid size={14} />
             </button>
             <button
               onClick={() => setViewMode("list")}
-              className={`p-1.5 ${viewMode === "list" ? "bg-accent/10 text-accent" : "text-text-tertiary hover:text-text-primary"}`}
+              className={`p-1.5 rounded transition-colors ${viewMode === "list" ? "bg-bg-primary shadow-sm text-text-primary" : "text-text-tertiary hover:text-text-primary"}`}
               title="List view"
             >
               <List size={14} />
@@ -277,7 +276,7 @@ export function AttachmentLibrary() {
       </div>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto p-5">
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <p className="text-sm text-text-tertiary">Loading attachments...</p>
@@ -301,7 +300,7 @@ export function AttachmentLibrary() {
             ))}
           </div>
         ) : (
-          <div className="flex flex-col">
+          <div className="flex flex-col divide-y divide-border-secondary rounded-md border border-border-primary overflow-hidden">
             {filtered.map((att) => (
               <AttachmentListItem
                 key={att.id}

@@ -33,7 +33,7 @@ interface ActionBarProps {
 }
 
 function Separator() {
-  return <div className="w-px h-5 bg-border-secondary mx-1 shrink-0" />;
+  return <div className="w-px h-4 bg-border-primary mx-1.5 shrink-0" />;
 }
 
 export function ActionBar({ thread, messages, noReply, defaultReplyMode = "reply", contactSidebarVisible, taskSidebarVisible, onReply, onReplyAll, onForward, onPrint, onExport, onPopOut, onToggleContactSidebar, onToggleTaskSidebar }: ActionBarProps) {
@@ -203,7 +203,7 @@ export function ActionBar({ thread, messages, noReply, defaultReplyMode = "reply
 
   return (
     <>
-      <div className="flex items-center gap-1 px-3 py-3 border-b border-border-secondary bg-bg-secondary">
+      <div className="flex items-center gap-0.5 px-4 h-12 border-b border-border-primary bg-bg-primary">
         {/* Reply / Forward group */}
         {hasLastMessage && (
           <>
@@ -252,7 +252,7 @@ export function ActionBar({ thread, messages, noReply, defaultReplyMode = "reply
           icon={<Star size={15} className={thread.isStarred ? "fill-current" : ""} />}
           onClick={handleToggleStar}
           title={thread.isStarred ? "Unstar (s)" : "Star (s)"}
-          className={thread.isStarred ? "text-warning" : ""}
+          className={thread.isStarred ? "text-text-primary" : ""}
         />
         <Button variant="secondary" iconOnly icon={<Clock size={15} />} onClick={() => setShowSnooze(true)} title="Snooze (h)" />
         <Button
@@ -278,7 +278,7 @@ export function ActionBar({ thread, messages, noReply, defaultReplyMode = "reply
           icon={<Pin size={15} className={thread.isPinned ? "fill-current" : ""} />}
           onClick={handleTogglePin}
           title={thread.isPinned ? "Unpin (p)" : "Pin (p)"}
-          className={thread.isPinned ? "text-accent" : ""}
+          className={thread.isPinned ? "text-text-primary bg-bg-selected" : ""}
         />
         <Button
           variant="secondary"
@@ -286,7 +286,7 @@ export function ActionBar({ thread, messages, noReply, defaultReplyMode = "reply
           icon={<VolumeX size={15} className={thread.isMuted ? "fill-current" : ""} />}
           onClick={handleToggleMute}
           title={thread.isMuted ? "Unmute (m)" : "Mute (m)"}
-          className={thread.isMuted ? "text-warning" : ""}
+          className={thread.isMuted ? "text-text-primary bg-bg-selected" : ""}
         />
         {hasFollowUp ? (
           <Button
@@ -295,7 +295,7 @@ export function ActionBar({ thread, messages, noReply, defaultReplyMode = "reply
             icon={<BellRing size={15} className="fill-current" />}
             onClick={handleCancelFollowUp}
             title="Cancel follow-up reminder"
-            className="text-accent"
+            className="text-text-primary bg-bg-selected"
           />
         ) : (
           <Button
@@ -327,7 +327,7 @@ export function ActionBar({ thread, messages, noReply, defaultReplyMode = "reply
         <Button
           variant="secondary"
           iconOnly
-          icon={<ListTodo size={15} className={taskSidebarVisible ? "text-accent" : ""} />}
+          icon={<ListTodo size={15} className={taskSidebarVisible ? "text-text-primary" : ""} />}
           onClick={onToggleTaskSidebar}
           title={taskSidebarVisible ? "Hide task panel" : "Show task panel"}
         />

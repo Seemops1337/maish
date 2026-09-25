@@ -52,14 +52,14 @@ export function CategoryTabs({ activeCategory, onCategoryChange, unreadCounts }:
   }, [activeCategory]);
 
   return (
-    <div className="relative border-b border-border-secondary shrink-0">
+    <div className="relative border-b border-border-primary shrink-0">
       {/* Left fade */}
       {canScrollLeft && (
-        <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-bg-secondary to-transparent z-10 pointer-events-none" />
+        <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-bg-primary to-transparent z-10 pointer-events-none" />
       )}
       {/* Right fade */}
       {canScrollRight && (
-        <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-bg-secondary to-transparent z-10 pointer-events-none" />
+        <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-bg-primary to-transparent z-10 pointer-events-none" />
       )}
       <div
         ref={scrollRef}
@@ -76,16 +76,16 @@ export function CategoryTabs({ activeCategory, onCategoryChange, unreadCounts }:
                 onCategoryChange(cat);
                 e.currentTarget.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
               }}
-              className={`px-2.5 py-1.5 text-xs font-medium transition-colors relative whitespace-nowrap flex items-center gap-1.5 ${
+              className={`h-9 px-2.5 text-[13px] transition-colors relative whitespace-nowrap flex items-center gap-1.5 ${
                 activeCategory === cat
-                  ? "text-accent"
-                  : "text-text-tertiary hover:text-text-primary"
+                  ? "text-text-primary"
+                  : "text-text-secondary hover:text-text-primary"
               }`}
             >
-              {Icon && <Icon size={13} />}
+              {Icon && <Icon size={14} />}
               {cat}
               {count > 0 && (
-                <span className="text-[0.625rem] bg-accent/15 text-accent px-1.5 rounded-full leading-normal">
+                <span className="font-mono text-[10px] leading-4 tabular-nums px-1.5 rounded-full border border-border-primary text-text-secondary">
                   {count}
                 </span>
               )}
@@ -95,7 +95,7 @@ export function CategoryTabs({ activeCategory, onCategoryChange, unreadCounts }:
         {/* Sliding indicator */}
         {indicatorStyle && (
           <span
-            className="absolute bottom-0 h-0.5 bg-accent rounded-full transition-all duration-200 ease-out pointer-events-none"
+            className="absolute bottom-0 h-px bg-text-primary transition-all duration-200 ease-out pointer-events-none"
             style={{ left: indicatorStyle.left, width: indicatorStyle.width }}
           />
         )}

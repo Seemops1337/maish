@@ -62,20 +62,20 @@ export function InlineAttachmentPreview({
 
       {/* PDF cards */}
       {pdfs.length > 0 && (
-        <div className="space-y-1">
+        <div className="flex flex-wrap gap-2">
           {pdfs.map((att) => (
             <button
               key={att.id}
               onClick={() => onAttachmentClick(att)}
-              className="flex items-center gap-2 px-3 py-2 rounded-md bg-bg-tertiary/50 hover:bg-bg-hover transition-colors w-full text-left"
+              className="flex items-center gap-2.5 px-3 py-2 rounded-md border border-border-primary bg-bg-primary hover:bg-bg-hover transition-colors min-w-[200px] max-w-[320px] text-left"
             >
-              <FileText size={16} className="text-danger shrink-0" />
+              <FileText size={16} className="text-text-tertiary shrink-0" />
               <div className="min-w-0">
-                <div className="text-xs text-text-primary truncate">
+                <div className="text-[13px] text-text-primary truncate">
                   {att.filename ?? "Document.pdf"}
                 </div>
                 {att.size != null && (
-                  <div className="text-[0.625rem] text-text-tertiary">
+                  <div className="font-mono text-[11px] tabular-nums text-text-tertiary">
                     {formatFileSize(att.size)}
                   </div>
                 )}
@@ -162,12 +162,12 @@ function ImageThumbnail({
     <div ref={observerRef}>
       <button
         onClick={onClick}
-        className="block rounded-md overflow-hidden border border-border-secondary hover:border-accent transition-colors"
+        className="block rounded-md overflow-hidden border border-border-primary hover:border-text-tertiary transition-colors"
         title={attachment.filename ?? "Image"}
       >
         {loading && (
           <div className="w-[200px] h-[120px] bg-bg-tertiary animate-pulse flex items-center justify-center">
-            <span className="text-xs text-text-tertiary">Loading...</span>
+            <span className="font-mono text-xs text-text-tertiary">Loading...</span>
           </div>
         )}
         {thumbnailUrl && (
@@ -179,7 +179,7 @@ function ImageThumbnail({
         )}
         {!loading && !thumbnailUrl && (
           <div className="w-[200px] h-[120px] bg-bg-tertiary flex items-center justify-center">
-            <span className="text-xs text-text-tertiary">Image</span>
+            <span className="label-mono">Image</span>
           </div>
         )}
       </button>

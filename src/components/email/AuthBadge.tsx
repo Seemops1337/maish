@@ -65,7 +65,7 @@ export function AuthBadge({ authResults }: AuthBadgeProps) {
     >
       {icon}
       {showTooltip && (
-        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 px-2 py-1.5 text-xs rounded-md bg-bg-tertiary text-text-primary border border-border-secondary shadow-md whitespace-pre z-50 pointer-events-none">
+        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 px-2.5 py-2 font-mono text-[11px] leading-4 font-normal rounded-md bg-bg-primary text-text-secondary border border-border-primary shadow-lg whitespace-pre z-50 pointer-events-none">
           {tooltipLines}
         </span>
       )}

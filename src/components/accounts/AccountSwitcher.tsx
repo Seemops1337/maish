@@ -39,12 +39,12 @@ export function AccountSwitcher({
       <div className="p-3">
         <button
           onClick={onAddAccount}
-          className={`flex items-center w-full rounded-lg p-2 text-sm text-sidebar-text/70 hover:bg-sidebar-hover hover:text-sidebar-text transition-colors ${
+          className={`flex items-center w-full rounded-md p-1.5 text-sm text-text-secondary hover:bg-sidebar-hover hover:text-text-primary transition-colors ${
             collapsed ? "justify-center" : "gap-3"
           }`}
         >
-          <div className="w-8 h-8 rounded-full bg-accent/10 flex items-center justify-center shrink-0">
-            <UserPlus size={16} className="text-accent" />
+          <div className="w-7 h-7 rounded-full border border-dashed border-border-primary flex items-center justify-center shrink-0">
+            <UserPlus size={14} className="text-text-tertiary" />
           </div>
           {!collapsed && <span className="font-medium">Add Account</span>}
         </button>
@@ -53,11 +53,11 @@ export function AccountSwitcher({
   }
 
   return (
-    <div className="relative p-2" ref={dropdownRef}>
+    <div className="relative px-3 pt-3 pb-2" ref={dropdownRef}>
       {/* Trigger button */}
       <button
         onClick={() => setOpen((v) => !v)}
-        className={`flex items-center w-full rounded-lg p-1.5 hover:bg-sidebar-hover transition-colors ${
+        className={`flex items-center w-full rounded-md p-1.5 hover:bg-sidebar-hover transition-colors ${
           collapsed ? "justify-center" : "gap-2.5"
         } ${open ? "bg-sidebar-hover" : ""}`}
       >
@@ -65,16 +65,16 @@ export function AccountSwitcher({
         {!collapsed && activeAccount && (
           <>
             <div className="flex-1 min-w-0 text-left">
-              <div className="text-sm font-medium text-sidebar-text truncate leading-tight">
+              <div className="text-sm font-medium text-text-primary truncate leading-tight">
                 {activeAccount.displayName || activeAccount.email.split("@")[0]}
               </div>
-              <div className="text-xs text-sidebar-text/50 truncate leading-tight">
+              <div className="font-mono text-[11px] text-text-tertiary truncate leading-tight mt-0.5">
                 {activeAccount.email}
               </div>
             </div>
             <ChevronDown
               size={14}
-              className={`shrink-0 text-sidebar-text/40 transition-transform duration-200 ${
+              className={`shrink-0 text-text-tertiary transition-transform duration-200 ${
                 open ? "rotate-180" : ""
               }`}
             />
@@ -85,12 +85,12 @@ export function AccountSwitcher({
       {/* Dropdown */}
       {open && (
         <div
-          className={`absolute z-50 mt-1 py-1 rounded-lg border border-border-primary bg-bg-primary shadow-lg ${
-            collapsed ? "left-full ml-1 top-0 w-64" : "left-2 right-2"
+          className={`absolute z-50 mt-1 p-1 rounded-md border border-border-primary bg-bg-primary shadow-lg ${
+            collapsed ? "left-full ml-1 top-0 w-64" : "left-3 right-3"
           }`}
         >
           {accounts.length > 1 && (
-            <div className="px-3 py-1.5 text-[0.625rem] font-medium text-text-tertiary uppercase tracking-wider">
+            <div className="px-2 pt-1.5 pb-1 label-mono">
               Accounts
             </div>
           )}
@@ -100,9 +100,9 @@ export function AccountSwitcher({
               <button
                 key={account.id}
                 onClick={() => handleSwitch(account.id)}
-                className={`flex items-center gap-2.5 w-full px-3 py-2 text-left transition-colors ${
+                className={`flex items-center gap-2.5 w-full px-2 py-1.5 rounded text-left transition-colors ${
                   isActive
-                    ? "bg-accent/8 text-accent"
+                    ? "bg-bg-selected text-text-primary"
                     : "text-text-primary hover:bg-bg-hover"
                 }`}
               >
@@ -114,12 +114,12 @@ export function AccountSwitcher({
                       <Calendar size={12} className="shrink-0 text-text-tertiary" />
                     )}
                   </div>
-                  <div className="text-xs text-text-secondary truncate leading-tight">
+                  <div className="font-mono text-[11px] text-text-tertiary truncate leading-tight mt-0.5">
                     {account.email}
                   </div>
                 </div>
                 {isActive && (
-                  <Check size={14} className="shrink-0 text-accent" />
+                  <Check size={14} className="shrink-0 text-text-primary" />
                 )}
               </button>
             );
@@ -127,9 +127,9 @@ export function AccountSwitcher({
           <div className="border-t border-border-primary my-1" />
           <button
             onClick={handleAdd}
-            className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-colors"
+            className="flex items-center gap-2.5 w-full px-2 py-1.5 rounded text-sm text-text-secondary hover:bg-bg-hover hover:text-text-primary transition-colors"
           >
-            <div className="w-7 h-7 rounded-full bg-bg-tertiary flex items-center justify-center shrink-0">
+            <div className="w-7 h-7 rounded-full border border-dashed border-border-primary flex items-center justify-center shrink-0">
               <Plus size={14} />
             </div>
             <span>Add account</span>
@@ -152,7 +152,7 @@ function ActiveAvatar({ account }: { account: Account | undefined }) {
   const showImg = account.avatarUrl && !imgError;
 
   return (
-    <div className="w-8 h-8 rounded-full bg-accent/15 text-accent flex items-center justify-center shrink-0 text-sm font-semibold overflow-hidden">
+    <div className="w-7 h-7 rounded-full bg-accent text-on-accent flex items-center justify-center shrink-0 text-xs font-medium overflow-hidden">
       {showImg ? (
         <img
           key={account.avatarUrl}
@@ -185,10 +185,10 @@ function AccountAvatarSmall({
 
   return (
     <div
-      className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-semibold overflow-hidden ${
+      className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-medium overflow-hidden ${
         isActive
           ? "bg-accent text-on-accent"
-          : "bg-accent/12 text-accent"
+          : "bg-bg-tertiary text-text-secondary border border-border-primary"
       }`}
     >
       {showImg ? (

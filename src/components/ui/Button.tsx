@@ -24,14 +24,17 @@ export function Button({
 
   const variants = {
     primary: "text-on-accent bg-accent hover:bg-accent-hover",
-    secondary: "text-text-secondary bg-bg-primary border border-border-primary hover:text-text-primary hover:bg-bg-hover",
+    // Icon-only secondary buttons sit in toolbars and stay borderless
+    secondary: iconOnly
+      ? "text-text-secondary hover:text-text-primary hover:bg-bg-hover"
+      : "text-text-primary bg-bg-primary border border-border-primary hover:bg-bg-hover",
     ghost: "text-text-tertiary hover:text-text-primary hover:bg-bg-hover",
     danger: "text-white bg-danger hover:bg-danger/90",
   };
 
   const sizes = iconOnly
     ? { xs: "p-1", sm: "p-1.5", md: "p-2" }
-    : { xs: "px-2 py-1 text-xs gap-1", sm: "px-3 py-1.5 text-xs gap-1.5", md: "px-4 py-2 text-sm gap-2" };
+    : { xs: "h-6 px-2 text-xs gap-1", sm: "h-7 px-3 text-xs gap-1.5", md: "h-8 px-3.5 text-sm gap-2" };
 
   return (
     <button

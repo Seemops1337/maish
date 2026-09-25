@@ -10,22 +10,22 @@ export function PhishingBanner({ scanResult, onTrustSender }: PhishingBannerProp
   const isHigh = scanResult.maxRiskScore >= 60;
 
   const bgClass = isHigh
-    ? "bg-danger/10 border-danger/30"
-    : "bg-warning/10 border-warning/30";
+    ? "bg-danger/5 border-danger/30"
+    : "bg-warning/5 border-warning/30";
   const textClass = isHigh ? "text-danger" : "text-warning";
   const iconClass = isHigh ? "text-danger" : "text-warning";
   const buttonClass = isHigh
-    ? "text-danger hover:text-danger/80 border-danger/30 hover:bg-danger/5"
-    : "text-warning hover:text-warning/80 border-warning/30 hover:bg-warning/5";
+    ? "text-danger border-danger/30 hover:bg-danger/10"
+    : "text-warning border-warning/30 hover:bg-warning/10";
 
   return (
-    <div className={`mb-3 px-3 py-2.5 rounded-lg border ${bgClass} flex items-center gap-3`}>
-      <ShieldAlert size={18} className={`shrink-0 ${iconClass}`} />
+    <div className={`mb-3 px-3 py-2.5 rounded-md border ${bgClass} flex items-center gap-2.5`}>
+      <ShieldAlert size={16} className={`shrink-0 ${iconClass}`} />
       <div className="flex-1 min-w-0">
-        <p className={`text-xs font-medium ${textClass}`}>
+        <p className={`text-sm font-medium ${textClass}`}>
           {isHigh ? "High risk" : "Suspicious"} links detected
         </p>
-        <p className="text-xs text-text-tertiary mt-0.5">
+        <p className="text-xs text-text-secondary mt-0.5">
           {scanResult.suspiciousLinkCount === 1
             ? "1 suspicious link found"
             : `${scanResult.suspiciousLinkCount} suspicious links found`}
@@ -34,7 +34,7 @@ export function PhishingBanner({ scanResult, onTrustSender }: PhishingBannerProp
       </div>
       <button
         onClick={onTrustSender}
-        className={`shrink-0 text-xs px-2.5 py-1 rounded-md border transition-colors ${buttonClass}`}
+        className={`shrink-0 h-7 px-2.5 text-xs font-medium rounded-md border bg-bg-primary transition-colors ${buttonClass}`}
       >
         Trust this sender
       </button>

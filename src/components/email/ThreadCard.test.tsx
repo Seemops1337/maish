@@ -75,7 +75,7 @@ describe("ThreadCard", () => {
       />,
     );
     const button = container.querySelector("button")!;
-    expect(button.className).toContain("bg-red-500/8");
+    expect(button.className).toContain("bg-danger/5");
   });
 
   it("does not apply red background for non-spam threads", () => {
@@ -87,7 +87,7 @@ describe("ThreadCard", () => {
       />,
     );
     const button = container.querySelector("button")!;
-    expect(button.className).not.toContain("bg-red-500");
+    expect(button.className).not.toContain("bg-danger");
   });
 
   it("applies red background for spam even when thread has other labels", () => {
@@ -99,6 +99,6 @@ describe("ThreadCard", () => {
       />,
     );
     const button = container.querySelector("button")!;
-    expect(button.className).toContain("bg-red-500/8");
+    expect(button.className).toContain("bg-danger/5");
   });
 });

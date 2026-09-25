@@ -1,11 +1,12 @@
 import { useState, useCallback, useRef, useEffect } from "react";
+import { FileTypeIcon } from "@/components/ui/FileTypeIcon";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeFile } from "@tauri-apps/plugin-fs";
 import { getAttachmentsForMessage, type DbAttachment } from "@/services/db/attachments";
 import { getEmailProvider } from "@/services/email/providerFactory";
 import { Modal } from "@/components/ui/Modal";
 import { Download, Eye } from "lucide-react";
-import { formatFileSize, isImage, isPdf, isText, canPreview, getFileIcon } from "@/utils/fileTypeHelpers";
+import { formatFileSize, isImage, isPdf, isText, canPreview } from "@/utils/fileTypeHelpers";
 
 /** Dedup attachments by filename+size (content-based) */
 function dedup(attachments: DbAttachment[]): DbAttachment[] {
@@ -41,8 +42,8 @@ export function AttachmentList({ accountId, messageId, attachments, referencedCi
 
   return (
     <>
-      <div className="mt-3 pt-3 border-t border-border-secondary">
-        <div className="text-xs text-text-tertiary mb-2">
+      <div className="mt-3 pt-3 border-t border-border-primary">
+        <div className="label-mono mb-2">
           {fileAttachments.length} attachment{fileAttachments.length !== 1 ? "s" : ""}
         </div>
         <div className="flex flex-wrap gap-2">
@@ -50,14 +51,14 @@ export function AttachmentList({ accountId, messageId, attachments, referencedCi
             <button
               key={att.id}
               onClick={() => setPreview(att)}
-              className="flex items-center gap-2 px-3 py-1.5 text-xs rounded-md border border-border-primary hover:bg-bg-hover transition-colors"
+              className="flex items-center gap-2 h-8 px-2.5 rounded-md border border-border-primary bg-bg-primary hover:bg-bg-hover transition-colors"
             >
-              <span className="text-text-tertiary">{getFileIcon(att.mime_type)}</span>
-              <span className="text-text-secondary truncate max-w-[200px]">
+              <FileTypeIcon mimeType={att.mime_type} size={14} className="shrink-0" />
+              <span className="text-[13px] text-text-primary truncate max-w-[200px]">
                 {att.filename ?? "Unnamed"}
               </span>
               {att.size != null && (
-                <span className="text-text-tertiary whitespace-nowrap">
+                <span className="font-mono text-[11px] tabular-nums text-text-tertiary whitespace-nowrap">
                   {formatFileSize(att.size)}
                 </span>
               )}
@@ -172,12 +173,12 @@ export function AttachmentPreview({
   const header = (
     <div className="px-4 py-3 border-b border-border-primary flex items-center justify-between shrink-0">
       <div className="flex items-center gap-2 min-w-0">
-        <span>{getFileIcon(attachment.mime_type)}</span>
+        <FileTypeIcon mimeType={attachment.mime_type} className="shrink-0" />
         <span className="text-sm font-medium text-text-primary truncate">
           {attachment.filename ?? "Unnamed"}
         </span>
         {attachment.size != null && (
-          <span className="text-xs text-text-tertiary whitespace-nowrap">
+          <span className="font-mono text-xs tabular-nums text-text-tertiary whitespace-nowrap">
             ({formatFileSize(attachment.size)})
           </span>
         )}
@@ -186,14 +187,14 @@ export function AttachmentPreview({
         <button
           onClick={handleDownload}
           disabled={saving}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-on-accent bg-accent hover:bg-accent-hover rounded-md transition-colors disabled:opacity-50"
+          className="flex items-center gap-1.5 h-8 px-3 text-sm font-medium text-on-accent bg-accent hover:bg-accent-hover rounded-md transition-colors disabled:opacity-50"
         >
-          <Download size={13} />
+          <Download size={14} />
           {saving ? "Saving..." : "Download"}
         </button>
         <button
           onClick={handleClose}
-          className="text-text-tertiary hover:text-text-primary text-lg leading-none"
+          className="w-7 h-7 flex items-center justify-center rounded-md text-text-tertiary hover:text-text-primary hover:bg-bg-hover text-lg leading-none transition-colors"
         >
           ×
         </button>
@@ -222,14 +223,14 @@ export function AttachmentPreview({
           <img
             src={blobUrl}
             alt={attachment.filename ?? "Attachment"}
-            className="max-w-full max-h-[70vh] object-contain rounded"
+            className="max-w-full max-h-[70vh] object-contain rounded-md"
           />
         )}
         {!loading && !error && blobUrl && isPdf(attachment.mime_type, attachment.filename) && (
           <iframe
             src={blobUrl}
             title={attachment.filename ?? "PDF preview"}
-            className="w-full h-[70vh] border-0 rounded"
+            className="w-full h-[70vh] border border-border-primary rounded-md"
           />
         )}
         {!loading && !error && blobUrl && isText(attachment.mime_type) && (
@@ -237,9 +238,9 @@ export function AttachmentPreview({
         )}
         {!isPreviewable && !loading && (
           <div className="flex flex-col items-center gap-3 text-text-tertiary">
-            <Eye size={40} strokeWidth={1} />
-            <p className="text-sm">Preview not available for this file type</p>
-            <p className="text-xs">{attachment.mime_type ?? "Unknown type"}</p>
+            <Eye size={32} strokeWidth={1.5} />
+            <p className="text-sm font-medium text-text-secondary">Preview not available for this file type</p>
+            <p className="font-mono text-xs">{attachment.mime_type ?? "Unknown type"}</p>
           </div>
         )}
       </div>
@@ -255,7 +256,7 @@ function TextPreview({ url }: { url: string }) {
   }, [url]);
 
   return (
-    <pre className="text-xs text-text-secondary whitespace-pre-wrap font-mono w-full max-h-[70vh] overflow-auto bg-bg-tertiary rounded p-4">
+    <pre className="text-xs text-text-secondary whitespace-pre-wrap font-mono w-full max-h-[70vh] overflow-auto bg-bg-secondary border border-border-primary rounded-md p-4">
       {text ?? "Loading..."}
     </pre>
   );

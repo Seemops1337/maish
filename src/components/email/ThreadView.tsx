@@ -399,16 +399,16 @@ export function ThreadView({ thread }: ThreadViewProps) {
         />
 
         {/* Thread subject */}
-        <div className="px-6 py-3 border-b border-border-primary">
-          <h1 className="text-lg font-semibold text-text-primary flex items-center gap-2">
+        <div className="px-6 pt-5 pb-4 border-b border-border-primary">
+          <h1 className="text-xl font-medium tracking-tight leading-snug text-text-primary flex items-center gap-2">
             {thread.subject ?? "(No subject)"}
             {thread.isMuted && (
-              <span className="text-warning shrink-0" title="Muted">
+              <span className="text-text-tertiary shrink-0" title="Muted">
                 <VolumeX size={16} />
               </span>
             )}
           </h1>
-          <div className="text-xs text-text-tertiary mt-1">
+          <div className="font-mono text-[11px] tabular-nums text-text-tertiary mt-1.5">
             {messages.length} message{messages.length !== 1 ? "s" : ""} in this thread
           </div>
         </div>
@@ -473,7 +473,7 @@ export function ThreadView({ thread }: ThreadViewProps) {
         <>
           {/* Backdrop for overlay mode (narrow widths) */}
           <div
-            className="absolute inset-0 z-10 bg-black/20 @[640px]:hidden"
+            className="absolute inset-0 z-10 overlay-backdrop @[640px]:hidden"
             onClick={toggleContactSidebar}
           />
           <div className="absolute right-0 top-0 bottom-0 z-20 shadow-xl @[640px]:relative @[640px]:z-auto @[640px]:shadow-none">

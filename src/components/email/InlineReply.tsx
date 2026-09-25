@@ -314,7 +314,7 @@ export function InlineReply({ thread, messages, accountId, noReply, onSent }: In
           onClick={() => activateMode("reply")}
           disabled={noReply}
           title={noReply ? "This sender does not accept replies" : undefined}
-          className="flex items-center gap-1.5 px-4 py-2 text-xs text-text-secondary border border-border-primary rounded-lg hover:bg-bg-hover hover:text-text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-text-secondary"
+          className="flex items-center gap-1.5 h-8 px-3 text-sm text-text-secondary bg-bg-primary border border-border-primary rounded-md hover:bg-bg-hover hover:text-text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-bg-primary disabled:hover:text-text-secondary"
         >
           <Reply size={14} />
           Reply
@@ -323,14 +323,14 @@ export function InlineReply({ thread, messages, accountId, noReply, onSent }: In
           onClick={() => activateMode("replyAll")}
           disabled={noReply}
           title={noReply ? "This sender does not accept replies" : undefined}
-          className="flex items-center gap-1.5 px-4 py-2 text-xs text-text-secondary border border-border-primary rounded-lg hover:bg-bg-hover hover:text-text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-text-secondary"
+          className="flex items-center gap-1.5 h-8 px-3 text-sm text-text-secondary bg-bg-primary border border-border-primary rounded-md hover:bg-bg-hover hover:text-text-primary transition-colors disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-bg-primary disabled:hover:text-text-secondary"
         >
           <ReplyAll size={14} />
           Reply All
         </button>
         <button
           onClick={() => activateMode("forward")}
-          className="flex items-center gap-1.5 px-4 py-2 text-xs text-text-secondary border border-border-primary rounded-lg hover:bg-bg-hover hover:text-text-primary transition-colors"
+          className="flex items-center gap-1.5 h-8 px-3 text-sm text-text-secondary bg-bg-primary border border-border-primary rounded-md hover:bg-bg-hover hover:text-text-primary transition-colors"
         >
           <Forward size={14} />
           Forward
@@ -344,19 +344,19 @@ export function InlineReply({ thread, messages, accountId, noReply, onSent }: In
   const modeLabel = mode === "reply" ? "Reply" : mode === "replyAll" ? "Reply All" : "Forward";
 
   return (
-    <div ref={containerRef} className="mx-4 my-3 border border-border-primary rounded-lg overflow-hidden bg-bg-primary">
+    <div ref={containerRef} className="mx-4 my-3 border border-border-primary rounded-md overflow-hidden bg-bg-primary transition-shadow focus-within:border-text-tertiary focus-within:ring-2 focus-within:ring-text-primary/10">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 bg-bg-secondary border-b border-border-secondary">
+      <div className="flex items-center justify-between px-3 h-10 bg-bg-secondary border-b border-border-primary">
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1">
             {(["reply", "replyAll", "forward"] as const).map((m) => (
               <button
                 key={m}
                 onClick={() => setMode(m)}
-                className={`px-2 py-1 text-[0.6875rem] rounded transition-colors ${
+                className={`h-6 px-2 text-xs rounded-md transition-colors ${
                   mode === m
-                    ? "bg-accent/10 text-accent font-medium"
-                    : "text-text-tertiary hover:text-text-primary"
+                    ? "bg-bg-selected text-text-primary font-medium"
+                    : "text-text-tertiary hover:text-text-primary hover:bg-bg-hover"
                 }`}
               >
                 {m === "reply" ? "Reply" : m === "replyAll" ? "Reply All" : "Forward"}
@@ -364,14 +364,14 @@ export function InlineReply({ thread, messages, accountId, noReply, onSent }: In
             ))}
           </div>
           {to.length > 0 && (
-            <span className="text-[0.6875rem] text-text-tertiary truncate max-w-[200px]">
+            <span className="font-mono text-[11px] text-text-tertiary truncate max-w-[200px]">
               to {to.join(", ")}
             </span>
           )}
         </div>
         <button
           onClick={() => setMode(null)}
-          className="text-xs text-text-tertiary hover:text-text-primary transition-colors"
+          className="h-6 px-2 rounded-md text-xs text-text-tertiary hover:text-text-primary hover:bg-bg-hover transition-colors"
         >
           Cancel
         </button>
@@ -391,14 +391,14 @@ export function InlineReply({ thread, messages, accountId, noReply, onSent }: In
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-between px-3 py-2 border-t border-border-secondary bg-bg-secondary">
+      <div className="flex items-center justify-between px-3 py-2 border-t border-border-primary bg-bg-secondary">
         <div className="flex items-center gap-1">
           <button
             onClick={handleExpandToComposer}
             title="Expand to full composer"
-            className="flex items-center gap-1.5 px-2 py-1 text-xs text-text-tertiary hover:text-text-primary transition-colors"
+            className="flex items-center gap-1.5 h-7 px-2 rounded-md text-xs text-text-tertiary hover:text-text-primary hover:bg-bg-hover transition-colors"
           >
-            <Maximize2 size={12} />
+            <Maximize2 size={14} />
             Expand
           </button>
           {hasAutoDraft && mode !== "forward" && (
@@ -407,17 +407,17 @@ export function InlineReply({ thread, messages, accountId, noReply, onSent }: In
                 onClick={handleRegenerateDraft}
                 disabled={autoDraftLoading}
                 title="Regenerate AI draft"
-                className="flex items-center gap-1 px-2 py-1 text-xs text-text-tertiary hover:text-accent transition-colors disabled:opacity-50"
+                className="flex items-center gap-1.5 h-7 px-2 rounded-md text-xs text-text-tertiary hover:text-text-primary hover:bg-bg-hover transition-colors disabled:opacity-50"
               >
-                <RotateCcw size={11} />
+                <RotateCcw size={14} />
                 Regenerate
               </button>
               <button
                 onClick={handleClearDraft}
                 title="Clear AI draft"
-                className="flex items-center gap-1 px-2 py-1 text-xs text-text-tertiary hover:text-danger transition-colors"
+                className="flex items-center gap-1.5 h-7 px-2 rounded-md text-xs text-text-tertiary hover:text-danger hover:bg-bg-hover transition-colors"
               >
-                <X size={11} />
+                <X size={14} />
                 Clear
               </button>
             </>
@@ -426,9 +426,9 @@ export function InlineReply({ thread, messages, accountId, noReply, onSent }: In
         <button
           onClick={handleSend}
           disabled={sending || (to.length === 0 && mode !== "forward")}
-          className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium text-on-accent bg-accent hover:bg-accent-hover rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-1.5 h-8 px-3 text-sm font-medium text-on-accent bg-accent hover:bg-accent-hover rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          <Send size={12} />
+          <Send size={14} />
           {modeLabel}
         </button>
       </div>

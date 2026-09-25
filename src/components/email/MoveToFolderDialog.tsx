@@ -186,11 +186,11 @@ export function MoveToFolderDialog({
       >
         <div className="overlay-backdrop absolute inset-0" />
         <div
-          className="relative bg-bg-primary border border-border-primary rounded-lg surface-overlay w-full max-w-md overflow-hidden"
+          className="relative bg-bg-primary border border-border-primary rounded-md surface-overlay w-full max-w-md overflow-hidden"
           onKeyDown={handleKeyDown}
         >
           {/* Search input */}
-          <div className="flex items-center gap-2 px-3 py-2.5 border-b border-border-secondary">
+          <div className="flex items-center gap-2 px-3 h-11 border-b border-border-primary">
             <Search size={16} className="text-text-tertiary shrink-0" />
             <input
               ref={inputRef}
@@ -209,11 +209,11 @@ export function MoveToFolderDialog({
           {/* Destination list */}
           <div
             ref={listRef}
-            className="max-h-64 overflow-y-auto py-1"
+            className="max-h-64 overflow-y-auto p-1"
             role="listbox"
           >
             {filtered.length === 0 && (
-              <div className="px-3 py-4 text-center text-xs text-text-tertiary">
+              <div className="px-3 py-6 text-center text-xs text-text-tertiary">
                 No matching folders or labels
               </div>
             )}
@@ -225,7 +225,7 @@ export function MoveToFolderDialog({
                   key={dest.id}
                   role="option"
                   aria-selected={isSelected}
-                  className={`flex items-center gap-2.5 w-full px-3 py-1.5 text-sm text-left cursor-pointer transition-colors ${
+                  className={`flex items-center gap-2.5 w-full h-8 px-2 rounded-md text-sm text-left cursor-pointer transition-colors ${
                     isSelected
                       ? "bg-bg-selected text-text-primary"
                       : "text-text-secondary hover:bg-bg-hover"
@@ -234,16 +234,12 @@ export function MoveToFolderDialog({
                   onMouseEnter={() => setSelectedIdx(idx)}
                 >
                   <Icon
-                    size={15}
-                    className={
-                      dest.type === "system"
-                        ? "text-text-tertiary"
-                        : "text-accent"
-                    }
+                    size={16}
+                    className="text-text-tertiary shrink-0"
                   />
                   <span className="truncate">{dest.label}</span>
                   {dest.type === "system" && (
-                    <span className="ml-auto text-[10px] text-text-tertiary uppercase tracking-wider">
+                    <span className="ml-auto font-mono text-[10px] leading-4 uppercase tracking-wide px-1.5 rounded-full border border-border-primary text-text-tertiary">
                       System
                     </span>
                   )}
@@ -253,21 +249,21 @@ export function MoveToFolderDialog({
           </div>
 
           {/* Footer hint */}
-          <div className="flex items-center gap-3 px-3 py-1.5 border-t border-border-secondary text-[10px] text-text-tertiary">
+          <div className="flex items-center gap-3 px-3 h-9 border-t border-border-primary bg-bg-secondary text-xs text-text-tertiary">
             <span>
-              <kbd className="px-1 py-0.5 rounded bg-bg-tertiary text-text-tertiary">
+              <kbd className="font-mono text-[11px] leading-none px-1.5 py-1 rounded border border-border-primary bg-bg-primary text-text-tertiary">
                 ↑↓
               </kbd>{" "}
               navigate
             </span>
             <span>
-              <kbd className="px-1 py-0.5 rounded bg-bg-tertiary text-text-tertiary">
+              <kbd className="font-mono text-[11px] leading-none px-1.5 py-1 rounded border border-border-primary bg-bg-primary text-text-tertiary">
                 ↵
               </kbd>{" "}
               select
             </span>
             <span>
-              <kbd className="px-1 py-0.5 rounded bg-bg-tertiary text-text-tertiary">
+              <kbd className="font-mono text-[11px] leading-none px-1.5 py-1 rounded border border-border-primary bg-bg-primary text-text-tertiary">
                 esc
               </kbd>{" "}
               close
