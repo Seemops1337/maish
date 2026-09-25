@@ -4,7 +4,7 @@
 > [`NOTICE`](NOTICE) for what was changed.
 
 <p align="center">
-  <img src="assets/icon.png?v1" alt="Maish" width="200" height="200" style="border-radius: 24px;" />
+  <img src="assets/icon.png?v2" alt="Maish" width="200" height="200" style="border-radius: 24px;" />
 </p>
 
 <h1 align="center">Maish</h1>

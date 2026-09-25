@@ -5,6 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Maish</title>
   <style>
+    /* Monochrome Geist palette (src/styles/globals.css). The splash opens before
+       the app reads its theme setting, so it follows the system appearance,
+       as the macOS 26 app icon does. */
+    :root {
+      --bg: #ffffff;
+      --fg: #171717;
+      --tile: #fafafa;
+      --tile-border: rgba(0, 0, 0, 0.08);
+      --glyph: #171717;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0a0a0a;
+        --fg: #ededed;
+        --tile: #0a0a0a;
+        --tile-border: rgba(255, 255, 255, 0.12);
+        --glyph: #ededed;
+      }
+    }
+
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
     body {
@@ -14,7 +35,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      background: linear-gradient(135deg, #0c1222 0%, #151030 35%, #1a0a2e 65%, #0f172a 100%);
+      background: var(--bg);
       overflow: hidden;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     }
@@ -24,6 +45,11 @@
       opacity: 0;
       animation: fadeIn 0.6s ease-out 0.1s forwards;
     }
+
+    .logo .tile { fill: var(--tile); }
+    .logo .tile-border { stroke: var(--tile-border); }
+    .logo .glyph { stroke: var(--glyph); }
+    .logo .wordmark { fill: var(--fg); }
 
     .loader {
       display: flex;
@@ -37,7 +63,7 @@
       width: 5px;
       height: 5px;
       border-radius: 50%;
-      background: #818cf8;
+      background: var(--fg);
       animation: pulse 1.4s ease-in-out infinite;
     }
 
@@ -58,16 +84,14 @@
 <body>
   <!-- Maish logo — inline SVG, no external dependencies -->
   <svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 120" fill="none" role="img" aria-label="Maish">
-    <defs>
-      <linearGradient id="maishBg" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0" stop-color="#818cf8"/>
-        <stop offset="1" stop-color="#4338ca"/>
-      </linearGradient>
-    </defs>
-    <rect x="4" y="10" width="100" height="100" rx="22" fill="url(#maishBg)"/>
-    <path d="M30 88V32h13l21 30 21-30h13v56H85V56l-17 24h-9L42 56v32z" fill="#ffffff"/>
-    <text x="128" y="82" font-family="system-ui, -apple-system, Segoe UI, sans-serif"
-          font-size="62" font-weight="600" letter-spacing="2" fill="#e2e8f0">Maish</text>
+    <!-- Same geometry as src-tauri/icons/icon.svg, scaled from 1024 to 100 -->
+    <g transform="translate(4 10) scale(0.09765625)">
+      <rect class="tile" width="1024" height="1024" rx="180"/>
+      <rect class="tile-border" x="4" y="4" width="1016" height="1016" rx="176" stroke-width="8"/>
+      <path class="glyph" d="M248,742 V307 L512,543 L776,307 V742 Z" stroke-width="80" stroke-linejoin="round"/>
+    </g>
+    <text class="wordmark" x="128" y="82" font-family="system-ui, -apple-system, Segoe UI, sans-serif"
+          font-size="62" font-weight="600" letter-spacing="2">Maish</text>
   </svg>
 
   <div class="loader">
