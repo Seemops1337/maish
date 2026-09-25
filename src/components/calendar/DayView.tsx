@@ -42,25 +42,25 @@ export function DayView({ currentDate, events, onEventClick }: DayViewProps) {
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
       {/* Header */}
-      <div className="px-6 py-3 border-b border-border-primary flex items-center gap-3 shrink-0">
-        <div className={`text-2xl font-bold w-10 h-10 flex items-center justify-center rounded-full ${
+      <div className="px-5 py-3 border-b border-border-primary flex items-center gap-3 shrink-0">
+        <div className={`font-mono tabular-nums text-lg font-medium w-9 h-9 flex items-center justify-center rounded-full ${
           isToday ? "bg-accent text-on-accent" : "text-text-primary"
         }`}>
           {currentDate.getDate()}
         </div>
-        <div className="text-sm text-text-secondary">
+        <div className="label-mono">
           {currentDate.toLocaleDateString(undefined, { weekday: "long" })}
         </div>
       </div>
 
       {/* All-day events */}
       {allDayEvents.length > 0 && (
-        <div className="px-6 py-2 border-b border-border-secondary space-y-1">
+        <div className="px-5 py-2 border-b border-border-primary space-y-1">
           {allDayEvents.map((e) => (
             <button
               key={e.id}
               onClick={() => onEventClick(e)}
-              className="w-full text-left text-xs px-2 py-1.5 rounded bg-accent/10 text-accent hover:bg-accent/20 transition-colors"
+              className="w-full text-left text-xs px-2 py-1.5 rounded-sm border-l-2 border-text-tertiary bg-bg-tertiary text-text-primary hover:bg-bg-hover transition-colors"
             >
               {e.summary ?? "Event"} · All day
             </button>
@@ -73,9 +73,9 @@ export function DayView({ currentDate, events, onEventClick }: DayViewProps) {
         {HOURS.map((hour) => {
           const hourEvents = hourEventMap.get(hour) ?? [];
           return (
-            <div key={hour} className="flex border-b border-border-secondary h-14">
+            <div key={hour} className="flex border-b border-border-primary h-14">
               <div className="w-16 shrink-0 px-2 flex items-start justify-end -mt-1.5">
-                <span className="text-[0.625rem] text-text-tertiary">
+                <span className="font-mono text-[10px] tabular-nums text-text-tertiary">
                   {hour === 0 ? "" : `${hour % 12 || 12}${hour < 12 ? "am" : "pm"}`}
                 </span>
               </div>
@@ -84,7 +84,7 @@ export function DayView({ currentDate, events, onEventClick }: DayViewProps) {
                   <button
                     key={e.id}
                     onClick={() => onEventClick(e)}
-                    className="w-full text-left text-xs px-2 py-1 rounded bg-accent/15 text-accent truncate hover:bg-accent/25 transition-colors mb-0.5"
+                    className="w-full text-left text-xs px-2 py-1 rounded-sm border-l-2 border-text-tertiary bg-bg-tertiary text-text-primary truncate hover:bg-bg-hover transition-colors mb-0.5"
                   >
                     {e.summary ?? "Event"}
                     {e.location && <span className="text-text-tertiary"> · {e.location}</span>}

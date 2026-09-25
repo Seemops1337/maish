@@ -28,7 +28,7 @@ export function CalendarToolbar({
   const title = formatTitle(currentDate, view);
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-6 py-3 border-b border-border-primary">
+    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 px-5 py-3 bg-bg-primary border-b border-border-primary">
       {/* Navigation comes before the title so a longer month name cannot push
           the buttons sideways and move the click targets between views. */}
       <div className="flex items-center gap-3 min-w-0">
@@ -37,13 +37,13 @@ export function CalendarToolbar({
             onClick={onPrev}
             aria-label={`Previous ${view}`}
             title={`Previous ${view}`}
-            className="p-1.5 text-text-secondary hover:text-text-primary hover:bg-bg-hover rounded transition-colors"
+            className="p-1.5 rounded-md text-text-tertiary hover:text-text-primary hover:bg-bg-hover transition-colors"
           >
             <ChevronLeft size={16} />
           </button>
           <button
             onClick={onToday}
-            className="px-2.5 py-1 text-xs font-medium text-text-secondary hover:text-text-primary hover:bg-bg-hover rounded transition-colors"
+            className="h-7 px-2.5 mx-0.5 rounded-md border border-border-primary bg-bg-primary text-xs font-medium text-text-primary hover:bg-bg-hover transition-colors"
           >
             Today
           </button>
@@ -51,12 +51,12 @@ export function CalendarToolbar({
             onClick={onNext}
             aria-label={`Next ${view}`}
             title={`Next ${view}`}
-            className="p-1.5 text-text-secondary hover:text-text-primary hover:bg-bg-hover rounded transition-colors"
+            className="p-1.5 rounded-md text-text-tertiary hover:text-text-primary hover:bg-bg-hover transition-colors"
           >
             <ChevronRight size={16} />
           </button>
         </div>
-        <h2 className="min-w-0 text-lg font-semibold text-text-primary truncate">
+        <h2 className="min-w-0 text-lg font-medium tracking-tight text-text-primary truncate">
           {title}
         </h2>
       </div>
@@ -65,7 +65,7 @@ export function CalendarToolbar({
         {showCalendarListButton && onToggleCalendarList && (
           <button
             onClick={onToggleCalendarList}
-            className="p-1.5 text-text-secondary hover:text-text-primary hover:bg-bg-hover rounded transition-colors"
+            className="p-1.5 rounded-md text-text-tertiary hover:text-text-primary hover:bg-bg-hover transition-colors"
             title="Toggle calendar list"
           >
             <CalendarDays size={16} />
@@ -76,10 +76,10 @@ export function CalendarToolbar({
             <button
               key={v}
               onClick={() => onViewChange(v)}
-              className={`px-3 py-1 text-xs font-medium rounded transition-colors capitalize ${
+              className={`h-7 px-3 text-xs font-medium rounded transition-colors capitalize ${
                 view === v
                   ? "bg-bg-primary text-text-primary shadow-sm"
-                  : "text-text-tertiary hover:text-text-secondary"
+                  : "text-text-secondary hover:text-text-primary"
               }`}
             >
               {v}
@@ -88,7 +88,7 @@ export function CalendarToolbar({
         </div>
         <button
           onClick={onCreateEvent}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-on-accent bg-accent hover:bg-accent-hover rounded-md transition-colors"
+          className="flex items-center gap-1.5 h-8 px-3 text-sm font-medium text-on-accent bg-accent hover:bg-accent-hover rounded-md transition-colors"
         >
           <Plus size={14} />
           Create

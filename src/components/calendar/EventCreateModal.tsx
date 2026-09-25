@@ -79,11 +79,11 @@ export function EventCreateModal({ calendars, onClose, onCreate }: EventCreateMo
 
         {calendars && calendars.length > 1 && (
           <div>
-            <label className="text-xs text-text-secondary block mb-1">Calendar</label>
+            <label className="label-mono block mb-1.5">Calendar</label>
             <select
               value={calendarId}
               onChange={(e) => setCalendarId(e.target.value)}
-              className="w-full px-3 py-1.5 bg-bg-tertiary border border-border-primary rounded text-sm text-text-primary outline-none focus:border-accent"
+              className="w-full px-3 h-8 bg-bg-primary border border-border-primary rounded-md text-sm text-text-primary outline-none focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10"
             >
               {calendars.map((cal) => (
                 <option key={cal.id} value={cal.id}>
@@ -100,7 +100,7 @@ export function EventCreateModal({ calendars, onClose, onCreate }: EventCreateMo
             type="checkbox"
             checked={allDay}
             onChange={(e) => setAllDay(e.target.checked)}
-            className="rounded accent-[var(--color-accent)]"
+            className="rounded accent-accent"
           />
           All day
         </label>
@@ -154,13 +154,13 @@ export function EventCreateModal({ calendars, onClose, onCreate }: EventCreateMo
         />
 
         <div>
-          <label className="text-xs text-text-secondary block mb-1">Description</label>
+          <label className="label-mono block mb-1.5">Description</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Add description"
             rows={3}
-            className="w-full px-3 py-1.5 bg-bg-tertiary border border-border-primary rounded text-sm text-text-primary outline-none focus:border-accent resize-none"
+            className="w-full px-3 py-2 bg-bg-primary border border-border-primary rounded-md text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10 resize-none"
           />
         </div>
 

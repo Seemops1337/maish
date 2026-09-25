@@ -16,7 +16,7 @@ export function EventCard({ event, compact, onClick }: EventCardProps) {
     return (
       <button
         onClick={onClick}
-        className="w-full text-left text-[0.625rem] px-1 py-0.5 rounded bg-accent/10 text-accent truncate hover:bg-accent/20 transition-colors"
+        className="w-full text-left text-[11px] leading-4 px-1.5 py-0.5 rounded-sm border-l-2 border-text-tertiary bg-bg-tertiary text-text-primary truncate hover:bg-bg-hover transition-colors"
         title={event.summary ?? "Event"}
       >
         {event.summary ?? "Event"}
@@ -27,15 +27,15 @@ export function EventCard({ event, compact, onClick }: EventCardProps) {
   return (
     <button
       onClick={onClick}
-      className="w-full text-left px-3 py-2 rounded-md border border-border-secondary hover:bg-bg-hover transition-colors"
+      className="w-full text-left px-3 py-2 rounded-md border border-border-primary bg-bg-primary hover:bg-bg-hover transition-colors"
     >
       <div className="flex items-start gap-2">
-        <div className="w-1 h-full min-h-[24px] rounded-full bg-accent shrink-0" />
+        <div className="w-0.5 self-stretch min-h-[24px] rounded-full bg-text-tertiary shrink-0" />
         <div className="min-w-0">
           <div className="text-sm font-medium text-text-primary truncate">
             {event.summary ?? "(No title)"}
           </div>
-          <div className="text-xs text-text-tertiary mt-0.5">
+          <div className="font-mono text-xs tabular-nums text-text-tertiary mt-0.5">
             {timeStr}
             {event.location && ` · ${event.location}`}
           </div>

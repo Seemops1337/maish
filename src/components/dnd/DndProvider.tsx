@@ -117,7 +117,7 @@ export function DndProvider({ children }: DndProviderProps) {
       {children}
       <DragOverlay dropAnimation={null}>
         {dragData && (
-          <div className="bg-accent text-on-accent text-sm font-medium px-3 py-1.5 rounded-lg shadow-lg pointer-events-none">
+          <div className="bg-bg-primary border border-border-primary text-text-primary text-sm font-medium px-3 py-1.5 rounded-md shadow-lg pointer-events-none">
             {dragData.threadIds.length === 1
               ? "1 conversation"
               : `${dragData.threadIds.length} conversations`}

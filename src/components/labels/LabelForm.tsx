@@ -96,7 +96,7 @@ export function LabelForm({ accountId, label, onDone, variant = "settings" }: La
       onKeyDown={handleKeyDown}
     >
       {error && (
-        <div className="flex items-center gap-2 px-2 py-1 bg-danger/10 text-danger text-xs rounded">
+        <div className="flex items-center gap-2 px-2 py-1 bg-danger/10 text-danger text-xs rounded-md">
           <span className="flex-1 truncate">{error}</span>
           <button onClick={() => setError(null)} className="shrink-0">
             <X size={10} />
@@ -112,33 +112,33 @@ export function LabelForm({ accountId, label, onDone, variant = "settings" }: La
         placeholder="Label name"
         className={
           isSidebar
-            ? "w-full px-2 py-1 bg-sidebar-hover border border-sidebar-text/20 rounded text-xs text-sidebar-text outline-none focus:border-accent"
-            : "w-full px-3 py-1.5 bg-bg-tertiary border border-border-primary rounded text-sm text-text-primary outline-none focus:border-accent"
+            ? "w-full px-2 h-7 bg-bg-primary border border-border-primary rounded-md text-xs text-text-primary placeholder:text-text-tertiary outline-none focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10"
+            : "w-full px-3 h-8 bg-bg-primary border border-border-primary rounded-md text-sm text-text-primary placeholder:text-text-tertiary outline-none focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10"
         }
       />
 
       {/* Color picker */}
       <div>
-        <div className={`flex flex-wrap gap-1 ${isSidebar ? "gap-1" : "gap-1.5"}`}>
+        <div className={`flex flex-wrap ${isSidebar ? "gap-1.5 p-0.5" : "gap-2 p-0.5"}`}>
           <button
             onClick={() => setSelectedColor(null)}
-            className={`${isSidebar ? "w-4 h-4" : "w-5 h-5"} rounded-full border-2 transition-colors ${
+            className={`${isSidebar ? "w-4 h-4 ring-offset-sidebar-bg" : "w-5 h-5 ring-offset-bg-primary"} flex items-center justify-center rounded-full border border-border-primary bg-bg-primary ring-offset-2 transition-shadow ${
               selectedColor === null
-                ? "border-accent ring-1 ring-accent"
-                : "border-border-primary hover:border-text-tertiary"
+                ? "ring-2 ring-text-primary"
+                : "hover:ring-1 hover:ring-text-tertiary"
             }`}
             title="No color"
           >
-            <X size={isSidebar ? 8 : 10} className="mx-auto text-text-tertiary" />
+            <X size={isSidebar ? 8 : 10} className="text-text-tertiary" />
           </button>
           {GMAIL_LABEL_COLORS.map((color) => (
             <button
               key={color.bg}
               onClick={() => setSelectedColor(color)}
-              className={`${isSidebar ? "w-4 h-4" : "w-5 h-5"} rounded-full border-2 transition-colors ${
+              className={`${isSidebar ? "w-4 h-4 ring-offset-sidebar-bg" : "w-5 h-5 ring-offset-bg-primary"} rounded-full ring-offset-2 transition-shadow ${
                 selectedColor?.bg === color.bg
-                  ? "border-accent ring-1 ring-accent"
-                  : "border-transparent hover:border-text-tertiary"
+                  ? "ring-2 ring-text-primary"
+                  : "hover:ring-1 hover:ring-text-tertiary"
               }`}
               style={{ backgroundColor: color.bg }}
               title={color.bg}
@@ -152,7 +152,7 @@ export function LabelForm({ accountId, label, onDone, variant = "settings" }: La
           onClick={handleSave}
           disabled={!name.trim() || isSaving}
           className={`${
-            isSidebar ? "px-2 py-1 text-[0.625rem]" : "px-3 py-1.5 text-xs"
+            isSidebar ? "h-6 px-2 text-xs" : "h-8 px-3 text-sm"
           } font-medium text-on-accent bg-accent hover:bg-accent-hover rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed`}
         >
           {isSaving ? "Saving..." : label ? "Update" : "Save"}
@@ -160,8 +160,8 @@ export function LabelForm({ accountId, label, onDone, variant = "settings" }: La
         <button
           onClick={onDone}
           className={`${
-            isSidebar ? "px-2 py-1 text-[0.625rem]" : "px-3 py-1.5 text-xs"
-          } text-text-secondary hover:text-text-primary rounded-md transition-colors`}
+            isSidebar ? "h-6 px-2 text-xs" : "h-8 px-3 text-sm"
+          } text-text-secondary bg-bg-primary border border-border-primary hover:text-text-primary hover:bg-bg-hover rounded-md transition-colors`}
         >
           Cancel
         </button>

@@ -96,21 +96,21 @@ export function TaskSidebar({ accountId, threadId }: TaskSidebarProps) {
   }, [threadTasks]);
 
   return (
-    <div className="w-72 border-l border-border-primary bg-bg-primary/50 flex flex-col shrink-0">
+    <div className="w-72 border-l border-border-primary bg-bg-primary flex flex-col shrink-0">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border-secondary">
-        <h3 className="text-sm font-semibold text-text-primary">Tasks</h3>
+      <div className="flex items-center justify-between h-11 px-4 border-b border-border-primary">
+        <h3 className="label-mono">Tasks</h3>
         <div className="flex items-center gap-1">
           <button
             onClick={() => navigateToLabel("tasks")}
             title="Open tasks page"
-            className="p-1 text-text-tertiary hover:text-text-primary transition-colors"
+            className="p-1.5 rounded-md text-text-tertiary hover:text-text-primary hover:bg-bg-hover transition-colors"
           >
             <ExternalLink size={13} />
           </button>
           <button
             onClick={toggleTaskSidebar}
-            className="p-1 text-text-tertiary hover:text-text-primary transition-colors"
+            className="p-1.5 rounded-md text-text-tertiary hover:text-text-primary hover:bg-bg-hover transition-colors"
           >
             <X size={14} />
           </button>
@@ -118,13 +118,13 @@ export function TaskSidebar({ accountId, threadId }: TaskSidebarProps) {
       </div>
 
       {/* Task list */}
-      <div className="flex-1 overflow-y-auto py-1">
+      <div className="flex-1 overflow-y-auto p-1.5">
         {threadTasks.length === 0 ? (
           <p className="text-xs text-text-tertiary text-center py-6">
             No tasks linked to this thread
           </p>
         ) : (
-          <div className="space-y-0.5">
+          <div className="space-y-px">
             {threadTasks.map((task) => (
               <TaskItem
                 key={task.id}
@@ -139,7 +139,7 @@ export function TaskSidebar({ accountId, threadId }: TaskSidebarProps) {
       </div>
 
       {/* Quick add */}
-      <div className="border-t border-border-secondary">
+      <div className="border-t border-border-primary">
         <TaskQuickAdd onAdd={handleAddTask} placeholder="Add task to this thread..." />
       </div>
     </div>

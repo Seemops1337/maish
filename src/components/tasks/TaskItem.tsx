@@ -1,7 +1,6 @@
 import { useState, useCallback } from "react";
 import {
-  Circle,
-  CheckCircle2,
+  Check,
   ChevronRight,
   ChevronDown,
   Trash2,
@@ -11,20 +10,22 @@ import {
 } from "lucide-react";
 import type { DbTask, TaskPriority } from "@/services/db/tasks";
 
-const PRIORITY_COLORS: Record<TaskPriority, string> = {
-  none: "text-text-tertiary",
-  low: "text-blue-400",
-  medium: "text-amber-400",
-  high: "text-orange-500",
-  urgent: "text-red-500",
+/** Checkbox ring per priority: monochrome, state colors only for the top two. */
+const PRIORITY_RING: Record<TaskPriority, string> = {
+  none: "border-text-tertiary/60",
+  low: "border-text-tertiary/60",
+  medium: "border-text-secondary",
+  high: "border-warning",
+  urgent: "border-danger",
 };
 
-const PRIORITY_DOT_COLORS: Record<TaskPriority, string> = {
-  none: "bg-text-tertiary/30",
-  low: "bg-blue-400",
-  medium: "bg-amber-400",
-  high: "bg-orange-500",
-  urgent: "bg-red-500",
+/** Mono stamp shown before the title; "none" shows nothing. */
+const PRIORITY_STAMP: Record<TaskPriority, { label: string; className: string } | null> = {
+  none: null,
+  low: { label: "Low", className: "text-text-tertiary" },
+  medium: { label: "Med", className: "text-text-secondary" },
+  high: { label: "High", className: "text-warning" },
+  urgent: { label: "Urgent", className: "text-danger" },
 };
 
 function formatDueDate(timestamp: number): string {
@@ -44,9 +45,9 @@ function formatDueDate(timestamp: number): string {
 function getDueDateColor(timestamp: number): string {
   const now = Math.floor(Date.now() / 1000);
   const diff = timestamp - now;
-  if (diff < 0) return "text-red-500 bg-red-500/10";
-  if (diff < 86400) return "text-amber-500 bg-amber-500/10";
-  return "text-text-tertiary bg-bg-tertiary";
+  if (diff < 0) return "text-danger";
+  if (diff < 86400) return "text-warning";
+  return "text-text-tertiary";
 }
 
 interface TaskItemProps {
@@ -95,24 +96,30 @@ export function TaskItem({
     <div>
       <div
         onClick={() => onSelect?.(task.id)}
-        className={`group flex items-start gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
-          isSelected ? "bg-accent/10 border border-accent/20" : "hover:bg-bg-hover border border-transparent"
-        } ${task.is_completed ? "opacity-60" : ""}`}
+        className={`group flex items-start gap-2.5 px-3 py-2 rounded-md cursor-pointer transition-colors ${
+          isSelected ? "bg-bg-selected" : "hover:bg-bg-hover"
+        }`}
       >
         {/* Checkbox */}
-        <button onClick={handleToggle} className="mt-0.5 shrink-0">
-          {task.is_completed ? (
-            <CheckCircle2 size={16} className="text-success" />
-          ) : (
-            <Circle size={16} className={PRIORITY_COLORS[task.priority]} />
-          )}
+        <button onClick={handleToggle} className="mt-0.5 shrink-0 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text-primary/20">
+          <span
+            className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${
+              task.is_completed
+                ? "bg-accent border-accent text-on-accent"
+                : `bg-bg-primary ${PRIORITY_RING[task.priority]} hover:bg-bg-hover`
+            }`}
+          >
+            {!!task.is_completed && <Check size={11} strokeWidth={3} />}
+          </span>
         </button>
 
         {/* Content */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-1.5">
-            {task.priority !== "none" && (
-              <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${PRIORITY_DOT_COLORS[task.priority]}`} />
+            {PRIORITY_STAMP[task.priority] && !task.is_completed && (
+              <span className={`label-mono shrink-0 ${PRIORITY_STAMP[task.priority]!.className}`}>
+                {PRIORITY_STAMP[task.priority]!.label}
+              </span>
             )}
             <span
               className={`text-sm truncate ${
@@ -126,30 +133,30 @@ export function TaskItem({
           {!compact && (
             <div className="flex items-center gap-2 mt-1 flex-wrap">
               {task.due_date && (
-                <span className={`inline-flex items-center gap-1 text-[0.6875rem] px-1.5 py-0.5 rounded ${getDueDateColor(task.due_date)}`}>
+                <span className={`inline-flex items-center gap-1 font-mono text-[11px] tabular-nums ${getDueDateColor(task.due_date)}`}>
                   <Calendar size={10} />
                   {formatDueDate(task.due_date)}
                 </span>
               )}
               {hasRecurrence && (
-                <span className="inline-flex items-center gap-0.5 text-[0.6875rem] text-text-tertiary">
+                <span className="inline-flex items-center gap-0.5 text-text-tertiary">
                   <RepeatIcon size={10} />
                 </span>
               )}
               {task.thread_id && (
-                <span className="inline-flex items-center gap-0.5 text-[0.6875rem] text-accent/70">
+                <span className="inline-flex items-center gap-0.5 text-text-tertiary">
                   <Link2 size={10} />
                 </span>
               )}
               {hasSubtasks && (
-                <span className="text-[0.6875rem] text-text-tertiary">
+                <span className="font-mono text-[11px] tabular-nums text-text-tertiary">
                   {completedSubtasks}/{subtasks.length}
                 </span>
               )}
               {tags.map((tag) => (
                 <span
                   key={tag}
-                  className="text-[0.625rem] px-1.5 py-0.5 rounded-full bg-accent/10 text-accent"
+                  className="rounded-full border border-border-primary px-1.5 text-[10px] leading-4 text-text-secondary"
                 >
                   {tag}
                 </span>
@@ -163,7 +170,7 @@ export function TaskItem({
           {hasSubtasks && (
             <button
               onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
-              className="p-0.5 text-text-tertiary hover:text-text-primary"
+              className="p-1 rounded-md text-text-tertiary hover:text-text-primary hover:bg-bg-hover"
             >
               {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
             </button>
@@ -171,7 +178,7 @@ export function TaskItem({
           {onDelete && (
             <button
               onClick={handleDelete}
-              className="p-0.5 text-text-tertiary hover:text-danger transition-colors"
+              className="p-1 rounded-md text-text-tertiary hover:text-danger hover:bg-bg-hover transition-colors"
             >
               <Trash2 size={13} />
             </button>
@@ -181,7 +188,7 @@ export function TaskItem({
 
       {/* Subtasks */}
       {expanded && hasSubtasks && (
-        <div className="ml-7 mt-0.5 space-y-0.5">
+        <div className="ml-6 mt-0.5 space-y-px border-l border-border-primary pl-1">
           {subtasks.map((sub) => (
             <TaskItem
               key={sub.id}

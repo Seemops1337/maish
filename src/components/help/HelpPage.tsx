@@ -50,17 +50,17 @@ export function HelpPage() {
   const activeCategory = getCategoryById(activeTopic);
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-bg-primary/50">
+    <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-bg-primary">
       {/* Header */}
       <div className="flex items-center gap-3 px-5 py-3 border-b border-border-primary shrink-0 bg-bg-primary">
         <button
           onClick={() => navigateToLabel("inbox")}
-          className="p-1.5 -ml-1 rounded-md text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors"
+          className="p-1.5 -ml-1 rounded-md text-text-tertiary hover:text-text-primary hover:bg-bg-hover transition-colors"
           title="Back to Inbox"
         >
-          <ArrowLeft size={18} />
+          <ArrowLeft size={16} />
         </button>
-        <h1 className="text-base font-semibold text-text-primary">Help</h1>
+        <h1 className="text-lg font-medium tracking-tight text-text-primary">Help</h1>
       </div>
 
       {/* Body: sidebar nav + content */}
@@ -80,7 +80,7 @@ export function HelpPage() {
                     const cat = getCategoryById(categoryId);
                     return (
                       <div key={categoryId}>
-                        <h2 className="text-xs font-medium text-text-tertiary uppercase tracking-wider mb-3">
+                        <h2 className="label-mono mb-2">
                           {cat?.label ?? categoryId}
                         </h2>
                         <HelpCardGrid
@@ -95,15 +95,15 @@ export function HelpPage() {
               ) : (
                 // Empty search state
                 <div className="flex flex-col items-center justify-center py-16 text-text-tertiary">
-                  <Search size={32} className="mb-3 opacity-40" />
-                  <p className="text-sm">No results for &ldquo;{searchQuery}&rdquo;</p>
+                  <Search size={24} className="mb-3" />
+                  <p className="text-sm font-medium text-text-primary">No results for &ldquo;{searchQuery}&rdquo;</p>
                 </div>
               )
             ) : (
               // Active topic mode
               activeCategory && (
                 <div>
-                  <h2 className="text-lg font-semibold text-text-primary mb-4">
+                  <h2 className="text-2xl font-medium tracking-display text-text-primary mb-5">
                     {activeCategory.label}
                   </h2>
                   <HelpCardGrid
