@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- Names the Icon Composer icon compiled into Resources/Assets.car (icons/Maish.icon).
+	     macOS 26 renders it in every icon style; older systems fall back to CFBundleIconFile. -->
+	<key>CFBundleIconName</key>
+	<string>Maish</string>
+</dict>
+</plist>

@@ -161,6 +161,46 @@ npm run tauri build -- --no-bundle
 npm run tauri build -- --no-sign
 ```
 
+### App icon
+
+The icon sources live in `src-tauri/icons/`:
+
+- `icon.svg` — full-bleed rounded square, for Windows, Linux and the in-app copies
+- `icon-macos.svg` — an 824 px body with a 100 px margin on the 1024 px canvas,
+  the grid macOS expects. It becomes `icon.icns`, the icon macOS shows before 26
+- `Maish.icon` — the Icon Composer icon macOS 26 uses. The background is the
+  system fill, so the icon turns white or black with the icon style the user
+  picks, and the glyph colour is set per appearance. Its layer is a filled
+  outline (`Assets/envelope.svg`): Icon Composer fills every path and ignores
+  strokes
+
+Tauri 2.10 cannot compile an `.icon` itself, so the compiled `Assets.car` is
+committed in `icons/macos/` and copied into the bundle by `bundle.macOS.files`.
+`src-tauri/Info.plist` adds `CFBundleIconName`, which points macOS at it. After
+editing `Maish.icon` (Xcode 26 required), from `src-tauri/`:
+
+```bash
+xcrun actool icons/Maish.icon --compile /tmp/maish-actool --platform macosx \
+  --minimum-deployment-target 10.13 --app-icon Maish \
+  --output-partial-info-plist /tmp/maish-actool/partial.plist
+cp /tmp/maish-actool/Assets.car icons/macos/Assets.car
+```
+
+After editing either SVG, regenerate from `src-tauri/` and keep only
+`icon.icns` from the macOS run:
+
+```bash
+npx tauri icon icons/icon.svg
+npx tauri icon icons/icon-macos.svg -o /tmp/maish-icon-macos
+cp /tmp/maish-icon-macos/icon.icns icons/icon.icns
+cp icons/icon.png ../src/assets/icon.png
+npx tauri icon icons/icon.svg -p 1024 -o /tmp/maish-icon-readme
+cp /tmp/maish-icon-readme/1024x1024.png ../assets/icon.png
+```
+
+`src/assets/icon.png` is the About panel's copy and `assets/icon.png` the
+README's. The splash screen draws the same mark inline in `splashscreen.html`.
+
 ## Release Artifacts
 
 Releases are published by merging the release-please pull request. That creates

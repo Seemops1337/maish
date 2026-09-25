@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Outline of the 80 px round-joined stroke in ../../icon.svg; Icon Composer fills paths and ignores strokes -->
+  <path fill="#000000" fill-rule="evenodd" d="M248,782 A40,40 0 0 1 208,742 L208,307 A40,40 0 0 1 274.66,277.18 L512,489.35 L749.34,277.18 A40,40 0 0 1 816,307 L816,742 A40,40 0 0 1 776,782 Z M288,702 L736,702 L736,396.41 L538.66,572.82 A40,40 0 0 1 485.34,572.82 L288,396.41 Z"/>
+</svg>
