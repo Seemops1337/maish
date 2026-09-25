@@ -67,10 +67,11 @@ export function InputDialog({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title} width="w-96">
-      <div className="p-4 space-y-3" onKeyDown={handleKeyDown}>
+      <div onKeyDown={handleKeyDown}>
+        <div className="p-4 space-y-3">
         {fields.map((field, i) => (
           <div key={field.key}>
-            <label className="block text-xs font-medium text-text-secondary mb-1">
+            <label className="label-mono block mb-1.5">
               {field.label}
             </label>
             <input
@@ -81,11 +82,12 @@ export function InputDialog({
                 setValues((prev) => ({ ...prev, [field.key]: e.target.value }))
               }
               placeholder={field.placeholder}
-              className="w-full bg-bg-tertiary text-text-primary text-sm px-3 py-1.5 rounded-md border border-border-primary focus:border-accent focus:outline-none placeholder:text-text-tertiary"
+              className="w-full h-8 bg-bg-primary text-text-primary text-sm px-3 rounded-md border border-border-primary outline-none transition-shadow focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10 placeholder:text-text-tertiary"
             />
           </div>
         ))}
-        <div className="flex justify-end gap-2 pt-1">
+        </div>
+        <div className="flex justify-end gap-2 px-4 py-3 border-t border-border-primary bg-bg-secondary rounded-b-lg">
           <Button variant="secondary" onClick={onClose}>
             Cancel
           </Button>

@@ -46,19 +46,19 @@ export function UndoSendToast() {
 
   return (
     <CSSTransition nodeRef={toastRef} in={undoSendVisible} timeout={200} classNames="toast" unmountOnExit>
-      <div ref={toastRef} className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-text-primary text-bg-primary rounded-lg shadow-lg overflow-hidden">
-        <div className="px-4 py-2.5 flex items-center gap-3">
+      <div ref={toastRef} className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 bg-accent text-on-accent rounded-md shadow-lg overflow-hidden">
+        <div className="pl-4 pr-3 h-10 flex items-center gap-4">
           <span className="text-sm">Sending email...</span>
           <button
             onClick={handleUndo}
-            className="text-sm font-medium text-accent hover:text-accent-hover underline"
+            className="text-sm font-medium text-on-accent underline underline-offset-2 hover:opacity-80 transition-opacity"
           >
             Undo
           </button>
         </div>
-        <div className="h-0.5 bg-white/20">
+        <div className="h-0.5 bg-on-accent/20">
           <div
-            className="h-full bg-accent rounded-full"
+            className="h-full bg-on-accent/70"
             style={{ animation: `countdownBar ${UNDO_DELAY_SECONDS}s linear forwards` }}
           />
         </div>

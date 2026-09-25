@@ -1,7 +1,26 @@
 import { useRef, useState } from "react";
 import type { Editor } from "@tiptap/react";
 import { InputDialog } from "@/components/ui/InputDialog";
-import { Sparkles } from "lucide-react";
+import {
+  Bold,
+  Code,
+  Heading1,
+  Heading2,
+  Heading3,
+  ImageIcon,
+  Italic,
+  Link,
+  List,
+  ListOrdered,
+  Minus,
+  Quote,
+  Redo2,
+  Sparkles,
+  Strikethrough,
+  Underline,
+  Undo2,
+  type LucideIcon,
+} from "lucide-react";
 
 interface EditorToolbarProps {
   editor: Editor | null;
@@ -28,47 +47,53 @@ export function EditorToolbar({ editor, onToggleAiAssist, aiAssistOpen }: Editor
   };
 
   const btn = (
+    Icon: LucideIcon,
     label: string,
     isActive: boolean,
     onClick: () => void,
-    title?: string,
   ) => (
     <button
       type="button"
       onClick={onClick}
-      title={title ?? label}
-      className={`px-1.5 py-1 text-xs rounded hover:bg-bg-hover transition-colors ${
-        isActive ? "bg-bg-hover text-accent font-semibold" : "text-text-secondary"
+      title={label}
+      aria-label={label}
+      aria-pressed={isActive}
+      className={`p-1.5 rounded-md transition-colors ${
+        isActive
+          ? "bg-bg-selected text-text-primary"
+          : "text-text-tertiary hover:text-text-primary hover:bg-bg-hover"
       }`}
     >
-      {label}
+      <Icon size={16} />
     </button>
   );
 
+  const divider = <div className="w-px h-4 bg-border-primary mx-1" />;
+
   return (
-    <div className="flex items-center gap-0.5 px-3 py-1.5 border-b border-border-secondary bg-bg-secondary flex-wrap">
-      {btn("B", editor.isActive("bold"), () => editor.chain().focus().toggleBold().run(), "Bold (Ctrl+B)")}
-      {btn("I", editor.isActive("italic"), () => editor.chain().focus().toggleItalic().run(), "Italic (Ctrl+I)")}
-      {btn("U", editor.isActive("underline"), () => editor.chain().focus().toggleUnderline().run(), "Underline (Ctrl+U)")}
-      {btn("S̶", editor.isActive("strike"), () => editor.chain().focus().toggleStrike().run(), "Strikethrough")}
+    <div className="flex items-center gap-0.5 px-3 py-1 border-b border-border-primary bg-bg-primary flex-wrap">
+      {btn(Bold, "Bold (Ctrl+B)", editor.isActive("bold"), () => editor.chain().focus().toggleBold().run())}
+      {btn(Italic, "Italic (Ctrl+I)", editor.isActive("italic"), () => editor.chain().focus().toggleItalic().run())}
+      {btn(Underline, "Underline (Ctrl+U)", editor.isActive("underline"), () => editor.chain().focus().toggleUnderline().run())}
+      {btn(Strikethrough, "Strikethrough", editor.isActive("strike"), () => editor.chain().focus().toggleStrike().run())}
 
-      <div className="w-px h-4 bg-border-primary mx-1" />
+      {divider}
 
-      {btn("H1", editor.isActive("heading", { level: 1 }), () => editor.chain().focus().toggleHeading({ level: 1 }).run())}
-      {btn("H2", editor.isActive("heading", { level: 2 }), () => editor.chain().focus().toggleHeading({ level: 2 }).run())}
-      {btn("H3", editor.isActive("heading", { level: 3 }), () => editor.chain().focus().toggleHeading({ level: 3 }).run())}
+      {btn(Heading1, "Heading 1", editor.isActive("heading", { level: 1 }), () => editor.chain().focus().toggleHeading({ level: 1 }).run())}
+      {btn(Heading2, "Heading 2", editor.isActive("heading", { level: 2 }), () => editor.chain().focus().toggleHeading({ level: 2 }).run())}
+      {btn(Heading3, "Heading 3", editor.isActive("heading", { level: 3 }), () => editor.chain().focus().toggleHeading({ level: 3 }).run())}
 
-      <div className="w-px h-4 bg-border-primary mx-1" />
+      {divider}
 
-      {btn("• List", editor.isActive("bulletList"), () => editor.chain().focus().toggleBulletList().run())}
-      {btn("1. List", editor.isActive("orderedList"), () => editor.chain().focus().toggleOrderedList().run())}
-      {btn("Quote", editor.isActive("blockquote"), () => editor.chain().focus().toggleBlockquote().run())}
-      {btn("< > Code", editor.isActive("codeBlock"), () => editor.chain().focus().toggleCodeBlock().run())}
+      {btn(List, "Bullet list", editor.isActive("bulletList"), () => editor.chain().focus().toggleBulletList().run())}
+      {btn(ListOrdered, "Numbered list", editor.isActive("orderedList"), () => editor.chain().focus().toggleOrderedList().run())}
+      {btn(Quote, "Quote", editor.isActive("blockquote"), () => editor.chain().focus().toggleBlockquote().run())}
+      {btn(Code, "Code block", editor.isActive("codeBlock"), () => editor.chain().focus().toggleCodeBlock().run())}
 
-      <div className="w-px h-4 bg-border-primary mx-1" />
+      {divider}
 
-      {btn("— Rule", false, () => editor.chain().focus().setHorizontalRule().run())}
-      {btn("Link", editor.isActive("link"), () => {
+      {btn(Minus, "Horizontal rule", false, () => editor.chain().focus().setHorizontalRule().run())}
+      {btn(Link, "Link", editor.isActive("link"), () => {
         if (editor.isActive("link")) {
           editor.chain().focus().unsetLink().run();
         } else {
@@ -82,7 +107,7 @@ export function EditorToolbar({ editor, onToggleAiAssist, aiAssistOpen }: Editor
         className="hidden"
         onChange={handleImageSelect}
       />
-      {btn("Image", false, () => imageInputRef.current?.click(), "Insert image")}
+      {btn(ImageIcon, "Insert image", false, () => imageInputRef.current?.click())}
 
       <div className="flex-1" />
 
@@ -91,17 +116,19 @@ export function EditorToolbar({ editor, onToggleAiAssist, aiAssistOpen }: Editor
           type="button"
           onClick={onToggleAiAssist}
           title="AI Assist"
-          className={`px-1.5 py-1 text-xs rounded hover:bg-bg-hover transition-colors flex items-center gap-1 ${
-            aiAssistOpen ? "bg-accent/10 text-accent font-semibold" : "text-text-secondary"
+          className={`h-7 px-2 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5 ${
+            aiAssistOpen
+              ? "bg-bg-selected text-text-primary"
+              : "text-text-tertiary hover:text-text-primary hover:bg-bg-hover"
           }`}
         >
-          <Sparkles size={12} />
+          <Sparkles size={14} />
           AI
         </button>
       )}
 
-      {btn("Undo", false, () => editor.chain().focus().undo().run())}
-      {btn("Redo", false, () => editor.chain().focus().redo().run())}
+      {btn(Undo2, "Undo", false, () => editor.chain().focus().undo().run())}
+      {btn(Redo2, "Redo", false, () => editor.chain().focus().redo().run())}
       <InputDialog
         isOpen={showLinkDialog}
         onClose={() => setShowLinkDialog(false)}

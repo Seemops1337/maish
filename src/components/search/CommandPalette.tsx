@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { CSSTransition } from "react-transition-group";
+import { Search } from "lucide-react";
 import { useUIStore } from "@/stores/uiStore";
 import { useComposerStore } from "@/stores/composerStore";
 import { useThreadStore } from "@/stores/threadStore";
@@ -150,7 +151,8 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
       <div className="absolute inset-0 overlay-backdrop" onClick={onClose} />
       <div className="relative bg-bg-primary border border-border-primary rounded-lg surface-overlay w-full max-w-lg overflow-hidden modal-panel">
         {/* Input */}
-        <div className="px-4 py-3 border-b border-border-primary">
+        <div className="flex items-center gap-2.5 px-4 h-12 border-b border-border-primary">
+          <Search size={16} className="text-text-tertiary shrink-0" />
           <input
             ref={inputRef}
             autoFocus
@@ -162,20 +164,20 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
             }}
             onKeyDown={handleKeyDown}
             placeholder="Type a command..."
-            className="w-full bg-transparent text-sm text-text-primary outline-none placeholder:text-text-tertiary"
+            className="flex-1 min-w-0 bg-transparent text-sm text-text-primary outline-none placeholder:text-text-tertiary"
           />
         </div>
 
         {/* Results */}
-        <div className="max-h-80 overflow-y-auto py-1">
+        <div className="max-h-80 overflow-y-auto p-1">
           {filtered.length === 0 ? (
-            <div className="px-4 py-6 text-center text-sm text-text-tertiary">
+            <div className="px-4 py-8 text-center text-sm text-text-tertiary">
               No commands found
             </div>
           ) : (
             categories.map((cat) => (
               <div key={cat}>
-                <div className="px-4 py-1 text-[0.625rem] font-semibold uppercase tracking-wider text-text-tertiary">
+                <div className="label-mono px-2 pt-2 pb-1">
                   {cat}
                 </div>
                 {filtered
@@ -186,15 +188,21 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
                       <button
                         key={cmd.id}
                         onClick={cmd.action}
-                        className={`w-full text-left px-4 py-2 flex items-center justify-between hover:bg-bg-hover text-sm ${
-                          globalIdx === selectedIdx ? "bg-bg-hover" : ""
+                        className={`w-full text-left h-9 px-2 rounded-md flex items-center justify-between gap-3 text-sm transition-colors ${
+                          globalIdx === selectedIdx
+                            ? "bg-bg-selected text-text-primary"
+                            : "text-text-secondary hover:bg-bg-hover hover:text-text-primary"
                         }`}
                       >
-                        <span className="text-text-primary">{cmd.label}</span>
+                        <span className="truncate">{cmd.label}</span>
                         {cmd.shortcut && (
-                          <kbd className="text-[0.625rem] text-text-tertiary bg-bg-tertiary px-1.5 py-0.5 rounded">
-                            {cmd.shortcut}
-                          </kbd>
+                          <span className="flex items-center gap-1 shrink-0">
+                            {cmd.shortcut.split(" ").map((key, i) => (
+                              <kbd key={i} className="font-mono text-[11px] leading-none px-1.5 py-1 rounded border border-border-primary bg-bg-secondary text-text-tertiary">
+                                {key}
+                              </kbd>
+                            ))}
+                          </span>
                         )}
                       </button>
                     );

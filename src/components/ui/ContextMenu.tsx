@@ -188,7 +188,7 @@ export function ContextMenu({ items, position, onClose }: ContextMenuProps) {
       <div
         ref={menuRef}
         role="menu"
-        className="fixed z-[100] bg-bg-primary border border-border-primary rounded-md shadow-lg py-1 min-w-[200px]"
+        className="fixed z-[100] bg-bg-primary border border-border-primary rounded-md shadow-lg p-1 min-w-[200px]"
         style={{ left: adjustedPosition.x, top: adjustedPosition.y }}
       >
         {items.map((item, index) => {
@@ -197,7 +197,7 @@ export function ContextMenu({ items, position, onClose }: ContextMenuProps) {
               <div
                 key={item.id}
                 role="separator"
-                className="my-1 border-t border-border-secondary"
+                className="-mx-1 my-1 border-t border-border-primary"
               />
             );
           }
@@ -219,7 +219,7 @@ export function ContextMenu({ items, position, onClose }: ContextMenuProps) {
                 disabled={item.disabled}
                 onClick={() => handleItemClick(item)}
                 onMouseEnter={() => handleMouseEnter(index, item)}
-                className={`flex items-center gap-2 w-full px-3 py-1.5 text-xs text-left transition-colors ${
+                className={`flex items-center gap-2 w-full h-8 px-2 rounded text-[13px] text-left transition-colors ${
                   item.disabled
                     ? "text-text-tertiary cursor-default"
                     : item.danger
@@ -230,20 +230,20 @@ export function ContextMenu({ items, position, onClose }: ContextMenuProps) {
                 {/* Checkmark or icon column */}
                 <span className="w-4 h-4 flex items-center justify-center shrink-0">
                   {item.checked != null ? (
-                    item.checked ? <Check size={12} /> : null
+                    item.checked ? <Check size={14} /> : null
                   ) : Icon ? (
-                    <Icon size={12} />
+                    <Icon size={14} />
                   ) : null}
                 </span>
 
-                <span className="flex-1">{item.label}</span>
+                <span className="flex-1 truncate">{item.label}</span>
 
                 {hasSubmenu && (
-                  <ChevronRight size={12} className="text-text-tertiary shrink-0" />
+                  <ChevronRight size={14} className="text-text-tertiary shrink-0" />
                 )}
 
                 {item.shortcut && !hasSubmenu && (
-                  <span className="text-text-tertiary ml-4 shrink-0">
+                  <span className="font-mono text-[11px] text-text-tertiary ml-4 shrink-0">
                     {item.shortcut}
                   </span>
                 )}
@@ -313,7 +313,7 @@ function Submenu({
       ref={submenuRef}
       role="menu"
       data-submenu-portal
-      className="fixed z-[101] bg-bg-primary border border-border-primary rounded-md shadow-lg py-1 min-w-[180px]"
+      className="fixed z-[101] bg-bg-primary border border-border-primary rounded-md shadow-lg p-1 min-w-[180px] max-h-[70vh] overflow-y-auto"
       style={{ left: position.left, top: position.top }}
       onMouseEnter={onMouseEnter}
     >
@@ -332,7 +332,7 @@ function Submenu({
                 onClose();
               }
             }}
-            className={`flex items-center gap-2 w-full px-3 py-1.5 text-xs text-left transition-colors ${
+            className={`flex items-center gap-2 w-full h-8 px-2 rounded text-[13px] text-left transition-colors ${
               item.disabled
                 ? "text-text-tertiary cursor-default"
                 : "text-text-primary hover:bg-bg-hover"
@@ -340,9 +340,9 @@ function Submenu({
           >
             <span className="w-4 h-4 flex items-center justify-center shrink-0">
               {item.checked != null ? (
-                item.checked ? <Check size={12} className="text-accent" /> : null
+                item.checked ? <Check size={14} /> : null
               ) : Icon ? (
-                <Icon size={12} />
+                <Icon size={14} />
               ) : null}
             </span>
             <span className="flex-1 truncate">{item.label}</span>

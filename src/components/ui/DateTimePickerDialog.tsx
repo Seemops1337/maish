@@ -45,15 +45,15 @@ export function DateTimePickerDialog({
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title} zIndex={zIndex}>
-      <div className="py-1">
+      <div className="p-1">
         {presets.map((preset) => (
           <button
             key={preset.label}
             onClick={() => handlePresetClick(preset.timestamp)}
-            className="w-full text-left px-4 py-2 text-sm text-text-primary hover:bg-bg-hover transition-colors flex items-center justify-between"
+            className="w-full text-left h-9 px-3 rounded-md text-sm text-text-primary hover:bg-bg-hover transition-colors flex items-center justify-between gap-3"
           >
             <span>{preset.label}</span>
-            <span className="text-xs text-text-tertiary">
+            <span className="font-mono text-xs tabular-nums text-text-tertiary">
               {preset.detail ??
                 new Date(preset.timestamp * 1000).toLocaleDateString(
                   undefined,
@@ -64,8 +64,8 @@ export function DateTimePickerDialog({
         ))}
       </div>
 
-      <div className="border-t border-border-secondary px-4 py-3 space-y-2">
-        <div className="text-xs text-text-tertiary font-medium">
+      <div className="border-t border-border-primary px-4 py-3 space-y-2 bg-bg-secondary rounded-b-lg">
+        <div className="label-mono">
           Custom date & time
         </div>
         <div className="flex gap-2">
@@ -73,13 +73,13 @@ export function DateTimePickerDialog({
             type="date"
             value={customDate}
             onChange={(e) => setCustomDate(e.target.value)}
-            className="flex-1 bg-bg-tertiary text-text-primary text-xs px-2 py-1.5 rounded border border-border-primary"
+            className="flex-1 min-w-0 h-8 bg-bg-primary text-text-primary text-sm px-2.5 rounded-md border border-border-primary outline-none transition-shadow focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10"
           />
           <input
             type="time"
             value={customTime}
             onChange={(e) => setCustomTime(e.target.value)}
-            className="w-20 bg-bg-tertiary text-text-primary text-xs px-2 py-1.5 rounded border border-border-primary"
+            className="w-24 h-8 bg-bg-primary text-text-primary text-sm px-2.5 rounded-md border border-border-primary outline-none transition-shadow focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10"
           />
         </div>
         <Button
