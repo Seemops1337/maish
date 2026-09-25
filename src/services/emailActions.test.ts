@@ -24,11 +24,16 @@ vi.mock("@/services/db/pendingOperations", () => ({
   enqueuePendingOperation: vi.fn(() => Promise.resolve("op-1")),
 }));
 
+const { mockDbExecute, mockDbSelect } = vi.hoisted(() => ({
+  mockDbExecute: vi.fn(() => Promise.resolve()),
+  mockDbSelect: vi.fn(() => Promise.resolve([] as unknown[])),
+}));
+
 vi.mock("@/services/db/connection", () => ({
   getDb: vi.fn(() =>
     Promise.resolve({
-      execute: vi.fn(() => Promise.resolve()),
-      select: vi.fn(() => Promise.resolve([])),
+      execute: mockDbExecute,
+      select: mockDbSelect,
     }),
   ),
 }));
@@ -51,6 +56,7 @@ import {
   spamThread,
   moveThread,
   executeEmailAction,
+  executeQueuedAction,
 } from "./emailActions";
 import { navigateToThread, getSelectedThreadId } from "@/router/navigate";
 import { createMockEmailProvider, createMockUIStoreState, createMockThreadStoreState } from "@/test/mocks";
@@ -63,6 +69,7 @@ const mockRemoveThread = vi.fn();
 describe("emailActions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockDbSelect.mockResolvedValue([]);
     vi.mocked(getEmailProvider).mockResolvedValue(mockProvider as never);
     vi.mocked(useUIStore.getState).mockReturnValue(createMockUIStoreState() as never);
     vi.mocked(useThreadStore.getState).mockReturnValue(createMockThreadStoreState({
@@ -289,6 +296,108 @@ describe("emailActions", () => {
       });
       expect(result.success).toBe(true);
       expect(mockProvider.createDraft).toHaveBeenCalledWith("base64data", undefined);
+    });
+  });
+
+  describe("message ID resolution", () => {
+    // Callers pass an empty messageIds array and expect the thread's messages to
+    // be looked up here. Without that, IMAP providers group an empty list by
+    // folder and never touch the server.
+    const rows = [
+      { id: "imap-acct-1-INBOX-100" },
+      { id: "imap-acct-1-INBOX-200" },
+    ];
+
+    it("resolves the thread's message IDs when the caller passes none", async () => {
+      mockDbSelect.mockResolvedValue(rows);
+
+      await archiveThread("acct-1", "t1", []);
+
+      expect(mockProvider.archive).toHaveBeenCalledWith("t1", [
+        "imap-acct-1-INBOX-100",
+        "imap-acct-1-INBOX-200",
+      ]);
+    });
+
+    it("resolves for every action that carries message IDs", async () => {
+      mockDbSelect.mockResolvedValue(rows);
+      const ids = ["imap-acct-1-INBOX-100", "imap-acct-1-INBOX-200"];
+
+      await trashThread("acct-1", "t1", []);
+      await starThread("acct-1", "t1", [], true);
+      await markThreadRead("acct-1", "t1", [], true);
+      await spamThread("acct-1", "t1", [], true);
+      await moveThread("acct-1", "t1", [], "Work");
+
+      expect(mockProvider.trash).toHaveBeenCalledWith("t1", ids);
+      expect(mockProvider.star).toHaveBeenCalledWith("t1", ids, true);
+      expect(mockProvider.markRead).toHaveBeenCalledWith("t1", ids, true);
+      expect(mockProvider.spam).toHaveBeenCalledWith("t1", ids, true);
+      expect(mockProvider.moveToFolder).toHaveBeenCalledWith("t1", ids, "Work");
+    });
+
+    it("keeps message IDs the caller supplied", async () => {
+      mockDbSelect.mockResolvedValue(rows);
+
+      await archiveThread("acct-1", "t1", ["m1"]);
+
+      expect(mockProvider.archive).toHaveBeenCalledWith("t1", ["m1"]);
+      expect(mockDbSelect).not.toHaveBeenCalled();
+    });
+
+    it("resolves before the local DB update, so permanent delete still reaches the server", async () => {
+      // applyLocalDbUpdate deletes the thread, and messages cascade with it —
+      // the lookup has to happen first or there is nothing left to resolve.
+      mockDbSelect.mockResolvedValue(rows);
+
+      await permanentDeleteThread("acct-1", "t1", []);
+
+      expect(mockProvider.permanentDelete).toHaveBeenCalledWith("t1", [
+        "imap-acct-1-INBOX-100",
+        "imap-acct-1-INBOX-200",
+      ]);
+      expect(mockDbSelect.mock.invocationCallOrder[0]!).toBeLessThan(
+        mockDbExecute.mock.invocationCallOrder[0]!,
+      );
+    });
+
+    it("queues the resolved IDs when offline", async () => {
+      mockDbSelect.mockResolvedValue(rows);
+      vi.mocked(useUIStore.getState).mockReturnValue({ isOnline: false } as never);
+
+      await archiveThread("acct-1", "t1", []);
+
+      expect(enqueuePendingOperation).toHaveBeenCalledWith(
+        "acct-1",
+        "archive",
+        "t1",
+        expect.objectContaining({
+          messageIds: ["imap-acct-1-INBOX-100", "imap-acct-1-INBOX-200"],
+        }),
+      );
+    });
+
+    it("resolves for operations queued before this fix", async () => {
+      mockDbSelect.mockResolvedValue(rows);
+
+      await executeQueuedAction("acct-1", "archive", {
+        threadId: "t1",
+        messageIds: [],
+      });
+
+      expect(mockProvider.archive).toHaveBeenCalledWith("t1", [
+        "imap-acct-1-INBOX-100",
+        "imap-acct-1-INBOX-200",
+      ]);
+    });
+
+    it("falls back to an empty list when the lookup fails", async () => {
+      mockDbSelect.mockRejectedValue(new Error("db gone"));
+
+      const result = await archiveThread("acct-1", "t1", []);
+
+      expect(result.success).toBe(true);
+      expect(mockProvider.archive).toHaveBeenCalledWith("t1", []);
     });
   });
 });

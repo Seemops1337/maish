@@ -4,6 +4,7 @@ import { getEmailProvider } from "@/services/email/providerFactory";
 import { enqueuePendingOperation } from "@/services/db/pendingOperations";
 import { classifyError } from "@/utils/networkErrors";
 import { getDb } from "@/services/db/connection";
+import { getMessageIdsForThread } from "@/services/db/messages";
 import { navigateToThread, getSelectedThreadId } from "@/router/navigate";
 
 // ---------------------------------------------------------------------------
@@ -300,10 +301,45 @@ async function executeViaProvider(
   }
 }
 
-export async function executeEmailAction(
+/**
+ * Fill in the messages an action applies to.
+ *
+ * Callers act on a thread and pass no message IDs. Gmail is addressed per
+ * thread and does not care, but IMAP has no threads: the provider has to name
+ * every UID it touches, so an empty list means archive, trash, star and
+ * mark-read silently never reach the server.
+ *
+ * Resolving here rather than in the provider keeps it ahead of the local DB
+ * update — a permanent delete drops the thread, and its messages cascade with
+ * it — and stores the real IDs on a queued operation, so a replay still has
+ * them once those rows are gone.
+ */
+async function withResolvedMessageIds(
   accountId: string,
   action: EmailAction,
+): Promise<EmailAction> {
+  if (!("messageIds" in action) || action.messageIds.length > 0) {
+    return action;
+  }
+  try {
+    const messageIds = await getMessageIdsForThread(accountId, action.threadId);
+    return { ...action, messageIds };
+  } catch (err) {
+    console.warn(
+      `Could not resolve message IDs for thread ${action.threadId}:`,
+      err,
+    );
+    return action;
+  }
+}
+
+export async function executeEmailAction(
+  accountId: string,
+  inputAction: EmailAction,
 ): Promise<ActionResult> {
+  // 0. Resolve the messages this action applies to (before any local mutation)
+  const action = await withResolvedMessageIds(accountId, inputAction);
+
   // 1. Optimistic UI update
   applyOptimisticUpdate(action);
 
@@ -360,7 +396,9 @@ export async function executeQueuedAction(
   params: Record<string, unknown>,
 ): Promise<void> {
   const action = { type: operationType, ...params } as EmailAction;
-  await executeViaProvider(accountId, action);
+  // Operations queued before message IDs were resolved up front carry an empty
+  // list; resolve it here so their replay still reaches the server.
+  await executeViaProvider(accountId, await withResolvedMessageIds(accountId, action));
 }
 
 // ---------------------------------------------------------------------------
