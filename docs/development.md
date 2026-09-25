@@ -177,8 +177,19 @@ release-please no longer recognises those tags as releases of this package, so
 It only applies while no `v`-tagged release exists and can be removed after the
 first one.
 
-The build runs on macOS arm64 only. Other platforms have to be added to the
-workflow before their users see updates.
+The build covers macOS arm64, Linux x86_64 (built on Ubuntu 22.04, so the
+AppImage runs on any distribution with glibc 2.35 or newer) and Windows x86_64.
+The three run one after another because tauri-action merges `latest.json` by
+downloading, extending and re-uploading it — two jobs finishing together can
+drop a platform. A final job, `Verify latest.json`, fails the run unless every
+platform is in the file and signed with the key in `plugins.updater.pubkey`
+(`.github/scripts/verify-updater-json.mjs`).
+
+Linux ships an AppImage, a `.deb` and an `.rpm`; only the AppImage updates
+itself. Windows ships an NSIS `.exe` and an `.msi`; the updater uses the NSIS
+installer, which installs per user and needs no admin prompt. The Windows
+installers are not code-signed, so SmartScreen asks once before the first run
+(**More info → Run anyway**).
 
 The macOS bundle is signed ad hoc (`bundle.macOS.signingIdentity: "-"`), not
 with an Apple Developer ID, and it is not notarized. A downloaded copy therefore
