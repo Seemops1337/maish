@@ -170,6 +170,13 @@ The updater reads that file from
 `releases/latest/download/latest.json` (`plugins.updater.endpoints` in
 `src-tauri/tauri.conf.json`).
 
+Tags and release titles are plain `vX.Y.Z` (`include-component-in-tag: false`).
+Releases up to 0.4.0 were tagged `maish-vX.Y.Z` and titled `maish: vX.Y.Z`.
+release-please no longer recognises those tags as releases of this package, so
+`bootstrap-sha` points at the 0.4.0 release commit to stop the changelog there.
+It only applies while no `v`-tagged release exists and can be removed after the
+first one.
+
 The build runs on macOS arm64 only. Other platforms have to be added to the
 workflow before their users see updates.
 
@@ -198,7 +205,7 @@ key, so this is a one-way step.
 
 Re-running a build, or filling in a release published before this workflow
 existed, is done by dispatching **Build Release Artifacts** manually with the tag
-(for example `maish-v0.1.1`). Tags older than the `createUpdaterArtifacts` change
+(for example `v0.4.1`, or `maish-v0.4.0` for older releases). Tags older than the `createUpdaterArtifacts` change
 produce installers but no `.sig` files and no `latest.json`.
 
 ## Email Account Setup

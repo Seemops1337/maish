@@ -19,7 +19,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Tag of an existing release, e.g. maish-v0.1.1
+        description: Tag of an existing release, e.g. v0.4.1
         required: true
         type: string
 
