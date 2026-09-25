@@ -91,3 +91,9 @@ jobs:
           releaseBody: ${{ steps.release.outputs.notes }}
           args: --target aarch64-apple-darwin
           retryAttempts: 2
+
+      # A bundle whose signature covers only the executable is reported as
+      # "damaged" by Gatekeeper and cannot be opened at all. signingIdentity "-"
+      # in tauri.conf.json seals the whole bundle ad hoc; this keeps it that way.
+      - name: Verify the bundle signature
+        run: codesign --verify --deep --strict --verbose=2 src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Maish.app

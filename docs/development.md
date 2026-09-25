@@ -180,6 +180,15 @@ first one.
 The build runs on macOS arm64 only. Other platforms have to be added to the
 workflow before their users see updates.
 
+The macOS bundle is signed ad hoc (`bundle.macOS.signingIdentity: "-"`), not
+with an Apple Developer ID, and it is not notarized. A downloaded copy therefore
+opens only after **System Settings → Privacy & Security → Open Anyway**, once per
+installation; updates installed by the app itself are not quarantined and open
+directly. Without the ad-hoc identity the linker signs only the executable, and
+Gatekeeper reports the whole app as "damaged" with no way to open it. The
+workflow checks the seal with `codesign --verify --deep --strict`. Removing the
+prompt entirely needs a paid Developer ID certificate plus notarization.
+
 Two repository secrets are required:
 
 | Secret | Purpose |
