@@ -24,7 +24,6 @@ import {
   UserCircle,
   Keyboard,
   Sparkles,
-  Check,
   Mail,
   Info,
   ExternalLink,
@@ -48,7 +47,6 @@ import { QuickStepEditor } from "./QuickStepEditor";
 import { SmartLabelEditor } from "./SmartLabelEditor";
 import { SHORTCUTS, getDefaultKeyMap } from "@/constants/shortcuts";
 import { useShortcutStore } from "@/stores/shortcutStore";
-import { COLOR_THEMES } from "@/constants/themes";
 import {
   getAliasesForAccount,
   setDefaultAlias,
@@ -84,8 +82,6 @@ export function SettingsPage() {
   const setEmailDensity = useUIStore((s) => s.setEmailDensity);
   const fontScale = useUIStore((s) => s.fontScale);
   const setFontScale = useUIStore((s) => s.setFontScale);
-  const colorTheme = useUIStore((s) => s.colorTheme);
-  const setColorTheme = useUIStore((s) => s.setColorTheme);
   const defaultReplyMode = useUIStore((s) => s.defaultReplyMode);
   const setDefaultReplyMode = useUIStore((s) => s.setDefaultReplyMode);
   const markAsReadBehavior = useUIStore((s) => s.markAsReadBehavior);
@@ -358,7 +354,7 @@ export function SettingsPage() {
   return (
     <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-bg-primary/50">
       {/* Header */}
-      <div className="flex items-center gap-3 px-5 py-3 border-b border-border-primary shrink-0 bg-bg-primary/60 backdrop-blur-sm">
+      <div className="flex items-center gap-3 px-5 py-3 border-b border-border-primary shrink-0 bg-bg-primary">
         <button
           onClick={() => navigateToLabel("inbox")}
           className="p-1.5 -ml-1 rounded-md text-text-secondary hover:text-text-primary hover:bg-bg-hover transition-colors"
@@ -464,35 +460,6 @@ export function SettingsPage() {
                         <option value="xlarge">Extra Large</option>
                       </select>
                     </SettingRow>
-                    <SettingRow label="Accent color">
-                      <div className="flex items-center gap-2">
-                        {COLOR_THEMES.map((t) => {
-                          const isSelected = colorTheme === t.id;
-                          return (
-                            <button
-                              key={t.id}
-                              onClick={() => setColorTheme(t.id)}
-                              title={t.name}
-                              className={`relative w-7 h-7 rounded-full transition-all ${
-                                isSelected
-                                  ? "ring-2 ring-offset-2 ring-offset-bg-primary scale-110"
-                                  : "hover:scale-105"
-                              }`}
-                              style={{
-                                backgroundColor: t.swatch,
-                                boxShadow: isSelected
-                                  ? `0 0 0 2px var(--color-bg-primary), 0 0 0 4px ${t.swatch}`
-                                  : undefined,
-                              }}
-                            >
-                              {isSelected && (
-                                <Check size={14} className="absolute inset-0 m-auto text-white drop-shadow-sm" />
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </SettingRow>
                     <SettingRow label="Inbox view mode">
                       <select
                         value={inboxViewMode}
@@ -507,7 +474,7 @@ export function SettingsPage() {
                     </SettingRow>
                     <ToggleRow
                       label="Reduce motion"
-                      description="Disable animated background effects (fixes flickering on some GPUs)"
+                      description="Turn off animations and transitions"
                       checked={reduceMotion}
                       onToggle={() => setReduceMotion(!reduceMotion)}
                     />
@@ -1913,7 +1880,7 @@ function ShortcutsTab() {
               onBlur={() => setRecordingGlobal(false)}
               className={`text-xs px-2.5 py-1 rounded-md transition-colors ${
                 recordingGlobal
-                  ? "bg-accent text-white"
+                  ? "bg-accent text-on-accent"
                   : "bg-bg-tertiary text-text-secondary hover:text-text-primary border border-border-primary"
               }`}
             >
@@ -1961,7 +1928,7 @@ function ShortcutsTab() {
                       onBlur={() => { if (isRecording) setRecordingId(null); }}
                       className={`text-xs px-2.5 py-1 rounded-md font-mono transition-colors ${
                         isRecording
-                          ? "bg-accent text-white"
+                          ? "bg-accent text-on-accent"
                           : "bg-bg-tertiary text-text-tertiary hover:text-text-primary border border-border-primary"
                       }`}
                     >
@@ -2264,7 +2231,7 @@ function BundleSettings() {
                       }}
                       className={`w-8 h-7 text-[0.625rem] rounded transition-colors ${
                         rule.days.includes(idx)
-                          ? "bg-accent text-white"
+                          ? "bg-accent text-on-accent"
                           : "bg-bg-tertiary text-text-tertiary border border-border-primary"
                       }`}
                     >

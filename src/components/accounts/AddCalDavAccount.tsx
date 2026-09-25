@@ -148,7 +148,7 @@ export function AddCalDavAccount({ onClose, onSuccess, onBack }: AddCalDavAccoun
               <button
                 onClick={handleDiscoverAndNext}
                 disabled={!email.trim()}
-                className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-white bg-accent hover:bg-accent-hover rounded-md transition-colors disabled:opacity-50"
+                className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-on-accent bg-accent hover:bg-accent-hover rounded-md transition-colors disabled:opacity-50"
               >
                 Next
                 <ArrowRight size={14} />
@@ -206,7 +206,7 @@ export function AddCalDavAccount({ onClose, onSuccess, onBack }: AddCalDavAccoun
               <button
                 onClick={() => { setStep("test"); handleTest(); }}
                 disabled={!caldavUrl || !password}
-                className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-white bg-accent hover:bg-accent-hover rounded-md transition-colors disabled:opacity-50"
+                className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-on-accent bg-accent hover:bg-accent-hover rounded-md transition-colors disabled:opacity-50"
               >
                 Test & Connect
                 <ArrowRight size={14} />
@@ -259,14 +259,14 @@ export function AddCalDavAccount({ onClose, onSuccess, onBack }: AddCalDavAccoun
                 <button
                   onClick={handleCreate}
                   disabled={creating}
-                  className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-white bg-accent hover:bg-accent-hover rounded-md transition-colors disabled:opacity-50"
+                  className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-on-accent bg-accent hover:bg-accent-hover rounded-md transition-colors disabled:opacity-50"
                 >
                   {creating ? "Creating..." : "Add Account"}
                 </button>
               ) : !testing ? (
                 <button
                   onClick={handleTest}
-                  className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-white bg-accent hover:bg-accent-hover rounded-md transition-colors"
+                  className="flex items-center gap-1 px-4 py-2 text-sm font-medium text-on-accent bg-accent hover:bg-accent-hover rounded-md transition-colors"
                 >
                   Retry
                 </button>
@@ -288,7 +288,7 @@ export function AddCalDavAccount({ onClose, onSuccess, onBack }: AddCalDavAccoun
             </p>
             <button
               onClick={onSuccess}
-              className="mt-4 px-4 py-2 text-sm font-medium text-white bg-accent hover:bg-accent-hover rounded-md transition-colors"
+              className="mt-4 px-4 py-2 text-sm font-medium text-on-accent bg-accent hover:bg-accent-hover rounded-md transition-colors"
             >
               Done
             </button>

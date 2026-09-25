@@ -485,7 +485,7 @@ export function EmailList({ width, listRef }: { width?: number; listRef?: React.
   return (
     <div
       ref={listRef}
-      className={`flex flex-col bg-bg-secondary/50 glass-panel ${
+      className={`flex flex-col bg-bg-primary ${
         readingPanePosition === "right"
           ? "min-w-[240px] shrink-0"
           : readingPanePosition === "bottom"

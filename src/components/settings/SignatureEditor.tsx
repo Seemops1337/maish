@@ -190,7 +190,7 @@ export function SignatureEditor() {
             <button
               onClick={handleSave}
               disabled={!name.trim()}
-              className="px-3 py-1.5 text-xs font-medium text-white bg-accent hover:bg-accent-hover rounded-md transition-colors disabled:opacity-50"
+              className="px-3 py-1.5 text-xs font-medium text-on-accent bg-accent hover:bg-accent-hover rounded-md transition-colors disabled:opacity-50"
             >
               {editingId ? "Update" : "Save"}
             </button>

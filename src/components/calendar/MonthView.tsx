@@ -64,7 +64,7 @@ export function MonthView({ currentDate, events, onEventClick }: MonthViewProps)
               className="border-b border-r border-border-secondary p-1 min-h-[80px]"
             >
               <div className={`text-xs font-medium mb-0.5 w-6 h-6 flex items-center justify-center rounded-full ${
-                isToday ? "bg-accent text-white" : "text-text-secondary"
+                isToday ? "bg-accent text-on-accent" : "text-text-secondary"
               }`}>
                 {day}
               </div>

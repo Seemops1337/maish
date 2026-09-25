@@ -381,7 +381,7 @@ export function InlineReply({ thread, messages, accountId, noReply, onSent }: In
       <div className="relative">
         <EditorContent editor={editor} />
         {autoDraftLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-bg-primary/60 backdrop-blur-[1px]">
+          <div className="absolute inset-0 flex items-center justify-center bg-bg-primary/80">
             <div className="flex items-center gap-2 text-xs text-text-secondary">
               <Loader2 size={14} className="animate-spin" />
               Generating draft...
@@ -426,7 +426,7 @@ export function InlineReply({ thread, messages, accountId, noReply, onSent }: In
         <button
           onClick={handleSend}
           disabled={sending || (to.length === 0 && mode !== "forward")}
-          className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium text-white bg-accent hover:bg-accent-hover rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-medium text-on-accent bg-accent hover:bg-accent-hover rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Send size={12} />
           {modeLabel}

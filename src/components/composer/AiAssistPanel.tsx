@@ -111,7 +111,7 @@ export function AiAssistPanel({ editor, isReplyMode, threadMessages }: AiAssistP
           <button
             onClick={handleGenerateReply}
             disabled={loading || !threadMessages?.length}
-            className="px-2 py-1 text-xs bg-accent text-white rounded hover:bg-accent-hover transition-colors disabled:opacity-50 flex items-center gap-1"
+            className="px-2 py-1 text-xs bg-accent text-on-accent rounded hover:bg-accent-hover transition-colors disabled:opacity-50 flex items-center gap-1"
           >
             {loading ? "..." : "Generate Reply"}
           </button>
@@ -119,7 +119,7 @@ export function AiAssistPanel({ editor, isReplyMode, threadMessages }: AiAssistP
           <button
             onClick={handleCompose}
             disabled={loading || !prompt.trim()}
-            className="px-2 py-1 text-xs bg-accent text-white rounded hover:bg-accent-hover transition-colors disabled:opacity-50 flex items-center gap-1"
+            className="px-2 py-1 text-xs bg-accent text-on-accent rounded hover:bg-accent-hover transition-colors disabled:opacity-50 flex items-center gap-1"
           >
             {loading ? "..." : "Generate"}
           </button>

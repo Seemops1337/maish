@@ -20,14 +20,14 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(function T
   return (
     <div className={className}>
       {label && (
-        <label htmlFor={inputId} className="text-sm text-text-secondary block mb-1.5">
+        <label htmlFor={inputId} className="label-mono block mb-1.5">
           {label}
         </label>
       )}
       <input
         ref={ref}
         id={inputId}
-        className={`w-full ${sizes[size]} bg-bg-tertiary border ${error ? "border-danger" : "border-border-primary"} rounded text-text-primary outline-none focus:border-accent`}
+        className={`w-full ${sizes[size]} bg-bg-primary border ${error ? "border-danger" : "border-border-primary"} rounded-md text-text-primary placeholder:text-text-tertiary outline-none transition-shadow focus:border-text-tertiary focus:ring-2 focus:ring-text-primary/10`}
         {...rest}
       />
       {error && <p className="text-xs text-danger mt-1">{error}</p>}

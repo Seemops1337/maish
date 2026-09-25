@@ -70,7 +70,7 @@ export function WeekView({ currentDate, events, onEventClick }: WeekViewProps) {
             <div key={i} className="px-2 py-2 text-center border-r border-border-secondary">
               <div className="text-xs text-text-tertiary">{DAY_NAMES[day.getDay()]}</div>
               <div className={`text-sm font-medium mt-0.5 w-7 h-7 flex items-center justify-center mx-auto rounded-full ${
-                isToday ? "bg-accent text-white" : "text-text-primary"
+                isToday ? "bg-accent text-on-accent" : "text-text-primary"
               }`}>
                 {day.getDate()}
               </div>

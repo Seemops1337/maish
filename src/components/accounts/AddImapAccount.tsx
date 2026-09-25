@@ -526,7 +526,7 @@ export function AddImapAccount({
           <button
             onClick={() => providerId && handleOAuthConnect(providerId)}
             disabled={oauthConnecting || !form.oauthClientId.trim()}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm bg-accent text-white rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm bg-accent text-on-accent rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {oauthConnecting ? (
               <>
@@ -929,7 +929,7 @@ export function AddImapAccount({
               <button
                 onClick={handleSave}
                 disabled={!bothTestsPassed || saving}
-                className="px-4 py-2 text-sm bg-accent text-white rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 text-sm bg-accent text-on-accent rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {saving ? "Adding..." : "Add Account"}
               </button>
@@ -937,7 +937,7 @@ export function AddImapAccount({
               <button
                 onClick={goNext}
                 disabled={!canGoNext()}
-                className="flex items-center gap-1 px-4 py-2 text-sm bg-accent text-white rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-1 px-4 py-2 text-sm bg-accent text-on-accent rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Next
                 <ArrowRight className="w-3.5 h-3.5" />

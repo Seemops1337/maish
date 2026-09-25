@@ -20,13 +20,13 @@ export function Button({
   ref,
   ...rest
 }: ButtonProps) {
-  const base = "inline-flex items-center justify-center font-medium rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed";
+  const base = "inline-flex items-center justify-center font-medium rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text-primary/20 disabled:opacity-50 disabled:cursor-not-allowed";
 
   const variants = {
-    primary: "text-white bg-accent hover:bg-accent-hover",
-    secondary: "text-text-secondary hover:text-text-primary hover:bg-bg-hover",
+    primary: "text-on-accent bg-accent hover:bg-accent-hover",
+    secondary: "text-text-secondary bg-bg-primary border border-border-primary hover:text-text-primary hover:bg-bg-hover",
     ghost: "text-text-tertiary hover:text-text-primary hover:bg-bg-hover",
-    danger: "text-white bg-danger hover:bg-red-700",
+    danger: "text-white bg-danger hover:bg-danger/90",
   };
 
   const sizes = iconOnly

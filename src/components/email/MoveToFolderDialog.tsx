@@ -184,9 +184,9 @@ export function MoveToFolderDialog({
           if (e.target === e.currentTarget) onClose();
         }}
       >
-        <div className="glass-backdrop absolute inset-0" />
+        <div className="overlay-backdrop absolute inset-0" />
         <div
-          className="relative bg-bg-primary border border-border-primary rounded-lg glass-modal w-full max-w-md overflow-hidden"
+          className="relative bg-bg-primary border border-border-primary rounded-lg surface-overlay w-full max-w-md overflow-hidden"
           onKeyDown={handleKeyDown}
         >
           {/* Search input */}

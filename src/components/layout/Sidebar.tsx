@@ -352,7 +352,7 @@ export function Sidebar({ collapsed, onAddAccount }: SidebarProps) {
 
   return (
     <aside
-      className={`no-select flex flex-col bg-sidebar-bg text-sidebar-text border-r border-border-primary transition-all duration-200 glass-panel ${
+      className={`no-select flex flex-col bg-sidebar-bg text-sidebar-text border-r border-border-primary transition-all duration-200 ${
         collapsed ? "w-16" : "w-60"
       }`}
     >
@@ -362,7 +362,7 @@ export function Sidebar({ collapsed, onAddAccount }: SidebarProps) {
       <div className="px-3 py-2">
         <button
           onClick={() => openComposer()}
-          className="w-full flex items-center justify-center gap-2 bg-accent hover:bg-accent-hover text-white rounded-lg py-2 text-sm font-medium interactive-btn"
+          className="w-full flex items-center justify-center gap-2 bg-accent hover:bg-accent-hover text-on-accent rounded-lg py-2 text-sm font-medium interactive-btn"
         >
           {collapsed ? <Plus size={16} /> : "Compose"}
         </button>

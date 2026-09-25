@@ -88,7 +88,7 @@ export function CalendarToolbar({
         </div>
         <button
           onClick={onCreateEvent}
-          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white bg-accent hover:bg-accent-hover rounded-md transition-colors"
+          className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-on-accent bg-accent hover:bg-accent-hover rounded-md transition-colors"
         >
           <Plus size={14} />
           Create

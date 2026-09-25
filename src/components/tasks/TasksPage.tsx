@@ -200,7 +200,7 @@ export function TasksPage() {
   return (
     <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-bg-primary/50">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-border-primary shrink-0 bg-bg-primary/60 backdrop-blur-sm">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-border-primary shrink-0 bg-bg-primary">
         <div className="flex items-center gap-2">
           <CheckSquare size={18} className="text-accent" />
           <h1 className="text-base font-semibold text-text-primary">Tasks</h1>

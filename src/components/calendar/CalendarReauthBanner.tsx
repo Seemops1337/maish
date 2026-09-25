@@ -39,7 +39,7 @@ export function CalendarReauthBanner({ accountId, email, onReauthSuccess }: Cale
         <button
           onClick={handleReauthorize}
           disabled={status === "authorizing"}
-          className="mt-2.5 px-3 py-1.5 text-xs font-medium bg-accent text-white rounded-md hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+          className="mt-2.5 px-3 py-1.5 text-xs font-medium bg-accent text-on-accent rounded-md hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
         >
           {status === "authorizing" && <Loader2 size={12} className="animate-spin" />}
           {status === "authorizing" ? "Waiting for authorization..." : "Re-authorize"}

@@ -80,7 +80,7 @@ export function SetupClientId({ onComplete, onCancel }: SetupClientIdProps) {
           <button
             onClick={handleSave}
             disabled={!clientId.trim() || !clientSecret.trim() || saving}
-            className="px-4 py-2 text-sm bg-accent text-white rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-sm bg-accent text-on-accent rounded-lg hover:bg-accent-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? "Saving..." : "Save & Continue"}
           </button>

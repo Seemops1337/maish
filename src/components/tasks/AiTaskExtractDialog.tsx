@@ -90,8 +90,8 @@ export function AiTaskExtractDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" onClick={onClose} />
-      <div className="relative glass-modal rounded-xl shadow-2xl w-[480px] max-w-[90vw] overflow-hidden">
+      <div className="absolute inset-0 overlay-backdrop" onClick={onClose} />
+      <div className="relative surface-overlay border border-border-primary rounded-lg w-[480px] max-w-[90vw] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-border-secondary">
           <div className="flex items-center gap-2">
@@ -189,7 +189,7 @@ export function AiTaskExtractDialog({
             <button
               onClick={handleCreate}
               disabled={!title.trim() || creating}
-              className="px-4 py-2 text-sm font-medium text-white bg-accent hover:bg-accent-hover rounded-lg transition-colors disabled:opacity-50"
+              className="px-4 py-2 text-sm font-medium text-on-accent bg-accent hover:bg-accent-hover rounded-lg transition-colors disabled:opacity-50"
             >
               {creating ? "Creating..." : "Create Task"}
             </button>

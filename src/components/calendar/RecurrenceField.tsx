@@ -178,7 +178,7 @@ export function RecurrenceField({
                       onClick={() => toggleWeekday(day)}
                       className={`w-7 h-7 rounded-full text-xs border transition-colors ${
                         active
-                          ? "bg-accent text-white border-accent"
+                          ? "bg-accent text-on-accent border-accent"
                           : "bg-bg-tertiary text-text-secondary border-border-primary hover:bg-bg-hover"
                       }`}
                     >

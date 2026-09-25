@@ -147,8 +147,8 @@ export function CommandPalette({ isOpen, onClose }: CommandPaletteProps) {
   return (
     <CSSTransition nodeRef={overlayRef} in={isOpen} timeout={200} classNames="modal" unmountOnExit>
     <div ref={overlayRef} className="fixed inset-0 z-[60] flex items-start justify-center pt-[15vh]">
-      <div className="absolute inset-0 bg-black/30 glass-backdrop" onClick={onClose} />
-      <div className="relative bg-bg-primary border border-border-primary rounded-lg glass-modal w-full max-w-lg overflow-hidden modal-panel">
+      <div className="absolute inset-0 overlay-backdrop" onClick={onClose} />
+      <div className="relative bg-bg-primary border border-border-primary rounded-lg surface-overlay w-full max-w-lg overflow-hidden modal-panel">
         {/* Input */}
         <div className="px-4 py-3 border-b border-border-primary">
           <input

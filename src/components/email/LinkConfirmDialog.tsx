@@ -97,7 +97,7 @@ export function LinkConfirmDialog({ linkAnalysis, onCancel, onConfirm }: LinkCon
       <div className="px-4 py-3 border-t border-border-primary flex items-center justify-end gap-2">
         <button
           onClick={onCancel}
-          className="px-3 py-1.5 text-xs font-medium bg-accent text-white rounded-md hover:bg-accent-hover transition-colors"
+          className="px-3 py-1.5 text-xs font-medium bg-accent text-on-accent rounded-md hover:bg-accent-hover transition-colors"
         >
           Go Back
         </button>

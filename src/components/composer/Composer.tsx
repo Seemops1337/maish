@@ -490,7 +490,7 @@ export function Composer() {
 
       {/* Composer window */}
       <div
-        className={`relative bg-bg-primary border rounded-lg glass-modal pointer-events-auto flex flex-col slide-up-panel ${
+        className={`relative bg-bg-primary border rounded-lg surface-overlay pointer-events-auto flex flex-col slide-up-panel ${
           isFullpage ? "w-full h-full max-w-5xl" : "w-full max-w-2xl max-h-[80vh]"
         } ${isDragging ? "border-accent border-2" : "border-border-primary"}`}
         onDragEnter={handleDragEnter}
@@ -628,14 +628,14 @@ export function Composer() {
               <button
                 onClick={handleSend}
                 disabled={to.length === 0}
-                className="px-4 py-1.5 text-xs font-medium text-white bg-accent hover:bg-accent-hover rounded-l-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-1.5 text-xs font-medium text-on-accent bg-accent hover:bg-accent-hover rounded-l-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Send
               </button>
               <button
                 onClick={() => setShowSchedule(true)}
                 disabled={to.length === 0}
-                className="px-2 py-1.5 text-white bg-accent hover:bg-accent-hover border-l border-white/20 rounded-r-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-2 py-1.5 text-on-accent bg-accent hover:bg-accent-hover border-l border-white/20 rounded-r-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Schedule send"
               >
                 <Clock size={12} />

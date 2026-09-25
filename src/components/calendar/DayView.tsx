@@ -44,7 +44,7 @@ export function DayView({ currentDate, events, onEventClick }: DayViewProps) {
       {/* Header */}
       <div className="px-6 py-3 border-b border-border-primary flex items-center gap-3 shrink-0">
         <div className={`text-2xl font-bold w-10 h-10 flex items-center justify-center rounded-full ${
-          isToday ? "bg-accent text-white" : "text-text-primary"
+          isToday ? "bg-accent text-on-accent" : "text-text-primary"
         }`}>
           {currentDate.getDate()}
         </div>

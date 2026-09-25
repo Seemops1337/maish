@@ -85,7 +85,7 @@ export function AccountSwitcher({
       {/* Dropdown */}
       {open && (
         <div
-          className={`absolute z-50 mt-1 py-1 rounded-lg border border-border-primary bg-bg-primary shadow-lg glass-panel ${
+          className={`absolute z-50 mt-1 py-1 rounded-lg border border-border-primary bg-bg-primary shadow-lg ${
             collapsed ? "left-full ml-1 top-0 w-64" : "left-2 right-2"
           }`}
         >
@@ -187,7 +187,7 @@ function AccountAvatarSmall({
     <div
       className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-xs font-semibold overflow-hidden ${
         isActive
-          ? "bg-accent text-white"
+          ? "bg-accent text-on-accent"
           : "bg-accent/12 text-accent"
       }`}
     >

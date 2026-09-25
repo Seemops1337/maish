@@ -62,8 +62,8 @@ export function AskInbox({ isOpen, onClose }: AskInboxProps) {
 
   return createPortal(
     <div className="fixed inset-0 z-[60] flex items-start justify-center pt-[10vh]">
-      <div className="absolute inset-0 bg-black/30 glass-backdrop" onClick={onClose} />
-      <div className="relative bg-bg-primary border border-border-primary rounded-lg glass-modal w-full max-w-lg overflow-hidden flex flex-col max-h-[70vh]">
+      <div className="absolute inset-0 overlay-backdrop" onClick={onClose} />
+      <div className="relative bg-bg-primary border border-border-primary rounded-lg surface-overlay w-full max-w-lg overflow-hidden flex flex-col max-h-[70vh]">
         {/* Header */}
         <div className="flex items-center gap-2 px-4 py-3 border-b border-border-primary bg-bg-secondary">
           <Sparkles size={16} className="text-accent" />
