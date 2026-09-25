@@ -28,8 +28,34 @@ permissions:
 
 jobs:
   build:
-    name: macOS (aarch64)
-    runs-on: macos-latest
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.runner }}
+    # Windows runners default to PowerShell; every run step here is bash.
+    defaults:
+      run:
+        shell: bash
+    strategy:
+      fail-fast: false
+      # One platform at a time: tauri-action merges latest.json by downloading
+      # the release's copy, adding its own platform and uploading it again, so
+      # two jobs finishing together can drop a platform from the file.
+      max-parallel: 1
+      matrix:
+        include:
+          - name: macOS (aarch64)
+            runner: macos-latest
+            rust-targets: aarch64-apple-darwin
+            args: --target aarch64-apple-darwin
+          # 22.04 rather than latest: an AppImage runs only on systems whose
+          # glibc is at least as new as the one it was built against.
+          - name: Linux (x86_64)
+            runner: ubuntu-22.04
+            rust-targets: ""
+            args: ""
+          - name: Windows (x86_64)
+            runner: windows-latest
+            rust-targets: ""
+            args: ""
 
     steps:
       - name: Check out the released tag
@@ -64,7 +90,19 @@ jobs:
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-apple-darwin
+          targets: ${{ matrix.rust-targets }}
+
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            libssl-dev \
+            patchelf
 
       - name: Cache Rust build
         uses: Swatinem/rust-cache@v2
@@ -89,11 +127,37 @@ jobs:
         with:
           releaseId: ${{ steps.release.outputs.id }}
           releaseBody: ${{ steps.release.outputs.notes }}
-          args: --target aarch64-apple-darwin
+          args: ${{ matrix.args }}
+          # The per-user NSIS installer updates without an admin prompt.
+          updaterJsonPreferNsis: true
           retryAttempts: 2
 
       # A bundle whose signature covers only the executable is reported as
       # "damaged" by Gatekeeper and cannot be opened at all. signingIdentity "-"
       # in tauri.conf.json seals the whole bundle ad hoc; this keeps it that way.
       - name: Verify the bundle signature
+        if: runner.os == 'macOS'
         run: codesign --verify --deep --strict --verbose=2 src-tauri/target/aarch64-apple-darwin/release/bundle/macos/Maish.app
+
+  # Every platform must end up in latest.json, signed with the key the app
+  # trusts, or clients on the missing platform never see the update.
+  verify-updater-json:
+    name: Verify latest.json
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the released tag
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag }}
+
+      - name: Check platforms and signing key
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          gh release download "$TAG" --pattern latest.json --dir /tmp/updater
+          node .github/scripts/verify-updater-json.mjs /tmp/updater/latest.json src-tauri/tauri.conf.json \
+            darwin-aarch64 linux-x86_64 windows-x86_64
