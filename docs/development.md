@@ -9,7 +9,7 @@
 ## Setting up on another machine
 
 ```bash
-git clone https://github.com/Seemops1337/maish.git
+git clone https://github.com/seemopz/maish.git
 cd maish
 npm install
 npm run tauri build -- --no-bundle
@@ -202,6 +202,12 @@ npm run tauri signer generate -- -w ~/.tauri/maish.key -p '<password>'
 The public half has to be copied into `plugins.updater.pubkey`. Replacing the key
 invalidates every update for clients that already shipped with the old public
 key, so this is a one-way step.
+
+The key was replaced once, on 2026-09-25 (key ID `AC3546AC3CF479E1`), because
+the original private key was lost and the secret held an unusable value — no
+release up to 0.4.0 ever got signed artifacts. Installs built before that date
+carry the old public key and have to be updated by hand once. The private key and
+its password are kept in the maintainer's password manager.
 
 Re-running a build, or filling in a release published before this workflow
 existed, is done by dispatching **Build Release Artifacts** manually with the tag

@@ -2,7 +2,7 @@
 
 Tauri v2 desktop mail client (Rust backend + React 19 frontend), a fork of Velo
 (`avihaymenahem/velo`, Apache-2.0) now maintained independently as
-`Seemops1337/maish`. Identity `Maish` / `xyz.hochreiner.maish`. No upstream remote,
+`seemopz/maish`. Identity `Maish` / `xyz.hochreiner.maish`. No upstream remote,
 no changes sent upstream.
 
 ## Licence obligations (Apache-2.0)
