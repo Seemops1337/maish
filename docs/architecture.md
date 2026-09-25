@@ -109,7 +109,7 @@ maish/
 │   ├── hooks/                # useKeyboardShortcuts, useClickOutside, useContextMenu
 │   ├── utils/                # crypto, date, emailBuilder, sanitize, imageBlocker,
 │   │                         # mailtoParser, fileUtils, templateVariables, noReply
-│   ├── constants/            # Keyboard shortcuts, color themes, help content
+│   ├── constants/            # Keyboard shortcuts, help content
 │   └── styles/               # Tailwind CSS v4 globals
 ├── src-tauri/
 │   ├── src/                  # Rust backend (tray, OAuth, splash, single-instance,
