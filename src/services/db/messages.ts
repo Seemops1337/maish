@@ -41,6 +41,24 @@ export async function getMessagesForThread(
   );
 }
 
+/**
+ * IDs of a thread's messages, oldest first.
+ *
+ * Deliberately narrower than getMessagesForThread(): callers that only need to
+ * address messages on the server should not pull every cached body along.
+ */
+export async function getMessageIdsForThread(
+  accountId: string,
+  threadId: string,
+): Promise<string[]> {
+  const db = await getDb();
+  const rows = await db.select<{ id: string }[]>(
+    "SELECT id FROM messages WHERE account_id = $1 AND thread_id = $2 ORDER BY date ASC",
+    [accountId, threadId],
+  );
+  return rows.map((r) => r.id);
+}
+
 export async function upsertMessage(msg: {
   id: string;
   accountId: string;
